@@ -1,0 +1,17 @@
+{
+  "name": "@openfaceid/platform",
+  "version": "0.1.0",
+  "description": "Cross-platform OS adapters for macOS, Windows, and Linux",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@openfaceid/core": "workspace:*"
+  },
+  "author": "Jayant Olhyan",
+  "license": "Apache-2.0"
+}

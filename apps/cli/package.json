@@ -1,0 +1,20 @@
+{
+  "name": "@openfaceid/cli",
+  "version": "0.1.0",
+  "description": "Command-line interface for OpenFaceID / SightLock",
+  "bin": {
+    "openfaceid": "./bin/openfaceid.js",
+    "sightlock": "./bin/openfaceid.js"
+  },
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-strip-types bin/openfaceid.ts"
+  },
+  "dependencies": {
+    "@openfaceid/branding": "workspace:*",
+    "@openfaceid/core": "workspace:*",
+    "@openfaceid/platform": "workspace:*"
+  },
+  "author": "Jayant Olhyan",
+  "license": "Apache-2.0"
+}

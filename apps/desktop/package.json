@@ -1,0 +1,17 @@
+{
+  "name": "@openfaceid/desktop",
+  "version": "0.1.0",
+  "description": "Desktop UI shell and Quick Glance HUD for OpenFaceID / SightLock",
+  "type": "module",
+  "scripts": {
+    "start": "node serve.js",
+    "dev": "node serve.js"
+  },
+  "dependencies": {
+    "@openfaceid/branding": "workspace:*",
+    "@openfaceid/core": "workspace:*",
+    "@openfaceid/platform": "workspace:*"
+  },
+  "author": "Jayant Olhyan",
+  "license": "Apache-2.0"
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@openfaceid/presence",
+  "version": "0.1.0",
+  "description": "Continuous low-power presence detection, leave tracking, and timeout automation",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --experimental-strip-types --test"
+  },
+  "dependencies": {
+    "@openfaceid/core": "workspace:*",
+    "@openfaceid/camera": "workspace:*",
+    "@openfaceid/vision": "workspace:*"
+  },
+  "author": "Jayant Olhyan",
+  "license": "Apache-2.0"
+}

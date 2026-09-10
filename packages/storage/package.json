@@ -1,0 +1,19 @@
+{
+  "name": "@openfaceid/storage",
+  "version": "0.1.0",
+  "description": "Encrypted identity store, privacy-safe activity log, and configuration persistence",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --experimental-strip-types --test"
+  },
+  "dependencies": {
+    "@openfaceid/core": "workspace:*",
+    "@openfaceid/vision": "workspace:*",
+    "@openfaceid/security": "workspace:*"
+  },
+  "author": "Jayant Olhyan",
+  "license": "Apache-2.0"
+}

@@ -1,0 +1,18 @@
+{
+  "name": "@openfaceid/security",
+  "version": "0.1.0",
+  "description": "Authenticated encryption (AES-256-GCM), key management, and secure memory zeroization",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --experimental-strip-types --test"
+  },
+  "dependencies": {
+    "@openfaceid/core": "workspace:*",
+    "@openfaceid/platform": "workspace:*"
+  },
+  "author": "Jayant Olhyan",
+  "license": "Apache-2.0"
+}

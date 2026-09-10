@@ -1,0 +1,18 @@
+{
+  "name": "@openfaceid/vision",
+  "version": "0.1.0",
+  "description": "Modular computer vision engine: face detection, quality analysis, ArcFace embeddings, temporal recognition, and multi-tier liveness",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --experimental-strip-types --test"
+  },
+  "dependencies": {
+    "@openfaceid/core": "workspace:*",
+    "@openfaceid/camera": "workspace:*"
+  },
+  "author": "Jayant Olhyan",
+  "license": "Apache-2.0"
+}

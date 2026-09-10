@@ -1,0 +1,17 @@
+{
+  "name": "@openfaceid/camera",
+  "version": "0.1.0",
+  "description": "Camera management, device enumeration, frame throttling, and disconnect recovery",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --experimental-strip-types --test"
+  },
+  "dependencies": {
+    "@openfaceid/core": "workspace:*"
+  },
+  "author": "Jayant Olhyan",
+  "license": "Apache-2.0"
+}

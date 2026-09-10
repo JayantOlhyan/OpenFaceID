@@ -1,0 +1,14 @@
+{
+  "name": "@openfaceid/branding",
+  "version": "0.1.0",
+  "description": "Centralized branding constants and metadata for OpenFaceID / SightLock",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": ["branding", "openfaceid", "sightlock"],
+  "author": "Jayant Olhyan",
+  "license": "Apache-2.0"
+}
