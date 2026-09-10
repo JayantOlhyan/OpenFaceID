@@ -19,16 +19,19 @@ export interface FaceLandmarks {
   noseTip: LandmarkPoint;
   leftMouth: LandmarkPoint;
   rightMouth: LandmarkPoint;
+  leftEar?: LandmarkPoint;
+  rightEar?: LandmarkPoint;
+  allPoints?: LandmarkPoint[];
 }
 
 export interface FaceQualityScore {
-  sharpness: number; // Laplacian variance (acceptable: > 80)
-  brightness: number; // Mean luminance 0-255 (acceptable: 40 - 220)
-  centering: number; // Center offset 0-1 (acceptable: < 0.25)
-  sizeRatio: number; // Face area / frame area (acceptable: 0.08 - 0.70)
-  yawDeg: number; // Head rotation left/right in degrees
-  pitchDeg: number; // Head tilt up/down in degrees
-  rollDeg: number; // Head tilt side-to-side in degrees
+  sharpness: number; // Laplacian variance (acceptable: > 50)
+  brightness: number; // Mean luminance 0-255 (acceptable: 35 - 235)
+  centering: number; // Center offset 0-1 (acceptable: < 0.35)
+  sizeRatio: number; // Face area / frame area (acceptable: 0.08 - 0.75)
+  yawDeg: number; // Head rotation left/right in degrees (-35 to +35)
+  pitchDeg: number; // Head tilt up/down in degrees (-30 to +30)
+  rollDeg: number; // Head tilt side-to-side in degrees (-25 to +25)
   isAcceptable: boolean;
   rejectionReason?: string;
   userGuidance: string;
@@ -66,9 +69,20 @@ export interface MatchResult {
   frameCount: number;
 }
 
+export type LivenessState =
+  | 'LIVENESS_IDLE'
+  | 'LIVENESS_STARTING'
+  | 'CHALLENGE_PRESENTED'
+  | 'WAITING_FOR_RESPONSE'
+  | 'RESPONSE_DETECTED'
+  | 'LIVENESS_PASSED'
+  | 'LIVENESS_FAILED'
+  | 'LIVENESS_TIMEOUT';
+
 export interface LivenessResult {
   passed: boolean;
   mode: LivenessMode;
+  state: LivenessState;
   score: number; // 0.0 to 1.0
   blinkDetected: boolean;
   motionVariance: number;

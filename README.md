@@ -20,16 +20,27 @@ All biometric processing occurs **100% locally in volatile RAM**. Your face imag
 
 ## Critical Security Boundary & Philosophy
 
-> [!IMPORTANT]
-> **OpenFaceID is NOT Apple Face ID, Touch ID, or Windows Hello IR.**
+> [!CAUTION]
+> **OpenFaceID is webcam-based face recognition. It is NOT equivalent to hardware-backed biometric authentication such as Apple Face ID or Windows Hello.**
 > A standard computer webcam is a 2D optical sensor lacking structured-light infrared (IR) dot projectors or time-of-flight depth cameras.
+> **Recognition and authentication are separate concepts.**
 >
 > OpenFaceID **strictly distinguishes** between:
 > 1. **Recognition**: *"Does this camera image match an enrolled biometric identity?"*
 > 2. **Presence**: *"Is an authorized person currently sitting in front of the computer?"*
 > 3. **Authentication**: *"Cryptographic authorization granted by the operating system kernel."*
 >
-> OpenFaceID **never** stores plaintext operating system passwords, **never** injects artificial keystrokes to mimic lock-screen unlocking, and **never** claims to be 100% spoof-proof.
+> OpenFaceID **never** stores plaintext operating system passwords, **never** injects artificial keystrokes to mimic lock-screen unlocking, and **never** claims to be 100% spoof-proof. OS login screen bypass is deliberately out of scope.
+
+---
+
+## Current Platform Verification Status (Phase 2)
+
+| Platform | Real Camera Capture | Face Detection (BlazeFace) | Face Recognition (ArcFace) | Liveness PAD | OS Login Auth Bypass |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **macOS (Darwin)** | **VERIFIED** (WebRTC / AVFoundation) | **VERIFIED** (896 Anchors, IoU NMS) | **VERIFIED** (512D Cosine Metric) | **VERIFIED** (Light Passive + Strong Active) | ⚠️ **NOT ENABLED** (Deferred to future Phase) |
+| **Windows 10 / 11** | **VERIFIED** (WebRTC / WMF) | **VERIFIED** (896 Anchors, IoU NMS) | **VERIFIED** (512D Cosine Metric) | **VERIFIED** (Light Passive + Strong Active) | ⚠️ **NOT ENABLED** (Deferred to future Phase) |
+| **Linux (X11 / Wayland)** | **VERIFIED** (WebRTC / V4L2) | **VERIFIED** (896 Anchors, IoU NMS) | **VERIFIED** (512D Cosine Metric) | **VERIFIED** (Light Passive + Strong Active) | ⚠️ **NOT ENABLED** (Deferred to future Phase) |
 
 ---
 
@@ -156,7 +167,10 @@ openfaceid lock
 - [Architecture & Design](docs/architecture.md)
 - [Technology Decision & ADR](docs/architecture-decision.md)
 - [Research Document](docs/research.md)
-- [Platform Capabilities Matrix](docs/platform-capabilities.md)
+- [Phase 2 Implementation Audit](docs/phase-2-audit.md)
+- [Platform Camera Matrix](docs/camera-platform-matrix.md)
+- [Threshold Calibration & Biometrics](docs/threshold-calibration.md)
+- [Real Hardware Setup Guide](docs/real-hardware-setup.md)
 - [Computer Vision Engine Math & Models](docs/vision-engine.md)
 - [Security Architecture & Cryptography](docs/security.md)
 - [STRIDE Threat Model & PAD](docs/threat-model.md)

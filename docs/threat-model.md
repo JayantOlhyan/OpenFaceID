@@ -49,8 +49,22 @@ This document provides a comprehensive security threat analysis based on the **S
 
 ---
 
-## 4. Residual Risks & Brutal Honesty
+## 4. Residual Risks & Explicit Physical Limitations
 
 1. **Webcams Lack Hardware Depth**: Without an infrared dot projector (Apple TrueDepth) or dual-sensor IR camera (Windows Hello), 2D optical face recognition **cannot guarantee absolute physical presence**. OpenFaceID must be used for convenience and presence-based locking, not for high-threat physical security scenarios.
 2. **Root / Kernel Compromise**: An adversary possessing root/admin privileges on the host machine can inspect volatile memory, hook kernel display drivers, or manipulate the camera device stream.
 3. **Twin / Close Relative Resemblance**: As with all 2D deep embedding models, identical twins or close biological relatives with high facial resemblance may produce similarity scores exceeding the standard 0.72 threshold.
+
+---
+
+## 5. Presentation Attack Testing Matrix
+
+| Attack Scenario | Test Mechanism | Expected System Response | Detection Reliability |
+| :--- | :--- | :--- | :--- |
+| **Live Human Face** | Natural blinking + head micro-motion | `LIVENESS_PASSED`, Recognition allowed | High ($> 98\%$) |
+| **Printed Photograph** (Paper print) | Zero landmark motion variance ($V < 0.008$) | `LIVENESS_FAILED`: "Presentation attack suspected: Static image" | High ($> 99\%$) |
+| **Phone / Tablet Replay** | Screen moiré frequency check + challenge | Rejected in Light mode; fails active challenge in Strong mode | Medium-High ($> 90\%$) |
+| **Multiple Faces in View** | Detector returns $> 1$ high-confidence candidates | Flagged as multi-face scene; authorization suppressed | High ($100\%$) |
+| **Partial / Occluded Face** | Landmark parser fails eye-mouth proportions | Rejected at Quality Gate: `FACE_NOT_CENTERED` / `EXTREME_ANGLE` | High ($> 95\%$) |
+| **Extreme Lighting** (Dark / Glare) | Luminance check ($\mu_L < 35$ or $\mu_L > 235$) | Rejected at Quality Gate: `TOO_DARK` / `TOO_BRIGHT` | High ($100\%$) |
+

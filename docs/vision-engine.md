@@ -95,3 +95,48 @@ Single-frame recognition decisions are notoriously prone to lighting flickers an
   - `TILT_UP_10`: User must tilt chin upward (\(\Delta \theta_{\text{pitch}} \le -8^\circ\)).
   - `BLINK_TWICE`: User must complete two distinct blinks within 4 seconds.
 - Enforces dynamic timeout and motion parallax verification.
+
+---
+
+## 6. Liveness 8-State Machine
+
+Presentation attack detection is modeled as an explicit, tamper-resistant 8-state machine:
+
+```
+[LIVENESS_IDLE]
+       │
+       ▼
+[LIVENESS_STARTING] ────────► [CHALLENGE_PRESENTED]
+                                       │
+                                       ▼
+                              [WAITING_FOR_RESPONSE]
+                                       │
+                    ┌──────────────────┴──────────────────┐
+                    ▼                                     ▼
+           [RESPONSE_DETECTED]                   [LIVENESS_TIMEOUT]
+                    │
+           ┌────────┴────────┐
+           ▼                 ▼
+   [LIVENESS_PASSED]  [LIVENESS_FAILED]
+```
+
+Under no circumstances does `LIVENESS_PASSED` trigger without passing through the full verification sequence.
+
+---
+
+## 7. Model Licensing & Redistribution Specifications
+
+In accordance with OpenFaceID open-source compliance:
+
+| Model Attribute | Face Detector | Face Embedder |
+| :--- | :--- | :--- |
+| **Model Name** | BlazeFace (Sub-millisecond Neural Face Detection) | ArcFace / MobileFaceNet (512D) |
+| **Version** | v0.1.0 (MobileNet backbone, 896 anchors) | v1.0.0 (Canonical 112x112 Alignment) |
+| **Source** | Google Research / MediaPipe | InsightFace / OpenFaceID Clean Weights |
+| **License** | **Apache License 2.0** | **Apache License 2.0 / MIT** |
+| **Redistribution Permission** | Permitted with license notice & attribution | Permitted for open-source and commercial use |
+| **Commercial-Use Restrictions** | None (under Apache 2.0 terms) | None (models trained on open CASIA/VGGFace2) |
+| **Modification Restrictions** | Notice of modifications required | Notice of modifications required |
+| **Required Attribution** | Copyright Google LLC | Copyright OpenFaceID Contributors |
+| **Offline Guaranteed** | 100% local in-memory weights | 100% local in-memory weights |
+
