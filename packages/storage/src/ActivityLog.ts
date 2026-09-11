@@ -79,6 +79,28 @@ export class ActivityLog {
     }
   }
 
+  public logEvent(eventType: string, metadata?: Record<string, unknown>): void {
+    const typeMap: Record<string, ActivityEntry['type']> = {
+      IDENTITY_MATCHED: 'MATCH',
+      IDENTITY_ENROLLED: 'SYSTEM',
+      IDENTITY_DELETED: 'SYSTEM',
+      WORKSTATION_LOCKED: 'LOCK',
+      USER_LEFT_TRIGGERED: 'ABSENCE',
+      ENGINE_INITIALIZED: 'SYSTEM',
+      ENGINE_SHUTDOWN: 'SYSTEM',
+      PRIVACY_PAUSE_ACTIVATED: 'SYSTEM',
+      PRIVACY_PAUSE_DEACTIVATED: 'SYSTEM',
+    };
+    this.addEntry({
+      type: typeMap[eventType] || 'SYSTEM',
+      description: `${eventType}: ${JSON.stringify(metadata || {})}`,
+    });
+  }
+
+  public getRecentEntries(limit: number = 50): ActivityEntry[] {
+    return this.getEntries().slice(0, limit);
+  }
+
   public clear(): void {
     try {
       fs.writeFileSync(this.filePath, JSON.stringify([]));
@@ -86,5 +108,9 @@ export class ActivityLog {
     } catch (err) {
       Logger.error('storage', 'Failed to clear activity log', { error: String(err) });
     }
+  }
+
+  public clearLog(): void {
+    this.clear();
   }
 }

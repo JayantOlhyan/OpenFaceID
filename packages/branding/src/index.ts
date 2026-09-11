@@ -6,6 +6,7 @@
 
 export interface ProductBranding {
   name: string;
+  version: string;
   codeName: string;
   displayName: string;
   tagline: string;
@@ -42,6 +43,7 @@ export interface ProductBranding {
 
 export const BRANDING: ProductBranding = {
   name: 'OpenFaceID',
+  version: '0.1.0',
   codeName: 'SightLock',
   displayName: 'OpenFaceID',
   tagline: 'Face recognition for every desktop.',

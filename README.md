@@ -34,20 +34,25 @@ All biometric processing occurs **100% locally in volatile RAM**. Your face imag
 
 ---
 
-## Current Platform Verification Status (Phase 2)
+## Current Platform Verification Status (Phase 3)
 
-| Platform | Real Camera Capture | Face Detection (BlazeFace) | Face Recognition (ArcFace) | Liveness PAD | OS Login Auth Bypass |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **macOS (Darwin)** | **VERIFIED** (WebRTC / AVFoundation) | **VERIFIED** (896 Anchors, IoU NMS) | **VERIFIED** (512D Cosine Metric) | **VERIFIED** (Light Passive + Strong Active) | ⚠️ **NOT ENABLED** (Deferred to future Phase) |
-| **Windows 10 / 11** | **VERIFIED** (WebRTC / WMF) | **VERIFIED** (896 Anchors, IoU NMS) | **VERIFIED** (512D Cosine Metric) | **VERIFIED** (Light Passive + Strong Active) | ⚠️ **NOT ENABLED** (Deferred to future Phase) |
-| **Linux (X11 / Wayland)** | **VERIFIED** (WebRTC / V4L2) | **VERIFIED** (896 Anchors, IoU NMS) | **VERIFIED** (512D Cosine Metric) | **VERIFIED** (Light Passive + Strong Active) | ⚠️ **NOT ENABLED** (Deferred to future Phase) |
+| Platform | Real Camera Capture | Face Detection (BlazeFace) | Face Recognition (ArcFace) | Liveness PAD | Desktop Daemon & Tray | OS Packaging |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **macOS (Darwin)** | **VERIFIED** (WebRTC / AVFoundation) | **VERIFIED** (896 Anchors, IoU NMS) | **VERIFIED** (512D Cosine Metric) | **VERIFIED** (Light Passive + Strong Active) | **VERIFIED** (Daemon + Tray + HUD) | **VERIFIED** (.app Bundle + ZIP) |
+| **Windows 10 / 11** | **VERIFIED** (WebRTC / WMF) | **VERIFIED** (896 Anchors, IoU NMS) | **VERIFIED** (512D Cosine Metric) | **VERIFIED** (Light Passive + Strong Active) | **CODE IMPLEMENTED** (Daemon + Tray) | **CODE IMPLEMENTED** (.cmd + Registry) |
+| **Linux (X11 / Wayland)** | **VERIFIED** (WebRTC / V4L2) | **VERIFIED** (896 Anchors, IoU NMS) | **VERIFIED** (512D Cosine Metric) | **VERIFIED** (Light Passive + Strong Active) | **CODE IMPLEMENTED** (Daemon + Tray) | **CODE IMPLEMENTED** (.desktop + tar.gz) |
 
 ---
 
 ## Key Features
 
+- **Authoritative Desktop Daemon (`DesktopEngine`)**: Runs continuously in the background, surviving dashboard window closures. Manages power events (sleep/wake), camera hot-plug disconnections, and dynamic loop throttling.
+- **System Tray & Menu Bar Integration**: Native tray menu for instant status visibility, Privacy Pause toggle, manual "Recognize Now", and direct workstation locking.
+- **Quick Glance HUD**: Floating keyboard-summonable heads-up display (`⌘⇧L` on macOS, `Ctrl+Shift+L` on Windows/Linux) for sub-second presence verification without opening the full dashboard.
+- **Hardware Privacy Pause**: One-click software kill-switch that completely halts camera hardware access, releases optical sensors, and zeroizes active RAM buffers.
+- **Hardened Local IPC Security**: Local REST and Server-Sent Events (SSE) server bound strictly to `127.0.0.1:41793` guarded by 192-bit cryptographic bearer tokens (`crypto.timingSafeEqual`) to prevent drive-by browser script tampering.
 - **Cross-Platform by Architecture**: Native adapters for **macOS** (Keychain, `pmset`, IOKit), **Windows** (DPAPI, `LockWorkStation`, GetLastInputInfo), and **Linux** (`loginctl`, FreeDesktop Secret Service, `xprintidle`).
-- **RAM-Only Processing**: Camera frames are processed in-memory and immediately zeroized and discarded. No photos are ever saved to disk.
+- **RAM-Only Processing**: Camera frames are processed in-memory and immediately zeroized and discarded (`frame.zeroize()`). No photos are ever saved to disk.
 - **Guided Multi-Pose Enrollment**: 5-step guided enrollment (Look Center, Turn Left, Turn Right, Look Up, Look Down) generates robust 512D composite ArcFace embeddings.
 - **Multi-Tier Liveness Detection**:
   - `Off`: Direct fast recognition.
@@ -55,9 +60,7 @@ All biometric processing occurs **100% locally in volatile RAM**. Your face imag
   - `Strong`: Active challenge-response requiring randomized head rotation or tilt.
 - **Continuous Presence Automation**: Automatically locks your workstation when you walk away after a configurable timeout (e.g. 20s).
 - **Multi-Identity Gallery**: Enroll multiple people or appearance variations (e.g., *Jayant*, *Jayant with Glasses*).
-- **Quick Glance HUD**: Floating minimal overlay accessible via global keyboard shortcut (`⌘⇧L` or `Ctrl+Shift+L`).
-- **Local-Only Authenticated API**: Local REST & Server-Sent Events (SSE) server on `127.0.0.1:41793` protected by ephemeral bearer token.
-- **Scriptable CLI**: Standalone command-line interface for terminal automation and diagnostics.
+- **Automated Desktop Packaging**: Build standalone distribution bundles (`dist/OpenFaceID.app` for macOS, `openfaceid.desktop` for Linux, and `OpenFaceID.cmd` for Windows).
 
 ---
 
@@ -65,31 +68,41 @@ All biometric processing occurs **100% locally in volatile RAM**. Your face imag
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                           OpenFaceID Desktop UI                         │
-│       (Vite + React 19 + Dark Theme Tokens + Floating QuickGlance)      │
-└────────────────────────────────────┬────────────────────────────────────┘
-                                     │ Local Authenticated REST + SSE (127.0.0.1)
-┌────────────────────────────────────▼────────────────────────────────────┐
-│                             OpenFaceID Core                             │
-│  ┌───────────────────────┐  ┌───────────────────────┐  ┌──────────────┐ │
-│  │ Recognition Machine   │  │   Presence Machine    │  │ Event Bus    │ │
-│  │ (Idle->Detect->Liveness│  │ (Present->Grace->Away │  │ & Policies   │ │
-│  │  ->Match->Authorized) │  │  ->Lock/Action)       │  │ Engine       │ │
-│  └───────────┬───────────┘  └───────────┬───────────┘  └──────┬───────┘ │
-│              │                          │                     │         │
-│  ┌───────────▼───────────┐  ┌───────────▼───────────┐  ┌──────▼───────┐ │
-│  │     Vision Engine     │  │     Camera Engine     │  │ Security     │ │
-│  │ • BlazeFace Detector  │  │ • Enumeration         │  │ • AES-256-GCM│ │
-│  │ • 5-Point Landmarks   │  │ • Frame Grabber (RAM) │  │ • Keystore   │ │
-│  │ • Quality Assessment  │  │ • Dynamic Throttler   │  │ • Zero-Trace │ │
-│  │ • ArcFace Embeddings  │  │ • Disconnect Recovery │  │   Deleter    │ │
-│  │ • Liveness (Off/Lt/St)│  │ • Permissions Guard   │  │              │ │
-│  └───────────────────────┘  └───────────────────────┘  └──────────────┘ │
-└────────────────────────────────────┬────────────────────────────────────┘
-                                     │
-┌────────────────────────────────────▼────────────────────────────────────┐
-│                         Platform Adapter Layer                          │
-│         [MacOSAdapter]       [WindowsAdapter]       [LinuxAdapter]      │
+│              OpenFaceID Desktop Shell & UI Layer                         │
+│   ┌───────────────────────────┐         ┌───────────────────────────┐   │
+│   │   System Tray / Menu Bar  │         │   Quick Glance HUD (⌘⇧L)  │   │
+│   └─────────────┬─────────────┘         └─────────────┬─────────────┘   │
+│                 │                                     │                 │
+│   ┌─────────────▼─────────────────────────────────────▼─────────────┐   │
+│   │          Desktop Dashboard (Vite + React 19 + Theme Tokens)      │   │
+│   └───────────────────────────────────┬─────────────────────────────┘   │
+└───────────────────────────────────────┼─────────────────────────────────┘
+                                        │ Authenticated REST + SSE (127.0.0.1:41793)
+                                        │ Bearer Token Guard (timingSafeEqual)
+┌───────────────────────────────────────▼─────────────────────────────────┐
+│                     DesktopEngine (Authoritative Daemon)                │
+│  ┌─────────────────────────┐  ┌───────────────────────┐  ┌────────────┐ │
+│  │ Power & Sleep Observer  │  │ Hot-Plug Disconnect   │  │ Privacy    │ │
+│  │ (pmset / lock state)    │  │ Recovery Manager      │  │ Pause Gate │ │
+│  └─────────────┬───────────┘  └───────────┬───────────┘  └─────┬──────┘ │
+│                │                          │                    │        │
+│  ┌─────────────▼───────────┐  ┌───────────▼───────────┐  ┌─────▼──────┐ │
+│  │  Recognition Machine    │  │   Presence Machine    │  │ Security   │ │
+│  │  (Multi-Stage Pipeline) │  │  (Authorized Presence)│  │ & Keystore │ │
+│  └─────────────┬───────────┘  └───────────┬───────────┘  └─────┬──────┘ │
+│                │                          │                    │        │
+│  ┌─────────────▼───────────┐  ┌───────────▼───────────┐  ┌─────▼──────┐ │
+│  │      Vision Engine      │  │     Camera Engine     │  │ AES-256-GCM│ │
+│  │  • BlazeFace Detector   │  │  • WebRTC Enumeration │  │ Zero-Trace │ │
+│  │  • 5-Point Landmarks    │  │  • RAM-Only Grabber   │  │ Shredder   │ │
+│  │  • ArcFace Embedder     │  │  • Dynamic Throttler  │  │            │ │
+│  │  • Liveness Evaluator   │  │  • Zeroize on Discard │  │            │ │
+│  └─────────────────────────┘  └───────────────────────┘  └────────────┘ │
+└───────────────────────────────────────┬─────────────────────────────────┘
+                                        │
+┌───────────────────────────────────────▼─────────────────────────────────┐
+│                        Platform Adapter Layer                           │
+│          [MacOSAdapter]       [WindowsAdapter]       [LinuxAdapter]     │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -101,11 +114,13 @@ All biometric processing occurs **100% locally in volatile RAM**. Your face imag
 | :--- | :--- | :--- | :--- |
 | **Face Detection & Recognition** | Full (Local) | Full (Local) | Full (Local) |
 | **Modular Liveness (Off/Light/Strong)**| Full | Full | Full |
-| **Presence & Leave Detection** | Full | Full | Full |
+| **Continuous Authorized Presence** | Full | Full | Full |
 | **Screen Lock Automation** | `pmset displaysleepnow` | `LockWorkStation` | `loginctl lock-session` |
 | **Lock State Detection** | IORegistry `CGSSessionScreenIsLocked` | Session Notification | D-Bus `ScreenSaver` / `loginctl` |
 | **Secure Master Keystore** | macOS Keychain | Windows Credential Mgr / DPAPI | Secret Service (`libsecret`) |
 | **Quick Glance Floating HUD** | `⌘⇧L` | `Ctrl+Shift+L` | `Ctrl+Shift+L` |
+| **Desktop Background Daemon** | Verified | Code Implemented | Code Implemented |
+| **Native Application Packaging** | `.app` Bundle + ZIP | `.cmd` Launcher + Registry | `.desktop` Launcher + tar.gz |
 
 ---
 
@@ -121,17 +136,29 @@ All biometric processing occurs **100% locally in volatile RAM**. Your face imag
 git clone https://github.com/JayantOlhyan/OpenFaceID.git
 cd OpenFaceID
 
-# Run comprehensive test suite
+# Run comprehensive test suite (55 tests)
 npm test
 
 # Check system status via CLI
 npm run cli status
 
-# Launch the Desktop UI and local daemon
-npm run dev:desktop
+# Launch the authoritative Desktop Daemon and UI
+npm run desktop
 ```
 
 Visit **`http://127.0.0.1:41793`** to access the dashboard, enroll your face, and configure security policies.
+
+### 3. Packaging Standalone Binaries
+```bash
+# Package for macOS (creates dist/OpenFaceID.app and dist/OpenFaceID-0.1.0-macos.zip)
+npm run package:macos
+
+# Package for Linux (creates dist/linux/openfaceid.desktop and tarball)
+npm run package:linux
+
+# Package for Windows (creates dist/windows/OpenFaceID.cmd and autostart registry script)
+npm run package:windows
+```
 
 ---
 
@@ -140,8 +167,16 @@ Visit **`http://127.0.0.1:41793`** to access the dashboard, enroll your face, an
 OpenFaceID includes a complete command-line interface:
 
 ```bash
-# Show status
+# Show general system status
 openfaceid status
+
+# Desktop daemon commands
+openfaceid desktop status
+openfaceid desktop tray
+openfaceid desktop hud
+openfaceid desktop pause
+openfaceid desktop resume
+openfaceid desktop autostart enable
 
 # List and test connected cameras
 openfaceid camera list
@@ -156,6 +191,9 @@ openfaceid identity delete usr_01jk98
 openfaceid recognition test
 openfaceid liveness test
 
+# Run vision benchmark
+openfaceid vision benchmark
+
 # Trigger immediate screen lock
 openfaceid lock
 ```
@@ -164,22 +202,34 @@ openfaceid lock
 
 ## Documentation
 
-- [Architecture & Design](docs/architecture.md)
-- [Technology Decision & ADR](docs/architecture-decision.md)
-- [Research Document](docs/research.md)
-- [Phase 2 Implementation Audit](docs/phase-2-audit.md)
-- [Platform Camera Matrix](docs/camera-platform-matrix.md)
-- [Threshold Calibration & Biometrics](docs/threshold-calibration.md)
-- [Real Hardware Setup Guide](docs/real-hardware-setup.md)
-- [Computer Vision Engine Math & Models](docs/vision-engine.md)
-- [Security Architecture & Cryptography](docs/security.md)
-- [STRIDE Threat Model & PAD](docs/threat-model.md)
-- [Privacy Policy (Zero Cloud)](PRIVACY.md)
-- [Vulnerability Reporting & Security Policy](SECURITY.md)
-- [Contributing Guide](docs/contributing.md)
+- **Architecture & Runtime**:
+  - [Architecture & Design](docs/architecture.md)
+  - [Desktop Runtime Guide](docs/desktop-runtime.md)
+  - [Desktop Runtime Architecture Decision](docs/desktop-runtime-decision.md)
+  - [Technology Decision & ADR](docs/architecture-decision.md)
+  - [Phase 3 Milestone Report](docs/phase-3-report.md)
+  - [Phase 3 Cross-Platform Test Matrix](docs/phase-3-test-matrix.md)
+  - [Installation, Testing & Migration Guide](docs/installation-testing.md)
+- **Computer Vision & Biometrics**:
+  - [Computer Vision Engine Math & Models](docs/vision-engine.md)
+  - [Platform Camera Matrix](docs/camera-platform-matrix.md)
+  - [Threshold Calibration & Biometrics](docs/threshold-calibration.md)
+  - [Phase 2 Implementation Audit](docs/phase-2-audit.md)
+  - [Phase 2 Verification & Claims Review](docs/phase-2-verification.md)
+- **Security & Privacy**:
+  - [Security Architecture & Cryptography](docs/security.md)
+  - [Desktop Security & IPC Threat Model](docs/desktop-security.md)
+  - [STRIDE Threat Model & PAD](docs/threat-model.md)
+  - [Privacy Policy (Zero Cloud)](PRIVACY.md)
+  - [Vulnerability Reporting & Security Policy](SECURITY.md)
+- **Operations & Repository**:
+  - [Repository Tracking State](docs/repository-state.md)
+  - [Real Hardware Setup Guide](docs/real-hardware-setup.md)
+  - [Contributing Guide](docs/contributing.md)
 
 ---
 
 ## License
 
 OpenFaceID is released under the **Apache 2.0 License**. See [LICENSE](LICENSE) for details.
+

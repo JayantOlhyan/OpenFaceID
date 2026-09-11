@@ -494,9 +494,75 @@
       font-size: 11px;
       color: var(--text-secondary);
     }
+
+    /* Quick Glance HUD Overlay */
+    .hud-overlay {
+      position: fixed;
+      top: 60px;
+      right: 24px;
+      z-index: 9999;
+      background: rgba(18, 20, 29, 0.95);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      width: 320px;
+      box-shadow: 0 16px 32px rgba(0,0,0,0.6);
+      backdrop-filter: blur(12px);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .hud-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .hud-close {
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .hud-close:hover { color: var(--text-primary); }
+    .hud-status {
+      font-size: 14px;
+      font-weight: 600;
+      color: #10b981;
+      margin-bottom: 10px;
+    }
+    .hud-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin: 6px 0;
+    }
+    .hud-item strong {
+      color: var(--text-primary);
+    }
   </style>
 </head>
 <body>
+
+  <!-- Quick Glance HUD Floating Overlay (Cmd/Ctrl + Shift + L) -->
+  <div id="quickGlanceHud" class="hud-overlay" style="display: none;">
+    <div class="hud-header">
+      <span class="hud-title">OpenFaceID Quick Glance</span>
+      <span class="hud-close" onclick="toggleHud()">✕</span>
+    </div>
+    <div class="hud-body">
+      <div class="hud-status" id="hudStatus">● Active</div>
+      <div class="hud-item"><span>Camera:</span> <strong id="hudCamera">Connected</strong></div>
+      <div class="hud-item"><span>Recognition:</span> <strong id="hudRecognition">Ready</strong></div>
+      <div class="hud-item"><span>Presence:</span> <strong id="hudPresence">Present</strong></div>
+      <div class="hud-item"><span>Last Match:</span> <strong id="hudLastMatch">None</strong></div>
+    </div>
+  </div>
 
   <!-- Top App Navigation -->
   <header>
@@ -516,6 +582,8 @@
     </nav>
 
     <div class="header-actions">
+      <button class="btn" id="privacyPauseBtn" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-subtle); padding: 5px 10px; font-size: 11px;" onclick="togglePrivacyPause()">⏸ Privacy Pause</button>
+      <button class="btn" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-subtle); padding: 5px 10px; font-size: 11px;" onclick="toggleHud()">HUD (⌘⇧L)</button>
       <span class="status-pill active" id="systemStatusPill">● Engine Ready</span>
       <button class="btn btn-primary" onclick="openEnrollmentModal()">Enroll Face</button>
     </div>
@@ -1160,10 +1228,20 @@
       });
     }
 
+    // Authentication Header Helper
+    function getAuthHeaders(extra = {}) {
+      const token = window.__OFID_TOKEN__ || '';
+      return {
+        'Authorization': 'Bearer ' + token,
+        'X-OpenFaceID-Token': token,
+        ...extra,
+      };
+    }
+
     // Identities Management (API Driven)
     async function loadIdentities() {
       try {
-        const res = await fetch('/api/v1/identities');
+        const res = await fetch('/api/v1/identities', { headers: getAuthHeaders() });
         const data = await res.json();
         enrolledIdentities = data.identities || [];
 
@@ -1202,19 +1280,19 @@
         // Update dashboard profile
         const primary = enrolledIdentities[0];
         document.getElementById('activeIdentityName').textContent = primary.name;
-        document.getElementById('activeIdentityDetails').textContent = `Primary Desktop Profile • ${primary.posesCount || 1} Enrolled Poses`;
+        document.getElementById('activeIdentityDetails').textContent = `${primary.posesCount} calibrated poses enrolled`;
         document.getElementById('activeAvatar').textContent = primary.name.substring(0, 2).toUpperCase();
-        document.getElementById('activeIdentityBadge').textContent = '● Biometric Profile Active';
-        document.getElementById('activeIdentityBadge').style.color = 'var(--accent-emerald)';
-      } catch (err) {
-        console.error('Error loading identities:', err);
+        document.getElementById('activeIdentityBadge').textContent = '● Enrolled & Ready';
+        document.getElementById('activeIdentityBadge').style.color = '#10b981';
+      } catch (e) {
+        console.error('Failed to load identities:', e);
       }
     }
 
     async function deleteIdentity(id) {
       if (!confirm('Are you sure you want to delete this identity? Biometric vectors will be permanently shredded.')) return;
       try {
-        await fetch(`/api/v1/identities/${id}`, { method: 'DELETE' });
+        await fetch(`/api/v1/identities/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
         await loadIdentities();
       } catch (e) {
         alert('Failed to delete: ' + e);
@@ -1255,11 +1333,11 @@
         activeEnrollmentStep++;
         updateEnrollModalUi();
       } else {
-        // Complete enrollment via Local API
+        // Complete enrollment via Local API with authorization
         try {
           const res = await fetch('/api/v1/identities', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ name })
           });
           if (res.ok) {
@@ -1276,7 +1354,7 @@
     // OS Workstation Lock
     async function lockWorkstationNow() {
       try {
-        const res = await fetch('/api/v1/lock', { method: 'POST' });
+        const res = await fetch('/api/v1/lock', { method: 'POST', headers: getAuthHeaders() });
         const data = await res.json();
         if (data.success) {
           console.log('Lock command dispatched successfully');
@@ -1286,10 +1364,69 @@
       }
     }
 
+    // Privacy Pause Mode
+    let isPrivacyPaused = false;
+    async function togglePrivacyPause() {
+      const endpoint = isPrivacyPaused ? '/api/v1/privacy/resume' : '/api/v1/privacy/pause';
+      try {
+        const res = await fetch(endpoint, { method: 'POST', headers: getAuthHeaders() });
+        const data = await res.json();
+        isPrivacyPaused = data.privacyPaused;
+        const btn = document.getElementById('privacyPauseBtn');
+        if (btn) {
+          btn.textContent = isPrivacyPaused ? '▶ Resume Protection' : '⏸ Privacy Pause';
+          btn.style.borderColor = isPrivacyPaused ? '#f59e0b' : 'var(--border-subtle)';
+        }
+        const statusPill = document.getElementById('systemStatusPill');
+        if (statusPill) {
+          statusPill.textContent = isPrivacyPaused ? '○ Paused' : '● Engine Ready';
+          statusPill.className = isPrivacyPaused ? 'status-pill' : 'status-pill active';
+        }
+        if (isPrivacyPaused && videoStream) {
+          videoStream.getTracks().forEach(t => t.enabled = false);
+        } else if (!isPrivacyPaused && videoStream) {
+          videoStream.getTracks().forEach(t => t.enabled = true);
+        }
+      } catch (err) {
+        console.error('Privacy toggle error:', err);
+      }
+    }
+
+    // Quick Glance HUD Toggle
+    async function toggleHud() {
+      const hudEl = document.getElementById('quickGlanceHud');
+      if (!hudEl) return;
+      const isHidden = hudEl.style.display === 'none';
+      if (isHidden) {
+        try {
+          const res = await fetch('/api/v1/hud');
+          const data = await res.json();
+          document.getElementById('hudStatus').textContent = data.status;
+          document.getElementById('hudCamera').textContent = data.camera;
+          document.getElementById('hudRecognition').textContent = data.recognition;
+          document.getElementById('hudPresence').textContent = data.presence;
+          document.getElementById('hudLastMatch').textContent = data.lastMatch;
+        } catch (e) {
+          console.error('HUD fetch error:', e);
+        }
+        hudEl.style.display = 'block';
+      } else {
+        hudEl.style.display = 'none';
+      }
+    }
+
+    // Global shortcut listener for Cmd/Ctrl + Shift + L
+    window.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        toggleHud();
+      }
+    });
+
     // Activity Log
     async function loadActivityLogs() {
       try {
-        const res = await fetch('/api/v1/activity');
+        const res = await fetch('/api/v1/activity', { headers: getAuthHeaders() });
         const data = await res.json();
         const container = document.getElementById('activityLogContainer');
         const entries = data.entries || [];
@@ -1317,7 +1454,7 @@
     }
 
     async function clearActivityLog() {
-      await fetch('/api/v1/activity', { method: 'DELETE' });
+      await fetch('/api/v1/activity', { method: 'DELETE', headers: getAuthHeaders() });
       await loadActivityLogs();
     }
 

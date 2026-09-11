@@ -243,6 +243,19 @@ export class CameraManager {
     return true;
   }
 
+  public getSelectedDeviceId(): string {
+    return this.selectedDeviceId;
+  }
+
+  public getSelectedDevice(): CameraDevice | null {
+    if (!this.cachedDevices || this.cachedDevices.length === 0) return null;
+    return (
+      this.cachedDevices.find((d) => d.deviceId === this.selectedDeviceId || d.id === this.selectedDeviceId) ||
+      this.cachedDevices[0] ||
+      null
+    );
+  }
+
   public async open(deviceId: string): Promise<void> {
     await this.selectDevice(deviceId);
     this.state = 'paused';

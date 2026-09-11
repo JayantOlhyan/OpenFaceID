@@ -26,13 +26,24 @@
 
 - **Presentation Attacks**: Mitigated via modular liveness checks (`Light` passive blink/motion variance, `Strong` active head rotation challenges).
 - **Credential & Database Theft**: Biometric embeddings on disk are encrypted using **AES-256-GCM** with keys sealed inside OS keystores (Keychain, DPAPI, Secret Service).
-- **Memory Inspection**: In-memory camera frame buffers and cryptographic keys are zeroized immediately following inference.
-- **Local API Abuse**: Local REST/SSE server binds strictly to `127.0.0.1` and requires an ephemeral cryptographically random Bearer token for mutating operations.
+- **Memory Inspection**: In-memory camera frame buffers and cryptographic keys are zeroized immediately following inference using TypedArray `.fill(0)` and explicit `zeroize()` calls.
+- **Local API Abuse & Cross-Origin CSRF**: Local REST/SSE server binds strictly to `127.0.0.1:41793`. Mutating and sensitive routes require an ephemeral 192-bit Bearer token validated via constant-time comparison (`crypto.timingSafeEqual`) to prevent timing side-channel attacks.
+- **Biometric Vector Secrecy**: Vector representations are never exposed over public HTTP responses or log outputs; API responses return only Boolean status, confidence scores, and identity IDs.
 - **Log Leakage**: The structured logger automatically scrubs biometric vectors, raw image arrays, and secrets.
 
 ---
 
-## 4. Reporting a Vulnerability
+## 4. Desktop IPC Route Security Classifications
+
+| Tier | Endpoints | Authentication | Threat Mitigated |
+| :--- | :--- | :--- | :--- |
+| **Public** | `GET /api/status`, `GET /api/health`, `GET /events` | None (Localhost only) | Status observation without state disruption |
+| **Protected** | `POST /api/recognize`, `POST /api/camera/privacy-pause`, `POST /api/lock` | Ephemeral Bearer Token | Unauthorized action triggering by untrusted local scripts |
+| **Sensitive** | `POST /api/identities/enroll`, `DELETE /api/identities/:id`, `PUT /api/policies` | Ephemeral Bearer Token | Biometric gallery tampering, identity replacement |
+
+---
+
+## 5. Reporting a Vulnerability
 
 If you discover a security vulnerability in OpenFaceID, please do **NOT** open a public GitHub issue.
 

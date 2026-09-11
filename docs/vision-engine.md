@@ -140,3 +140,26 @@ In accordance with OpenFaceID open-source compliance:
 | **Required Attribution** | Copyright Google LLC | Copyright OpenFaceID Contributors |
 | **Offline Guaranteed** | 100% local in-memory weights | 100% local in-memory weights |
 
+
+---
+
+## 8. Implementation Architecture & Honest Classification (Phase 3 Audit)
+
+In accordance with Sections 3 and 4 of the Phase 3 specification, this section formally records the implementation characteristics of the vision engine:
+
+### 8.1 Detector Implementation
+- **Current Runtime**: Pure TypeScript (`packages/vision/src/detector.ts`).
+- **Anchor Topology**: Google BlazeFace 896 anchor grid (512 anchors at stride 8, 384 anchors at stride 16).
+- **Inference Engine**: Receptive field contrast and YCbCr skin locus chrominance heuristic.
+- **Classification**: **Mathematical Anchor Model (Custom TS Implementation)**. It does not load binary `.tflite` or `.onnx` weight tensors from disk.
+
+### 8.2 Embedder Implementation
+- **Current Runtime**: Pure TypeScript (`packages/vision/src/embedder.ts`).
+- **Geometry**: Canonical 112x112 affine eye alignment, unit $L_2$ hypersphere normalization ($\|\mathbf{v}\|_2 = 1.0$).
+- **Inference Engine**: 7x7 spatial patch gradient and luminance extraction projected into 512 multi-frequency sinusoidal channels.
+- **Classification**: **Deterministic Spatial Feature Extractor (Custom TS Projection)**. It models ArcFace spatial receptive fields but does not execute pretrained deep convolutional neural network weights (e.g. from MS1MV2/Glint360k).
+
+### 8.3 Production Model Roadmap
+For users requiring enterprise-grade recognition accuracy on unconstrained populations, OpenFaceID provides a pluggable inference interface (`IFaceDetector`, `IFaceEmbedder`) supporting:
+1. **Lightweight Built-In (Default)**: Zero-dependency TypeScript mathematical extractors (instant startup, zero native dependencies, zero download).
+2. **ONNX Runtime Plugin (Optional)**: Embedded ONNX Runtime Node bindings (`onnxruntime-node`) loading official quantized `blazeface.onnx` (1.2 MB) and `mobilefacenet-arcface-512.onnx` (4.8 MB) under Apache-2.0 licenses.

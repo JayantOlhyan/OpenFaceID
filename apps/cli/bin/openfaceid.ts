@@ -13,6 +13,9 @@ import {
   ENROLLMENT_POSES,
 } from '../../../packages/vision/src/index.ts';
 import { IdentityStore } from '../../../packages/storage/src/index.ts';
+import { DesktopEngine } from '../../desktop/src/daemon.ts';
+import { DesktopTrayManager } from '../../desktop/src/tray.ts';
+import { QuickGlanceHud } from '../../desktop/src/hud.ts';
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -174,8 +177,8 @@ async function main() {
         const detections = await detector.detect(frame);
         const tDetect = performance.now() - t0;
 
-        // 2. Benchmark Embedding Extraction
-        const dummyLandmarks = {
+        // 2. Benchmark Embedding Extraction (use detected face landmarks if present, or canonical benchmark calibration coordinates)
+        const benchmarkLandmarks = detections.length > 0 ? detections[0].landmarks : {
           leftEye: { x: 500, y: 300 },
           rightEye: { x: 780, y: 300 },
           noseTip: { x: 640, y: 400 },
@@ -184,12 +187,12 @@ async function main() {
         };
 
         const t1 = performance.now();
-        const embedding = await embedder.embed(frame, dummyLandmarks);
+        const embedding = await embedder.embed(frame, benchmarkLandmarks);
         const tEmbed = performance.now() - t1;
 
         // 3. Benchmark Liveness
         const t2 = performance.now();
-        const liveResult = await liveness.evaluateLiveness([frame], [dummyLandmarks, dummyLandmarks], 'light');
+        const liveResult = await liveness.evaluateLiveness([frame], [benchmarkLandmarks, benchmarkLandmarks], 'light');
         const tLive = performance.now() - t2;
 
         const totalLatency = tDetect + tEmbed + tLive;
@@ -434,6 +437,75 @@ async function main() {
         console.log(`Setting config ${key} = ${val} (persisted to local config store).`);
       } else {
         console.log(`Usage: ${BRANDING.identifiers.cliCommand} config [get <key?>|set <key> <val>]`);
+      }
+      break;
+    }
+
+    case 'desktop': {
+      const sub = args[1] || 'status';
+      const engine = DesktopEngine.getInstance();
+      await engine.initialize();
+
+      if (sub === 'status') {
+        const state = await engine.getAuthoritativeState();
+        console.log(`\nAuthoritative Desktop State:`);
+        console.log(`  Application:            ${state.version} (${state.codename})`);
+        console.log(`  Platform:               ${state.platform.os} ${state.platform.release} (${state.platform.arch})`);
+        console.log(`  Tray Status:            ${state.tray.status}`);
+        console.log(`  Camera Status:          ${state.camera.status} (${state.camera.activeDeviceName || 'None'})`);
+        console.log(`  Vision Lifecycle:       ${state.vision.status}`);
+        console.log(`  Recognition State:      ${state.recognition.state}`);
+        console.log(`  Presence State:         ${state.presence.state} (Authorized: ${state.presence.authorizedIdentity || 'None'})`);
+        console.log(`  Screen Locked:          ${state.security.screenLocked}`);
+        console.log(`  System Idle:            ${state.security.systemIdleSeconds}s`);
+        console.log(`  Privacy Paused:         ${state.security.privacyPaused}`);
+        console.log(`  Keystore:               ${state.storage.keystoreType}`);
+        console.log(`  Enrolled Profiles:      ${state.storage.enrolledIdentitiesCount}`);
+        console.log(`  Cloud Egress:           ${state.security.cloudEgress} (100% Local)`);
+      } else if (sub === 'tray') {
+        const trayMgr = new DesktopTrayManager(engine);
+        const text = await trayMgr.renderTrayText();
+        const items = await trayMgr.getMenuItems();
+        console.log(`\nSystem Tray Item:`);
+        console.log(`  Status Bar Label:       "${text}"`);
+        console.log(`\nContext Menu Actions:`);
+        items.forEach((item) => {
+          if (item.separator) {
+            console.log(`  ───────────────`);
+          } else {
+            console.log(`  • [${item.id}] ${item.label} ${item.enabled === false ? '(disabled)' : ''}`);
+          }
+        });
+      } else if (sub === 'hud') {
+        const hud = new QuickGlanceHud(engine);
+        const data = await hud.getHudPayload();
+        console.log(`\nQuick Glance HUD (⌘⇧L):`);
+        console.log(`  Status:                 ${data.status}`);
+        console.log(`  Camera:                 ${data.camera}`);
+        console.log(`  Recognition:            ${data.recognition}`);
+        console.log(`  Presence:               ${data.presence}`);
+        console.log(`  Last Match:             ${data.lastMatch}`);
+        console.log(`  Privacy Paused:         ${data.privacyPaused}`);
+      } else if (sub === 'pause') {
+        engine.pausePrivacy();
+        console.log(`\x1b[33m⏸ Privacy Pause activated. Camera, recognition, and presence suspended.\x1b[0m`);
+      } else if (sub === 'resume') {
+        engine.resumePrivacy();
+        console.log(`\x1b[32m▶ Protection resumed.\x1b[0m`);
+      } else if (sub === 'autostart') {
+        const action = args[2] || 'status';
+        if (action === 'enable') {
+          const ok = await adapter.registerStartup(true);
+          console.log(ok ? '\x1b[32m✓ Start at login enabled.\x1b[0m' : '\x1b[31m✗ Failed to enable startup.\x1b[0m');
+        } else if (action === 'disable') {
+          const ok = await adapter.registerStartup(false);
+          console.log(ok ? '\x1b[32m✓ Start at login disabled.\x1b[0m' : '\x1b[31m✗ Failed to disable startup.\x1b[0m');
+        } else {
+          const enabled = await adapter.isStartupEnabled();
+          console.log(`Start at login status: ${enabled ? '\x1b[32mENABLED\x1b[0m' : '\x1b[33mDISABLED\x1b[0m'}`);
+        }
+      } else {
+        console.log(`Usage: ${BRANDING.identifiers.cliCommand} desktop [status|tray|hud|pause|resume|autostart]`);
       }
       break;
     }
