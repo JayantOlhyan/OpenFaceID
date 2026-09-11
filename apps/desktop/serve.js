@@ -2,9 +2,11 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import { BRANDING } from '../../packages/branding/src/index.ts';
 import { Logger } from '../../packages/core/src/index.ts';
+import { CryptoManager } from '../../packages/security/src/index.ts';
 import { DesktopEngine } from './src/daemon.ts';
 import { DesktopTrayManager } from './src/tray.ts';
 import { QuickGlanceHud } from './src/hud.ts';
@@ -20,19 +22,62 @@ const engine = DesktopEngine.getInstance();
 const trayManager = new DesktopTrayManager(engine);
 const hud = new QuickGlanceHud(engine);
 
-// Generate cryptographically secure ephemeral bearer token for the desktop session
+// Generate cryptographically secure ephemeral bearer token for the desktop session (192 bits)
 const API_TOKEN = 'ofid_' + crypto.randomBytes(24).toString('hex');
 
+// Write token to ~/.openfaceid/token with strict 0600 permissions
+const configDir = path.join(os.homedir(), BRANDING.identifiers.configDirectoryName);
+const tokenPath = path.join(configDir, 'token');
+try {
+  if (!fs.existsSync(configDir)) {
+    fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
+  }
+  fs.writeFileSync(tokenPath, API_TOKEN, { mode: 0o600 });
+} catch (e) {
+  Logger.warn('security', `Failed to write token file: ${e}`);
+}
+
+// Cleanup token on process termination
+function cleanupToken() {
+  try {
+    if (fs.existsSync(tokenPath)) {
+      fs.unlinkSync(tokenPath);
+    }
+  } catch (_) {}
+}
+process.on('exit', cleanupToken);
+process.on('SIGINT', () => { cleanupToken(); process.exit(0); });
+process.on('SIGTERM', () => { cleanupToken(); process.exit(0); });
+
 await engine.initialize();
+
+// In-memory sliding rate-limiter
+const rateLimitStore = new Map();
+function isRateLimited(key, maxRequests, windowMs = 60000) {
+  const now = Date.now();
+  const entry = rateLimitStore.get(key) || { count: 0, resetTime: now + windowMs };
+  if (now > entry.resetTime) {
+    entry.count = 1;
+    entry.resetTime = now + windowMs;
+    rateLimitStore.set(key, entry);
+    return false;
+  }
+  entry.count++;
+  rateLimitStore.set(key, entry);
+  return entry.count > maxRequests;
+}
+
+const ID_REGEX = /^usr_[a-zA-Z0-9_-]{1,64}$/;
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${HOST}:${PORT}`);
   const method = req.method || 'GET';
+  const clientIp = req.socket.remoteAddress || '127.0.0.1';
 
   // Strict Security Headers
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Content-Security-Policy', "default-src 'self' 'unsafe-inline' data: blob:; media-src 'self' blob: mediastream:;");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; connect-src 'self';");
 
   // CORS headers strictly for local host requests
   res.setHeader('Access-Control-Allow-Origin', `http://${HOST}:${PORT}`);
@@ -45,13 +90,20 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Token Verification Helper for Protected Routes
+  // Constant-Time Token Verification Helper
   const verifyAuth = () => {
     const authHeader = req.headers['authorization'] || '';
     const tokenHeader = req.headers['x-openfaceid-token'] || '';
     const provided = authHeader.replace(/^Bearer\s+/i, '') || tokenHeader;
-    return provided === API_TOKEN;
+    return CryptoManager.verifyTimingSafe(provided, API_TOKEN);
   };
+
+  // Generic rate limit check (120 req/min per IP)
+  if (isRateLimited(`global:${clientIp}`, 120)) {
+    res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '60' });
+    res.end(JSON.stringify({ error: 'Too Many Requests: Rate limit exceeded' }));
+    return;
+  }
 
   // 1. Authoritative Application State (Public)
   if (url.pathname === '/api/v1/status' && method === 'GET') {
@@ -187,14 +239,37 @@ const server = http.createServer(async (req, res) => {
       res.end(JSON.stringify({ error: 'Unauthorized: Missing bearer token' }));
       return;
     }
+    if (isRateLimited(`enroll:${clientIp}`, 6)) {
+      res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '60' });
+      res.end(JSON.stringify({ error: 'Rate limit exceeded: Enrollment allows at most 6 requests per minute' }));
+      return;
+    }
     let body = '';
-    req.on('data', (chunk) => { body += chunk; });
+    let bodyTooLarge = false;
+    req.on('data', (chunk) => {
+      body += chunk;
+      if (body.length > 1024 * 1024) {
+        bodyTooLarge = true;
+        res.writeHead(413, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Payload Too Large: Max payload size is 1MB' }));
+        req.destroy();
+      }
+    });
     req.on('end', async () => {
+      if (bodyTooLarge) return;
       try {
-        const payload = JSON.parse(body);
-        if (!payload.name) {
+        let payload;
+        try {
+          payload = JSON.parse(body);
+        } catch (e) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Name is required' }));
+          res.end(JSON.stringify({ error: 'Invalid JSON payload' }));
+          return;
+        }
+
+        if (!payload || typeof payload.name !== 'string' || !payload.name.trim() || payload.name.trim().length > 64) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid name: Must be a non-empty string of 1 to 64 characters' }));
           return;
         }
 
@@ -268,7 +343,17 @@ const server = http.createServer(async (req, res) => {
       res.end(JSON.stringify({ error: 'Unauthorized: Missing bearer token' }));
       return;
     }
+    if (isRateLimited(`delete:${clientIp}`, 20)) {
+      res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '60' });
+      res.end(JSON.stringify({ error: 'Rate limit exceeded: Deletion allows at most 20 requests per minute' }));
+      return;
+    }
     const id = url.pathname.replace('/api/v1/identities/', '');
+    if (!ID_REGEX.test(id)) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Invalid identity ID format: Must match ^usr_[a-zA-Z0-9_-]{1,64}$' }));
+      return;
+    }
     try {
       const deleted = await engine.identityStore.deleteIdentity(id);
       if (deleted) {
@@ -306,15 +391,7 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 12. Token Handshake for Authenticated Desktop UI
-  if (url.pathname === '/api/v1/session/token' && method === 'GET') {
-    // Only accessible from localhost origin
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ token: API_TOKEN }));
-    return;
-  }
-
-  // 13. Static Desktop UI Serving (index.html with token injection)
+  // 12. Static Desktop UI Serving (index.html with token injection)
   let filePath = path.join(__dirname, 'index.html');
   try {
     let content = fs.readFileSync(filePath, 'utf8');

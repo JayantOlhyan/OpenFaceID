@@ -43,6 +43,37 @@ export class IdentityStore {
     }
   }
 
+  public getSafeFilePath(id: string): string {
+    if (typeof id !== 'string' || !id || id.includes('\0')) {
+      throw new Error('INVALID_PATH: Null bytes or invalid ID');
+    }
+    const sanitizedId = path.basename(id).replace(/[^a-zA-Z0-9_-]/g, '');
+    if (!sanitizedId || sanitizedId !== id) {
+      throw new Error(`INVALID_ID: Identity ID "${id}" contains illegal characters`);
+    }
+    const resolvedPath = path.resolve(this.baseDir, `${sanitizedId}.enc`);
+    const normalizedBase = path.resolve(this.baseDir);
+    if (!resolvedPath.startsWith(normalizedBase + path.sep)) {
+      throw new Error(`PATH_TRAVERSAL: Attempted path escape for ID "${id}"`);
+    }
+
+    try {
+      if (fs.existsSync(resolvedPath)) {
+        const lstat = fs.lstatSync(resolvedPath);
+        if (lstat.isSymbolicLink()) {
+          const realPath = fs.realpathSync(resolvedPath);
+          if (!realPath.startsWith(normalizedBase + path.sep)) {
+            throw new Error('SYMLINK_ATTACK: Symlink points outside base directory');
+          }
+        }
+      }
+    } catch (e: any) {
+      if (e.message?.includes('SYMLINK_ATTACK')) throw e;
+    }
+
+    return resolvedPath;
+  }
+
   public async saveIdentity(identity: EnrolledIdentity): Promise<boolean> {
     try {
       const masterSecret = await KeyringManager.getOrCreateMasterSecret();
@@ -67,7 +98,7 @@ export class IdentityStore {
       const jsonStr = JSON.stringify(serialized);
       const encrypted = CryptoManager.encrypt(jsonStr, masterSecret);
 
-      const filePath = path.join(this.baseDir, `${identity.id}.enc`);
+      const filePath = this.getSafeFilePath(identity.id);
       fs.writeFileSync(filePath, JSON.stringify(encrypted, null, 2), { mode: 0o600 });
 
       Logger.info('storage', `Encrypted biometric identity saved: ${identity.name} (${identity.id})`);
@@ -80,7 +111,7 @@ export class IdentityStore {
 
   public async getIdentity(id: string): Promise<EnrolledIdentity | null> {
     try {
-      const filePath = path.join(this.baseDir, `${id}.enc`);
+      const filePath = this.getSafeFilePath(id);
       if (!fs.existsSync(filePath)) return null;
 
       const masterSecret = await KeyringManager.getOrCreateMasterSecret();
@@ -137,7 +168,7 @@ export class IdentityStore {
 
   public async deleteIdentity(id: string): Promise<boolean> {
     try {
-      const filePath = path.join(this.baseDir, `${id}.enc`);
+      const filePath = this.getSafeFilePath(id);
       if (!fs.existsSync(filePath)) return false;
 
       // Secure File Shredding: multi-pass overwrite before unlinking

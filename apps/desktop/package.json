@@ -8,9 +8,9 @@
     "dev": "node serve.js"
   },
   "dependencies": {
-    "@openfaceid/branding": "workspace:*",
-    "@openfaceid/core": "workspace:*",
-    "@openfaceid/platform": "workspace:*"
+    "@openfaceid/branding": "*",
+    "@openfaceid/core": "*",
+    "@openfaceid/platform": "*"
   },
   "author": "Jayant Olhyan",
   "license": "Apache-2.0"

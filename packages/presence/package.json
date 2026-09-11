@@ -10,9 +10,9 @@
     "test": "node --experimental-strip-types --test"
   },
   "dependencies": {
-    "@openfaceid/core": "workspace:*",
-    "@openfaceid/camera": "workspace:*",
-    "@openfaceid/vision": "workspace:*"
+    "@openfaceid/core": "*",
+    "@openfaceid/camera": "*",
+    "@openfaceid/vision": "*"
   },
   "author": "Jayant Olhyan",
   "license": "Apache-2.0"

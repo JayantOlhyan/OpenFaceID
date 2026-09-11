@@ -1,10 +1,10 @@
 import os from 'os';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { PlatformAdapter, type PlatformInfo, type DisplayInfo } from './PlatformAdapter.ts';
 import { Logger } from '../../core/src/index.ts';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export class WindowsAdapter extends PlatformAdapter {
   private serviceName = 'OpenFaceID';
@@ -28,7 +28,7 @@ export class WindowsAdapter extends PlatformAdapter {
   public async lockScreen(): Promise<boolean> {
     try {
       Logger.info('platform', 'Locking Windows workstation via user32.dll,LockWorkStation');
-      await execAsync('rundll32.exe user32.dll,LockWorkStation');
+      await execFileAsync('rundll32.exe', ['user32.dll,LockWorkStation']);
       return true;
     } catch (err) {
       Logger.error('platform', 'Failed to lock Windows workstation', { error: String(err) });
@@ -38,8 +38,12 @@ export class WindowsAdapter extends PlatformAdapter {
 
   public async isScreenLocked(): Promise<boolean> {
     try {
-      const cmd = `powershell -NoProfile -Command "(Get-Process -Name logonui -ErrorAction SilentlyContinue) -ne $null"`;
-      const { stdout } = await execAsync(cmd);
+      const { stdout } = await execFileAsync('powershell.exe', [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        '(Get-Process -Name logonui -ErrorAction SilentlyContinue) -ne $null',
+      ]);
       return stdout.trim().toLowerCase() === 'true';
     } catch {
       return false;
@@ -49,32 +53,37 @@ export class WindowsAdapter extends PlatformAdapter {
   public async getSystemIdleTimeMs(): Promise<number> {
     try {
       const psScript = `
-        Add-Type @'
-        using System;
-        using System.Runtime.InteropServices;
-        public struct LASTINPUTINFO {
-            public uint cbSize;
-            public uint dwTime;
-        }
-        public class Win32 {
-            [DllImport("user32.dll")]
-            public static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
-            [DllImport("kernel32.dll")]
-            public static extern uint GetTickCount();
-        }
+Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public struct LASTINPUTINFO {
+    public uint cbSize;
+    public uint dwTime;
+}
+public class Win32 {
+    [DllImport("user32.dll")]
+    public static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
+    [DllImport("kernel32.dll")]
+    public static extern uint GetTickCount();
+}
 '@
-        $lii = New-Object LASTINPUTINFO
-        $lii.cbSize = [System.Runtime.InteropServices.Marshal]::SizeOf($lii)
-        if ([Win32]::GetLastInputInfo([ref]$lii)) {
-            $ticks = [Win32]::GetTickCount()
-            $idle = $ticks - $lii.dwTime
-            Write-Output $idle
-        } else {
-            Write-Output 0
-        }
-      `.replace(/\n/g, ' ');
+$lii = New-Object LASTINPUTINFO
+$lii.cbSize = [System.Runtime.InteropServices.Marshal]::SizeOf($lii)
+if ([Win32]::GetLastInputInfo([ref]$lii)) {
+    $ticks = [Win32]::GetTickCount()
+    $idle = $ticks - $lii.dwTime
+    Write-Output $idle
+} else {
+    Write-Output 0
+}
+`.trim();
 
-      const { stdout } = await execAsync(`powershell -NoProfile -Command "${psScript}"`);
+      const { stdout } = await execFileAsync('powershell.exe', [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        psScript,
+      ]);
       const ms = parseInt(stdout.trim(), 10);
       return isNaN(ms) ? 0 : ms;
     } catch {
@@ -94,10 +103,27 @@ export class WindowsAdapter extends PlatformAdapter {
     try {
       const appName = 'OpenFaceID';
       const exePath = 'C:\\Program Files\\OpenFaceID\\OpenFaceID.exe';
-      const cmd = enable
-        ? `reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "${appName}" /t REG_SZ /d "${exePath}" /f`
-        : `reg delete "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "${appName}" /f`;
-      await execAsync(cmd);
+      if (enable) {
+        await execFileAsync('reg.exe', [
+          'add',
+          'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run',
+          '/v',
+          appName,
+          '/t',
+          'REG_SZ',
+          '/d',
+          exePath,
+          '/f',
+        ]);
+      } else {
+        await execFileAsync('reg.exe', [
+          'delete',
+          'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run',
+          '/v',
+          appName,
+          '/f',
+        ]);
+      }
       return true;
     } catch (err) {
       Logger.warn('platform', `Could not update Windows Run registry key: ${String(err)}`);
@@ -107,7 +133,12 @@ export class WindowsAdapter extends PlatformAdapter {
 
   public async isStartupEnabled(): Promise<boolean> {
     try {
-      const { stdout } = await execAsync(`reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "OpenFaceID"`);
+      const { stdout } = await execFileAsync('reg.exe', [
+        'query',
+        'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run',
+        '/v',
+        'OpenFaceID',
+      ]);
       return stdout.includes('OpenFaceID');
     } catch {
       return false;
@@ -128,27 +159,36 @@ export class WindowsAdapter extends PlatformAdapter {
 
   public async showNotification(title: string, body: string): Promise<void> {
     try {
-      const safeTitle = title.replace(/"/g, '`"');
-      const safeBody = body.replace(/"/g, '`"');
-      const psCmd = `powershell -NoProfile -Command "[reflection.assembly]::loadwithpartialname('System.Windows.Forms'); [System.Windows.Forms.MessageBox]::Show('${safeBody}', '${safeTitle}')"`;
-      await execAsync(psCmd);
+      const safeTitle = title.replace(/'/g, "''");
+      const safeBody = body.replace(/'/g, "''");
+      const psScript = `[reflection.assembly]::loadwithpartialname('System.Windows.Forms') | Out-Null; [System.Windows.Forms.MessageBox]::Show('${safeBody}', '${safeTitle}')`;
+      await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', psScript]);
     } catch {
       // Ignored
     }
   }
 
+  private validateKey(key: string): void {
+    if (!/^[a-zA-Z0-9_-]{1,64}$/.test(key)) {
+      throw new Error(`Invalid storage key format: ${key}`);
+    }
+  }
+
   public async storeSecret(key: string, secret: string): Promise<boolean> {
     try {
+      this.validateKey(key);
       const b64Secret = Buffer.from(secret, 'utf8').toString('base64');
       const script = `
-        Add-Type -AssemblyName System.Security
-        $bytes = [System.Convert]::FromBase64String('${b64Secret}')
-        $protected = [System.Security.Cryptography.ProtectedData]::Protect($bytes, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
-        $out = [System.Convert]::ToBase64String($protected)
-        Set-Content -Path "$env:LOCALAPPDATA\\OpenFaceID\\${key}.secret" -Value $out -Force
-      `.replace(/\n/g, ' ');
+Add-Type -AssemblyName System.Security
+$bytes = [System.Convert]::FromBase64String('${b64Secret}')
+$protected = [System.Security.Cryptography.ProtectedData]::Protect($bytes, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
+$out = [System.Convert]::ToBase64String($protected)
+$dir = "$env:LOCALAPPDATA\\OpenFaceID"
+if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+Set-Content -Path "$dir\\${key}.secret" -Value $out -Force
+`.trim();
 
-      await execAsync(`powershell -NoProfile -Command "${script}"`);
+      await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script]);
       return true;
     } catch {
       return false;
@@ -157,17 +197,18 @@ export class WindowsAdapter extends PlatformAdapter {
 
   public async retrieveSecret(key: string): Promise<string | null> {
     try {
+      this.validateKey(key);
       const script = `
-        Add-Type -AssemblyName System.Security
-        $path = "$env:LOCALAPPDATA\\OpenFaceID\\${key}.secret"
-        if (-not (Test-Path $path)) { exit 1 }
-        $content = Get-Content -Path $path -Raw
-        $bytes = [System.Convert]::FromBase64String($content)
-        $unprotected = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
-        [System.Text.Encoding]::UTF8.GetString($unprotected)
-      `.replace(/\n/g, ' ');
+Add-Type -AssemblyName System.Security
+$path = "$env:LOCALAPPDATA\\OpenFaceID\\${key}.secret"
+if (-not (Test-Path $path)) { exit 1 }
+$content = Get-Content -Path $path -Raw
+$bytes = [System.Convert]::FromBase64String($content)
+$unprotected = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
+[System.Text.Encoding]::UTF8.GetString($unprotected)
+`.trim();
 
-      const { stdout } = await execAsync(`powershell -NoProfile -Command "${script}"`);
+      const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script]);
       return stdout.trim();
     } catch {
       return null;
@@ -176,7 +217,9 @@ export class WindowsAdapter extends PlatformAdapter {
 
   public async deleteSecret(key: string): Promise<boolean> {
     try {
-      await execAsync(`powershell -NoProfile -Command "Remove-Item -Path '$env:LOCALAPPDATA\\OpenFaceID\\${key}.secret' -Force -ErrorAction SilentlyContinue"`);
+      this.validateKey(key);
+      const script = `Remove-Item -Path "$env:LOCALAPPDATA\\OpenFaceID\\${key}.secret" -Force -ErrorAction SilentlyContinue`;
+      await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script]);
       return true;
     } catch {
       return false;

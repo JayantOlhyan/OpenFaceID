@@ -10,7 +10,7 @@ describe('DesktopEngine Lifecycle & Authoritative State', () => {
     await engine.initialize();
 
     const state = await engine.getAuthoritativeState();
-    assert.equal(state.version, '0.1.0');
+    assert.equal(state.version, '0.2.0-rc.1');
     assert.equal(state.codename, 'SightLock');
     assert.ok(state.platform.os === 'macos' || state.platform.os === 'windows' || state.platform.os === 'linux');
     assert.equal(state.security.cloudEgress, false);

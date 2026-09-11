@@ -1,0 +1,23 @@
+# OpenFaceID Code Owners
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+* @JayantOlhyan
+
+# Core Architecture & Security
+/packages/core/       @JayantOlhyan
+/packages/security/   @JayantOlhyan
+/packages/storage/    @JayantOlhyan
+
+# Vision Pipeline & Models
+/packages/vision/     @JayantOlhyan
+/packages/camera/     @JayantOlhyan
+
+# Platform Adapters & OS Integration
+/packages/platform/   @JayantOlhyan
+/packages/presence/   @JayantOlhyan
+/packages/automation/ @JayantOlhyan
+
+# Applications & Packaging
+/apps/                @JayantOlhyan
+/scripts/             @JayantOlhyan
+/docs/                @JayantOlhyan

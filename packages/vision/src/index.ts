@@ -5,3 +5,4 @@ export * from './embedder.ts';
 export * from './recognizer.ts';
 export * from './liveness.ts';
 export * from './enrollment.ts';
+export * from './registry.ts';

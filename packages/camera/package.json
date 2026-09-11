@@ -10,7 +10,7 @@
     "test": "node --experimental-strip-types --test"
   },
   "dependencies": {
-    "@openfaceid/core": "workspace:*"
+    "@openfaceid/core": "*"
   },
   "author": "Jayant Olhyan",
   "license": "Apache-2.0"

@@ -1,10 +1,12 @@
 import os from 'os';
-import { exec } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { PlatformAdapter, type PlatformInfo, type DisplayInfo } from './PlatformAdapter.ts';
 import { Logger } from '../../core/src/index.ts';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export class LinuxAdapter extends PlatformAdapter {
   private serviceName = 'openfaceid';
@@ -28,12 +30,12 @@ export class LinuxAdapter extends PlatformAdapter {
   public async lockScreen(): Promise<boolean> {
     try {
       Logger.info('platform', 'Attempting lock via loginctl lock-session');
-      await execAsync('loginctl lock-session');
+      await execFileAsync('loginctl', ['lock-session']);
       return true;
     } catch {
       try {
         Logger.info('platform', 'Fallback lock via xdg-screensaver lock');
-        await execAsync('xdg-screensaver lock');
+        await execFileAsync('xdg-screensaver', ['lock']);
         return true;
       } catch (err) {
         Logger.error('platform', 'All Linux lock commands failed', { error: String(err) });
@@ -44,11 +46,11 @@ export class LinuxAdapter extends PlatformAdapter {
 
   public async isScreenLocked(): Promise<boolean> {
     try {
-      const { stdout } = await execAsync(`loginctl show-session $(loginctl | grep $(whoami) | head -n1 | awk '{print $1}') -p LockedHint`);
+      const { stdout } = await execFileAsync('loginctl', ['show-session', 'self', '-p', 'LockedHint']);
       return stdout.includes('LockedHint=yes');
     } catch {
       try {
-        const { stdout } = await execAsync('gnome-screensaver-command -q 2>/dev/null || xscreensaver-command -time 2>/dev/null');
+        const { stdout } = await execFileAsync('gnome-screensaver-command', ['-q']);
         return stdout.toLowerCase().includes('active') || stdout.toLowerCase().includes('locked');
       } catch {
         return false;
@@ -58,7 +60,7 @@ export class LinuxAdapter extends PlatformAdapter {
 
   public async getSystemIdleTimeMs(): Promise<number> {
     try {
-      const { stdout } = await execAsync('xprintidle');
+      const { stdout } = await execFileAsync('xprintidle', []);
       const ms = parseInt(stdout.trim(), 10);
       return isNaN(ms) ? 0 : ms;
     } catch {
@@ -68,7 +70,7 @@ export class LinuxAdapter extends PlatformAdapter {
 
   public async checkCameraPermission(): Promise<'granted' | 'denied' | 'prompt' | 'unsupported'> {
     try {
-      await execAsync('test -r /dev/video0');
+      await fs.promises.access('/dev/video0', fs.constants.R_OK);
       return 'granted';
     } catch {
       return 'denied';
@@ -81,12 +83,16 @@ export class LinuxAdapter extends PlatformAdapter {
 
   public async registerStartup(enable: boolean): Promise<boolean> {
     try {
-      const desktopFile = `${os.homedir()}/.config/autostart/openfaceid.desktop`;
+      const autostartDir = path.join(os.homedir(), '.config', 'autostart');
+      const desktopFile = path.join(autostartDir, 'openfaceid.desktop');
       if (enable) {
         const content = `[Desktop Entry]\nType=Application\nName=OpenFaceID\nExec=openfaceid\nHidden=false\nNoDisplay=false\nX-GNOME-Autostart-enabled=true\n`;
-        await execAsync(`mkdir -p ${os.homedir()}/.config/autostart && echo "${content}" > ${desktopFile}`);
+        await fs.promises.mkdir(autostartDir, { recursive: true, mode: 0o700 });
+        await fs.promises.writeFile(desktopFile, content, { mode: 0o644 });
       } else {
-        await execAsync(`rm -f ${desktopFile}`);
+        if (fs.existsSync(desktopFile)) {
+          await fs.promises.unlink(desktopFile);
+        }
       }
       return true;
     } catch (err) {
@@ -97,8 +103,8 @@ export class LinuxAdapter extends PlatformAdapter {
 
   public async isStartupEnabled(): Promise<boolean> {
     try {
-      await execAsync(`test -f ${os.homedir()}/.config/autostart/openfaceid.desktop`);
-      return true;
+      const desktopFile = path.join(os.homedir(), '.config', 'autostart', 'openfaceid.desktop');
+      return fs.existsSync(desktopFile);
     } catch {
       return false;
     }
@@ -118,9 +124,7 @@ export class LinuxAdapter extends PlatformAdapter {
 
   public async showNotification(title: string, body: string): Promise<void> {
     try {
-      const safeTitle = title.replace(/"/g, '\\"');
-      const safeBody = body.replace(/"/g, '\\"');
-      await execAsync(`notify-send "${safeTitle}" "${safeBody}"`);
+      await execFileAsync('notify-send', [title, body]);
     } catch (err) {
       Logger.warn('platform', 'Failed to send Linux desktop notification', { error: String(err) });
     }
@@ -128,8 +132,22 @@ export class LinuxAdapter extends PlatformAdapter {
 
   public async storeSecret(key: string, secret: string): Promise<boolean> {
     try {
-      const cmd = `echo -n "${secret}" | secret-tool store --label="OpenFaceID Secret" service "${this.serviceName}" key "${key}"`;
-      await execAsync(cmd);
+      const child = execFile('secret-tool', [
+        'store',
+        '--label=OpenFaceID Secret',
+        'service',
+        this.serviceName,
+        'key',
+        key,
+      ]);
+      if (child.stdin) {
+        child.stdin.write(secret);
+        child.stdin.end();
+      }
+      await new Promise<void>((resolve, reject) => {
+        child.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`Exit ${code}`))));
+        child.on('error', reject);
+      });
       return true;
     } catch {
       return false;
@@ -138,8 +156,13 @@ export class LinuxAdapter extends PlatformAdapter {
 
   public async retrieveSecret(key: string): Promise<string | null> {
     try {
-      const cmd = `secret-tool lookup service "${this.serviceName}" key "${key}"`;
-      const { stdout } = await execAsync(cmd);
+      const { stdout } = await execFileAsync('secret-tool', [
+        'lookup',
+        'service',
+        this.serviceName,
+        'key',
+        key,
+      ]);
       return stdout.trim();
     } catch {
       return null;
@@ -148,8 +171,13 @@ export class LinuxAdapter extends PlatformAdapter {
 
   public async deleteSecret(key: string): Promise<boolean> {
     try {
-      const cmd = `secret-tool clear service "${this.serviceName}" key "${key}"`;
-      await execAsync(cmd);
+      await execFileAsync('secret-tool', [
+        'clear',
+        'service',
+        this.serviceName,
+        'key',
+        key,
+      ]);
       return true;
     } catch {
       return false;

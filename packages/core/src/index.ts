@@ -7,4 +7,5 @@ export * from './state/presence.ts';
 export * from './events/bus.ts';
 export * from './logger/logger.ts';
 export * from './session/session.ts';
-export { BRANDING } from '../../branding/src/index.ts';
+export * from './errors.ts';
+export { BRANDING, getBuildMetadata, type BuildMetadata } from '../../branding/src/index.ts';

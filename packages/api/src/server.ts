@@ -4,6 +4,7 @@ import { BRANDING } from '../../branding/src/index.ts';
 import { getPlatformAdapter } from '../../platform/src/index.ts';
 import { EventBus, DEFAULT_CONFIG, Logger } from '../../core/src/index.ts';
 import { IdentityStore } from '../../storage/src/index.ts';
+import { CryptoManager } from '../../security/src/index.ts';
 
 export interface LocalApiOptions {
   port?: number;
@@ -139,8 +140,8 @@ export class LocalApiServer {
       const authHeader = req.headers['authorization'] || '';
       const providedToken = authHeader.replace(/^Bearer\s+/i, '');
 
-      // Check token
-      if (providedToken !== this.apiToken) {
+      // Check token in constant time
+      if (!CryptoManager.verifyTimingSafe(providedToken, this.apiToken)) {
         res.writeHead(401, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Unauthorized: Invalid or missing bearer token' }));
         return;
@@ -172,12 +173,53 @@ export class LocalApiServer {
         return;
       }
 
+      // POST /api/v1/identities
+      if (url.pathname === '/api/v1/identities' && method === 'POST') {
+        let body = '';
+        let bodyTooLarge = false;
+
+        await new Promise<void>((resolve) => {
+          req.on('data', (chunk: Buffer) => {
+            body += chunk.toString();
+            if (body.length > 1024 * 1024) {
+              bodyTooLarge = true;
+              res.writeHead(413, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Payload Too Large: Max body size is 1MB' }));
+              resolve();
+            }
+          });
+          req.on('end', () => resolve());
+        });
+
+        if (bodyTooLarge) return;
+
+        let payload: any;
+        try {
+          payload = JSON.parse(body || '{}');
+        } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Malformed JSON payload' }));
+          return;
+        }
+
+        if (!payload || typeof payload.name !== 'string' || !payload.name.trim() || payload.name.trim().length > 64) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid name: Must be a non-empty string of 1 to 64 characters' }));
+          return;
+        }
+
+        res.writeHead(201, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, name: payload.name.trim() }));
+        return;
+      }
+
       // DELETE /api/v1/identities/:id
       if (url.pathname.startsWith('/api/v1/identities/') && method === 'DELETE') {
-        const id = url.pathname.split('/').pop();
-        if (!id) {
+        const id = url.pathname.split('/').pop() || '';
+        const ID_REGEX = /^usr_[a-zA-Z0-9_-]{1,64}$/;
+        if (!ID_REGEX.test(id)) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Missing identity ID' }));
+          res.end(JSON.stringify({ error: 'Invalid identity ID format: Must match ^usr_[a-zA-Z0-9_-]{1,64}$' }));
           return;
         }
 

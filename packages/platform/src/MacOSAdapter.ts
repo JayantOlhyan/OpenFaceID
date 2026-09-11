@@ -1,10 +1,10 @@
 import os from 'os';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { PlatformAdapter, type PlatformInfo, type DisplayInfo } from './PlatformAdapter.ts';
 import { Logger } from '../../core/src/index.ts';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export class MacOSAdapter extends PlatformAdapter {
   private serviceName = 'org.openfaceid.desktop';
@@ -28,12 +28,12 @@ export class MacOSAdapter extends PlatformAdapter {
   public async lockScreen(): Promise<boolean> {
     try {
       Logger.info('platform', 'Locking macOS session via pmset displaysleepnow');
-      await execAsync('/usr/bin/pmset displaysleepnow');
+      await execFileAsync('/usr/bin/pmset', ['displaysleepnow']);
       return true;
     } catch (err) {
       Logger.error('platform', 'Failed to lock macOS screen via pmset, attempting AppleScript fallback', { error: String(err) });
       try {
-        await execAsync(`osascript -e 'tell application "System Events" to sleep'`);
+        await execFileAsync('/usr/bin/osascript', ['-e', 'tell application "System Events" to sleep']);
         return true;
       } catch (fallbackErr) {
         Logger.error('platform', 'AppleScript lock fallback also failed', { error: String(fallbackErr) });
@@ -44,7 +44,7 @@ export class MacOSAdapter extends PlatformAdapter {
 
   public async isScreenLocked(): Promise<boolean> {
     try {
-      const { stdout } = await execAsync(`/usr/sbin/ioreg -n Root -d1 -a`);
+      const { stdout } = await execFileAsync('/usr/sbin/ioreg', ['-n', 'Root', '-d1', '-a']);
       return stdout.includes('CGSSessionScreenIsLocked') || stdout.includes('"CGSSessionScreenIsLocked" = 1');
     } catch (err) {
       Logger.debug('platform', 'Error checking macOS screen lock state', { error: String(err) });
@@ -54,7 +54,7 @@ export class MacOSAdapter extends PlatformAdapter {
 
   public async getSystemIdleTimeMs(): Promise<number> {
     try {
-      const { stdout } = await execAsync(`/usr/sbin/ioreg -c IOHIDSystem`);
+      const { stdout } = await execFileAsync('/usr/sbin/ioreg', ['-c', 'IOHIDSystem']);
       const match = stdout.match(/"HIDIdleTime"\s*=\s*(\d+)/i);
       if (match && match[1]) {
         const nano = BigInt(match[1]);
@@ -78,10 +78,10 @@ export class MacOSAdapter extends PlatformAdapter {
   public async registerStartup(enable: boolean): Promise<boolean> {
     try {
       const appName = 'OpenFaceID';
-      const cmd = enable
-        ? `osascript -e 'tell application "System Events" to make login item at end with properties {name: "${appName}", path: "/Applications/${appName}.app", hidden: false}'`
-        : `osascript -e 'tell application "System Events" to delete login item "${appName}"'`;
-      await execAsync(cmd);
+      const script = enable
+        ? `tell application "System Events" to make login item at end with properties {name: "${appName}", path: "/Applications/${appName}.app", hidden: false}`
+        : `tell application "System Events" to delete login item "${appName}"`;
+      await execFileAsync('/usr/bin/osascript', ['-e', script]);
       return true;
     } catch (err) {
       Logger.warn('platform', `Could not update macOS login item: ${String(err)}`);
@@ -91,7 +91,7 @@ export class MacOSAdapter extends PlatformAdapter {
 
   public async isStartupEnabled(): Promise<boolean> {
     try {
-      const { stdout } = await execAsync(`osascript -e 'tell application "System Events" to get the name of every login item'`);
+      const { stdout } = await execFileAsync('/usr/bin/osascript', ['-e', 'tell application "System Events" to get the name of every login item']);
       return stdout.includes('OpenFaceID') || stdout.includes('SightLock');
     } catch {
       return false;
@@ -112,9 +112,8 @@ export class MacOSAdapter extends PlatformAdapter {
 
   public async showNotification(title: string, body: string): Promise<void> {
     try {
-      const safeTitle = title.replace(/"/g, '\\"');
-      const safeBody = body.replace(/"/g, '\\"');
-      await execAsync(`osascript -e 'display notification "${safeBody}" with title "${safeTitle}"'`);
+      const script = `display notification ${JSON.stringify(body)} with title ${JSON.stringify(title)}`;
+      await execFileAsync('/usr/bin/osascript', ['-e', script]);
     } catch (err) {
       Logger.warn('platform', 'Failed to display macOS notification', { error: String(err) });
     }
@@ -122,8 +121,16 @@ export class MacOSAdapter extends PlatformAdapter {
 
   public async storeSecret(key: string, secret: string): Promise<boolean> {
     try {
-      const cmd = `/usr/bin/security add-generic-password -U -s "${this.serviceName}" -a "${key}" -w "${secret}"`;
-      await execAsync(cmd);
+      await execFileAsync('/usr/bin/security', [
+        'add-generic-password',
+        '-U',
+        '-s',
+        this.serviceName,
+        '-a',
+        key,
+        '-w',
+        secret,
+      ]);
       return true;
     } catch (err) {
       Logger.error('security', `Keychain storeSecret failed for key ${key}`, { error: String(err) });
@@ -133,8 +140,14 @@ export class MacOSAdapter extends PlatformAdapter {
 
   public async retrieveSecret(key: string): Promise<string | null> {
     try {
-      const cmd = `/usr/bin/security find-generic-password -s "${this.serviceName}" -a "${key}" -w`;
-      const { stdout } = await execAsync(cmd);
+      const { stdout } = await execFileAsync('/usr/bin/security', [
+        'find-generic-password',
+        '-s',
+        this.serviceName,
+        '-a',
+        key,
+        '-w',
+      ]);
       return stdout.trim();
     } catch {
       return null;
@@ -143,8 +156,13 @@ export class MacOSAdapter extends PlatformAdapter {
 
   public async deleteSecret(key: string): Promise<boolean> {
     try {
-      const cmd = `/usr/bin/security delete-generic-password -s "${this.serviceName}" -a "${key}"`;
-      await execAsync(cmd);
+      await execFileAsync('/usr/bin/security', [
+        'delete-generic-password',
+        '-s',
+        this.serviceName,
+        '-a',
+        key,
+      ]);
       return true;
     } catch {
       return false;

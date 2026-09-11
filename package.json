@@ -1,6 +1,6 @@
 {
   "name": "openfaceid-monorepo",
-  "version": "0.1.0",
+  "version": "0.2.0-rc.1",
   "private": true,
   "description": "Open-Source Cross-Platform Face Recognition & Presence System",
   "workspaces": [
@@ -17,6 +17,8 @@
     "cli": "node --experimental-strip-types apps/cli/bin/openfaceid.ts",
     "package:macos": "./scripts/package-macos.sh",
     "package:linux": "./scripts/package-linux.sh",
+    "package:deb": "./scripts/package-deb.sh",
+    "package:release": "node --experimental-strip-types scripts/generate-release-manifest.js",
     "typecheck": "node --experimental-strip-types -e 'console.log(\"Typecheck verified\")'"
   },
   "keywords": [
@@ -31,7 +33,6 @@
   "author": "Jayant Olhyan <https://github.com/JayantOlhyan>",
   "license": "Apache-2.0",
   "devDependencies": {
-    "typescript": "^5.7.3",
-    "vitest": "^3.0.7"
+    "typescript": "^5.7.3"
   }
 }

@@ -14,6 +14,7 @@ import {
   LivenessDetector,
   FaceQualityAnalyzer,
   FaceRecognizer,
+  ModelRegistry,
   type FaceLandmarks,
 } from '../../../packages/vision/src/index.ts';
 import { IdentityStore, ActivityLog, ConfigStore } from '../../../packages/storage/src/index.ts';
@@ -105,7 +106,17 @@ export class DesktopEngine {
       const config = await this.configStore.loadConfig();
       await this.identityStore.listIdentities(); // Ensure keystore is ready
 
-      // 2. Query hardware camera devices
+      // 2. Cryptographic Model Integrity Verification
+      const modelRegistry = ModelRegistry.getInstance();
+      const integrityCheck = await modelRegistry.verifyAllModels();
+      if (!integrityCheck.allValid) {
+        Logger.error('vision', 'MODEL_INTEGRITY_FAILURE: Vision model cryptographic integrity check failed');
+        this.visionState = 'ERROR';
+        this.activityLog.logEvent('MODEL_INTEGRITY_FAILURE', { details: integrityCheck.results });
+        return;
+      }
+
+      // 3. Query hardware camera devices
       const devices = await this.cameraManager.enumerateDevices();
       const permission = await this.cameraManager.checkPermission();
 

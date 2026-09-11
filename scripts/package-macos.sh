@@ -36,14 +36,15 @@ echo "APPL????" > "$APP_DIR/Contents/PkgInfo"
 echo "✓ Created $APP_DIR"
 
 # 4. Package macOS zip archive
-ZIP_PATH="$DIR/dist/OpenFaceID-0.1.0-macos.zip"
+VERSION="0.2.0-rc.1"
+ZIP_PATH="$DIR/dist/OpenFaceID-${VERSION}-macos.zip"
 rm -f "$ZIP_PATH"
-(cd "$DIR/dist" && zip -r -q "OpenFaceID-0.1.0-macos.zip" "OpenFaceID.app")
+(cd "$DIR/dist" && zip -r -q "OpenFaceID-${VERSION}-macos.zip" "OpenFaceID.app")
 echo "✓ Created $ZIP_PATH"
 
 # 5. Create DMG if permitted
 if which hdiutil >/dev/null 2>&1; then
-  DMG_PATH="$DIR/dist/OpenFaceID-0.1.0-arm64.dmg"
+  DMG_PATH="$DIR/dist/OpenFaceID-${VERSION}-arm64.dmg"
   rm -f "$DMG_PATH"
   echo "Attempting macOS Disk Image creation ($DMG_PATH)..."
   if hdiutil create -volname "OpenFaceID" -srcfolder "$APP_DIR" -ov -format UDZO "$DMG_PATH" 2>/dev/null; then

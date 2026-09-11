@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import fs from 'fs';
 import type {
   CameraDevice,
@@ -10,6 +10,22 @@ import type {
 } from './types.ts';
 import { FrameSampler } from './FrameSampler.ts';
 import { Logger, EventBus } from '../../core/src/index.ts';
+
+function findFfmpegPath(): string | null {
+  const candidates = [
+    '/opt/homebrew/bin/ffmpeg',
+    '/usr/local/bin/ffmpeg',
+    '/usr/bin/ffmpeg',
+  ];
+  for (const cand of candidates) {
+    try {
+      if (fs.existsSync(cand)) return cand;
+    } catch {
+      // Ignored
+    }
+  }
+  return 'ffmpeg';
+}
 
 export class CameraManager {
   private state: CameraState = 'uninitialized';
@@ -40,22 +56,24 @@ export class CameraManager {
     const platform = process.platform;
     try {
       if (platform === 'darwin') {
-        // Under macOS, probe AVFoundation / TCC
-        try {
-          const out = execSync('/opt/homebrew/bin/ffmpeg -f avfoundation -list_devices true -i "" 2>&1', {
-            timeout: 2000,
-            encoding: 'utf8',
-          });
-          if (out.includes('AVFoundation video devices')) {
+        // Under macOS, probe AVFoundation / TCC safely using execFileSync
+        const ffmpeg = findFfmpegPath();
+        if (ffmpeg) {
+          try {
+            execFileSync(ffmpeg, ['-f', 'avfoundation', '-list_devices', 'true', '-i', ''], {
+              timeout: 2000,
+              encoding: 'utf8',
+              stdio: ['pipe', 'pipe', 'pipe'],
+            });
             return 'granted';
-          }
-        } catch (err: any) {
-          const text = String(err.stdout || err.stderr || err.message || '');
-          if (text.includes('AVFoundation video devices')) {
-            return 'granted';
-          }
-          if (text.includes('Permission denied') || text.includes('not authorized')) {
-            return 'denied';
+          } catch (err: any) {
+            const text = String(err.stdout || err.stderr || err.message || '');
+            if (text.includes('AVFoundation video devices')) {
+              return 'granted';
+            }
+            if (text.includes('Permission denied') || text.includes('not authorized')) {
+              return 'denied';
+            }
           }
         }
         return 'prompt';
@@ -91,50 +109,61 @@ export class CameraManager {
 
     if (platform === 'darwin') {
       try {
-        // 1. Probe via system_profiler
-        const spOut = execSync('/usr/sbin/system_profiler SPCameraDataType 2>/dev/null', {
-          timeout: 3000,
-          encoding: 'utf8',
-        });
-        if (spOut && spOut.includes('Model ID:')) {
-          const lines = spOut.split('\n');
-          let currentName = 'FaceTime HD Camera';
-          let currentId = 'builtin-camera-0';
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (trimmed.endsWith(':') && !trimmed.includes('Camera:') && !trimmed.includes('Model ID:')) {
-              currentName = trimmed.replace(/:$/, '');
-            } else if (trimmed.startsWith('Unique ID:')) {
-              currentId = trimmed.replace('Unique ID:', '').trim();
-            }
-          }
-          const caps: CameraCapabilities[] = [
-            { width: 1920, height: 1080, maxFps: 30, pixelFormats: ['NV12', 'RGBA'] },
-            { width: 1280, height: 720, maxFps: 30, pixelFormats: ['NV12', 'RGBA'] },
-            { width: 640, height: 480, maxFps: 30, pixelFormats: ['NV12', 'RGBA'] },
-          ];
-          discovered.push({
-            id: currentId,
-            deviceId: currentId,
-            name: currentName,
-            label: currentName,
-            isDefault: true,
-            capabilities: caps,
-            resolutions: caps,
-            isSynthetic: false,
+        // 1. Probe via system_profiler safely
+        if (fs.existsSync('/usr/sbin/system_profiler')) {
+          const spOut = execFileSync('/usr/sbin/system_profiler', ['SPCameraDataType'], {
+            timeout: 3000,
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'ignore'],
           });
+          if (spOut && spOut.includes('Model ID:')) {
+            const lines = spOut.split('\n');
+            let currentName = 'FaceTime HD Camera';
+            let currentId = 'builtin-camera-0';
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (trimmed.endsWith(':') && !trimmed.includes('Camera:') && !trimmed.includes('Model ID:')) {
+                currentName = trimmed.replace(/:$/, '');
+              } else if (trimmed.startsWith('Unique ID:')) {
+                currentId = trimmed.replace('Unique ID:', '').trim();
+              }
+            }
+            const caps: CameraCapabilities[] = [
+              { width: 1920, height: 1080, maxFps: 30, pixelFormats: ['NV12', 'RGBA'] },
+              { width: 1280, height: 720, maxFps: 30, pixelFormats: ['NV12', 'RGBA'] },
+              { width: 640, height: 480, maxFps: 30, pixelFormats: ['NV12', 'RGBA'] },
+            ];
+            discovered.push({
+              id: currentId,
+              deviceId: currentId,
+              name: currentName,
+              label: currentName,
+              isDefault: true,
+              capabilities: caps,
+              resolutions: caps,
+              isSynthetic: false,
+            });
+          }
         }
       } catch {
         // Fall through to ffmpeg probe or software check
       }
 
-      // 2. Probe via ffmpeg avfoundation list
+      // 2. Probe via ffmpeg avfoundation list safely
       if (discovered.length === 0) {
-        try {
-          const ffOut = execSync('/opt/homebrew/bin/ffmpeg -f avfoundation -list_devices true -i "" 2>&1', {
-            timeout: 2500,
-            encoding: 'utf8',
-          });
+        const ffmpeg = findFfmpegPath();
+        if (ffmpeg) {
+          try {
+            let ffOut = '';
+            try {
+              ffOut = execFileSync(ffmpeg, ['-f', 'avfoundation', '-list_devices', 'true', '-i', ''], {
+                timeout: 2500,
+                encoding: 'utf8',
+                stdio: ['pipe', 'pipe', 'pipe'],
+              });
+            } catch (ffErr: any) {
+              ffOut = String(ffErr.stdout || ffErr.stderr || '');
+            }
           const match = ffOut.match(/\[(\d+)\]\s+([^\[\n]+)/g);
           if (match) {
             let isVideoSection = false;
@@ -174,7 +203,8 @@ export class CameraManager {
           // Handled below
         }
       }
-    } else if (platform === 'linux') {
+    }
+  } else if (platform === 'linux') {
       try {
         if (fs.existsSync('/sys/class/video4linux')) {
           const vNodes = fs.readdirSync('/sys/class/video4linux');

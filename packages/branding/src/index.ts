@@ -43,7 +43,7 @@ export interface ProductBranding {
 
 export const BRANDING: ProductBranding = {
   name: 'OpenFaceID',
-  version: '0.1.0',
+  version: '0.2.0-rc.1',
   codeName: 'SightLock',
   displayName: 'OpenFaceID',
   tagline: 'Face recognition for every desktop.',
@@ -79,5 +79,25 @@ export const BRANDING: ProductBranding = {
     localOnly: true,
   },
 };
+
+export interface BuildMetadata {
+  version: string;
+  gitCommit: string;
+  buildDate: string;
+  nodeVersion: string;
+  platform: string;
+  arch: string;
+}
+
+export function getBuildMetadata(): BuildMetadata {
+  return {
+    version: BRANDING.version,
+    gitCommit: process.env.GIT_COMMIT || 'development',
+    buildDate: process.env.BUILD_DATE || new Date().toISOString(),
+    nodeVersion: process.version,
+    platform: process.platform,
+    arch: process.arch,
+  };
+}
 
 export default BRANDING;
