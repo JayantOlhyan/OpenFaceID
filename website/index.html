@@ -238,8 +238,13 @@
       });
     }
 
+    // Dynamic OS Tab Switching with Button Sync
     function switchOsTab(os) {
       const tabs = ['macos', 'windows', 'linux'];
+      const primaryBtn = document.getElementById('primaryDownloadBtn');
+      const primaryText = document.getElementById('primaryBtnText');
+      const secondaryBtn = document.getElementById('secondaryDownloadBtn');
+
       tabs.forEach(t => {
         const tabEl = document.getElementById('tab-' + t);
         const paneEl = document.getElementById('pane-' + t);
@@ -256,6 +261,20 @@
           paneEl.style.display = 'none';
         }
       });
+
+      if (os === 'windows') {
+        if (primaryBtn) primaryBtn.href = 'https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-win-x64.zip';
+        if (primaryText) primaryText.innerText = 'Download for Windows (x64)';
+        if (secondaryBtn) secondaryBtn.style.display = 'none';
+      } else if (os === 'linux') {
+        if (primaryBtn) primaryBtn.href = 'https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/openfaceid_0.2.1-rc.1_amd64.deb';
+        if (primaryText) primaryText.innerText = 'Download for Linux (.deb)';
+        if (secondaryBtn) secondaryBtn.style.display = 'none';
+      } else {
+        if (primaryBtn) primaryBtn.href = 'https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-arm64.dmg';
+        if (primaryText) primaryText.innerText = 'Download for Mac (Apple Silicon)';
+        if (secondaryBtn) secondaryBtn.style.display = 'inline-flex';
+      }
     }
 
     // Auto-detect OS on load
@@ -268,11 +287,9 @@
       } else {
         switchOsTab('macos');
       }
-    // Auto-detect client architecture
-    (function detectArch() {
-      const isIntel = navigator.userAgent.indexOf('Intel') !== -1 && navigator.userAgent.indexOf('Mac') !== -1;
-      // If WebGL/client indicates Intel x86_64, update button label appropriately
-    })();
+    } catch (e) {
+      switchOsTab('macos');
+    }
   </script>
 </body>
 </html>
