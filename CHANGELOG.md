@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.1-rc.1] - 2026-09-13
 
+### Phase 10: Production Release Candidate + Final Certification + Launch Readiness
+
+#### Added
+- **Final Certification Suite**: Created formal certification reports: `docs/release/PHASE-10-FINAL-CERTIFICATION.md`, `docs/release/phase-10-scorecard.md`, `docs/release/claim-evidence-matrix.md`, `docs/release/phase-10-baseline.md`, `docs/release/release-blockers.md`, `docs/release/reproducible-build.md`, and `docs/release/artifact-manifest.md`.
+- **Security & Privacy Final Certifications**: Added `docs/security/final-privacy-certification.md` (zero egress, volatile RAM zeroization, 0 disk frame writes, privacy pause) and `docs/security/phase-10-security-certification.md` (6 security gates, IPC Bearer token, timing attack resistance).
+- **Supply Chain Certification**: Added `docs/release/supply-chain-certification.md` certifying 0 external runtime dependencies, 0 CVEs via `npm audit`, and uniform Apache-2.0 licensing.
+- **Automated Doc Link Checker**: Added `scripts/check-doc-links.js` (`npm run docs:check-links`) verifying zero broken relative markdown links across 130 documentation files.
+- **Release Engineering**: Added `docs/release/RELEASE-CHECKLIST.md` and `docs/release/RELEASE-NOTES-0.2.1-rc.1.md`.
+
+#### Changed
+- **Packaging Integrity**: Cleaned legacy marketing strings from `scripts/package-linux.sh` and `scripts/package-deb.sh`.
+- **Threshold Semantics Audit**: Reconciled historical documentation citations to strictly reflect monotonic cosine similarity presets ($0.70 < 0.80 < 0.88$).
+- **Release Classification**: Formally classified release candidate as `PUBLIC RC WITH SIGNING & HARDWARE LIMITATIONS` with deferred blockers RB-01 (Apple Developer ID signing) and RB-02 (Windows/Linux physical hardware lab).
+
 ### Phase 9: Open-Source Ecosystem, Developer Experience & Contributor Readiness
 
 #### Added

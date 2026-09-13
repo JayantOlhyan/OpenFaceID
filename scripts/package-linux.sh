@@ -17,7 +17,7 @@ cat << 'DESKTOP' > "$LINUX_DIR/share/applications/openfaceid.desktop"
 Type=Application
 Name=OpenFaceID
 GenericName=Face Recognition & Presence Utility
-Comment=Open-source Face ID for every desktop
+Comment=Local facial presence detection and biometric verification for desktop systems
 Exec=openfaceid %u
 Icon=openfaceid
 Terminal=false

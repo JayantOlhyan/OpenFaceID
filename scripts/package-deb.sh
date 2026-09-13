@@ -24,7 +24,7 @@ Priority: optional
 Architecture: ${ARCH}
 Depends: nodejs (>= 22.0.0)
 Maintainer: Jayant Olhyan <https://github.com/JayantOlhyan/OpenFaceID>
-Description: Open-source Face ID and presence detection for Linux desktops.
+Description: Local facial presence detection and biometric verification for Linux desktops.
  SightLock (OpenFaceID) provides privacy-preserving facial recognition
  and presence tracking using standard 2D webcams. Biometric vectors are
  encrypted with AES-256-GCM and stored exclusively on local disk.
@@ -36,7 +36,7 @@ cat << 'DESKTOP' > "$DEB_ROOT/usr/share/applications/openfaceid.desktop"
 Type=Application
 Name=OpenFaceID
 GenericName=Face Recognition & Presence Utility
-Comment=Open-source Face ID for every desktop
+Comment=Local facial presence detection and biometric verification for desktop systems
 Exec=openfaceid %u
 Icon=openfaceid
 Terminal=false

@@ -46,9 +46,12 @@ All inference executes **100% locally in volatile RAM**. Raw video frames are an
 
 | Platform | Code Implementation | Physical Hardware Validation | Packaging Status | Platform Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **macOS** | Implemented (`MacOSAdapter`) | **Verified on MAC-01** (Apple Silicon M1) | Partial (Unsigned DMG / App Bundle) | **Verified with warnings** (unsigned build) |
-| **Windows** | Implemented (`WindowsAdapter`) | **Hardware Unverified** (CI software build passes) | Partial / Unverified (NSIS installer script) | **Hardware unverified** |
-| **Linux** | Implemented (`LinuxAdapter`) | **Hardware Unverified** (CI software build passes) | Partial / Unverified (Debian / tar.gz script) | **Hardware unverified** |
+| **macOS** | Implemented (`MacOSAdapter`) | **Hardware Verified** (Apple Silicon M1 / FaceTime HD) | Generated (Ad-hoc Signed DMG / App Bundle) | **Hardware Verified (Signing Deferred - RB-01)** |
+| **Windows** | Implemented (`WindowsAdapter`) | **Hardware Unverified** (Pending Hardware Lab - RB-02) | Scripted (NSIS installer script) | **Hardware Unverified** |
+| **Linux** | Implemented (`LinuxAdapter`) | **Hardware Unverified** (Pending Hardware Lab - RB-02) | Generated (.tar.gz / .deb packages) | **Hardware Unverified** |
+
+> [!NOTE]
+> OpenFaceID does not claim hardware verification for Windows or Linux until physical lab testing on real camera devices is performed (Blocker `RB-02`). macOS binaries are currently ad-hoc signed pending Apple Developer ID enrollment (Blocker `RB-01`).
 
 ---
 

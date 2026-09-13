@@ -116,9 +116,10 @@ The interactive enrollment pipeline enforces a strict 5-pose guided capture sequ
 
 - **Hyperspherical Matching**: Evaluates 512D normalized ArcFace embeddings against enrolled templates.
 - **Similarity Presets**:
-  - `Balanced`: Cosine distance threshold `0.72` (recommended).
-  - `Strict`: Cosine distance threshold `0.65` (sensitive workstations).
-  - `Very Strict`: Cosine distance threshold `0.58` (maximum discrimination).
+  - `Balanced`: Cosine similarity threshold `0.70` (or `0.72` calibrated default).
+  - `Strict`: Cosine similarity threshold `0.80`.
+  - `Very Strict`: Cosine similarity threshold `0.88` (maximum discrimination).
+  *(Note: Historical draft notes inverted the scale by referring to distance; active pipeline enforces monotonic similarity $s \ge \tau$ where higher values require closer match).*
 - **Recognition States**: Transitions through `LOOKING_FOR_FACE` -> `FACE_DETECTED` -> `LIVENESS_RUNNING` -> `FACE_MATCHING` -> `IDENTITY_RECOGNIZED` / `UNKNOWN_FACE`.
 
 ---
