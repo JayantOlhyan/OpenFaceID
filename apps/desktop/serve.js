@@ -898,7 +898,20 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 21. Static Desktop UI Serving (index.html with token injection)
+  // 21. Static Favicons and Branding Assets
+  if (url.pathname === '/favicon.ico' || url.pathname.endsWith('.png')) {
+    const relPath = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
+    const safePath = path.normalize(relPath).replace(/^(\.\.[\/\\])+/, '');
+    const assetPath = path.join(__dirname, safePath);
+    if (fs.existsSync(assetPath)) {
+      const mime = safePath.endsWith('.ico') ? 'image/x-icon' : 'image/png';
+      res.writeHead(200, { 'Content-Type': mime });
+      res.end(fs.readFileSync(assetPath));
+      return;
+    }
+  }
+
+  // 22. Static Desktop UI Serving (index.html with token injection)
   let filePath = path.join(__dirname, 'index.html');
   try {
     let content = fs.readFileSync(filePath, 'utf8');
