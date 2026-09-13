@@ -34,6 +34,6 @@
 2. **Temporal Aggregation Invariant:**
    Single-frame recognition against angled or moving probes exhibits an expected drop in cosine similarity (`TAR = 45%` at `t=0.70`), but the production engine's 5-frame rolling majority consensus window (`windowSize: 5, requiredMatches: 4`) completely eliminates transient false rejections, yielding `100% TAR` for bona fide users.
 3. **Impostor Rejection & Separation:**
-   Across 500 distinct impostor and orthogonal probe attempts, the maximum observed cross-identity similarity was `0.285`, far below the default `Balanced 0.70` threshold, ensuring `0.0% FAR`.
+   Across 500 distinct impostor and orthogonal probe attempts, the maximum observed cross-identity similarity was `0.285`, far below the default `Balanced 0.70` threshold, resulting in 0 false accepts across 500 tested impostor comparisons.
 4. **Windows & Linux Platform Notice:**
    Because physical hardware testing could not be executed on Windows or Linux machines in this test cycle, no latency, TAR, or FAR claims are made for those operating systems.

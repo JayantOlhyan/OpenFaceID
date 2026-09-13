@@ -2,7 +2,7 @@ import type { AppConfig } from './types.ts';
 
 export const DEFAULT_CONFIG: AppConfig = {
   recognition: {
-    threshold: 0.72,
+    threshold: 0.70,
     temporalWindowSize: 5,
     requiredMatchesInWindow: 4,
     maxFaceAngleDeviationDeg: 25,

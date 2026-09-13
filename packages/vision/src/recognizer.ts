@@ -2,7 +2,7 @@ import type { EnrolledIdentity, MatchResult, IFaceRecognizer } from './interface
 import { ArcFaceEmbedder } from './embedder.ts';
 
 export interface RecognizerOptions {
-  threshold?: number; // default: 0.72
+  threshold?: number; // default: 0.70 (Balanced)
   windowSize?: number; // default: 5
   requiredMatches?: number; // default: 4
 }
@@ -23,7 +23,7 @@ export class FaceRecognizer implements IFaceRecognizer {
 
   constructor(options: RecognizerOptions = {}) {
     this.embedder = new ArcFaceEmbedder();
-    this.threshold = options.threshold ?? 0.72;
+    this.threshold = options.threshold ?? 0.70;
     this.windowSize = options.windowSize ?? 5;
     this.requiredMatches = options.requiredMatches ?? 4;
   }

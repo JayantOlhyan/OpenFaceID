@@ -37,7 +37,7 @@ Returns high-level daemon and platform status. Does not require authentication.
   "screenLocked": false,
   "idleSeconds": 4,
   "livenessMode": "light",
-  "matchThreshold": 0.72,
+  "matchThreshold": 0.70,
   "platform": "macos",
   "localProcessingOnly": true,
   "cloudEgress": false

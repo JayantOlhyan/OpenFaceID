@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Recognition Failure Analysis (`docs/validation/recognition-failure-analysis.md`)**: Detailed taxonomy and root-cause breakdown of false rejects (extreme yaw $>20^\circ$, low light $<35\text{ lux}$) and near-neighbor false accepts.
 - **Camera Compatibility Matrix (`docs/validation/camera-compatibility-matrix.md`)**: Documented physical Apple FaceTime HD capture, UVC class driver handling, and fail-closed disconnection response.
 - **Presentation Attack Limitations (`docs/security/presentation-attack-limitations.md`)**: Analyzed boundaries of 2D optical liveness against paper photos, OLED replays, video loops, and OS virtual camera drivers.
-- **UX & Accessibility Validation (`docs/validation/ux-validation.md`)**: Assessed user onboarding, 5-pose guided enrollment, desktop HUD, and WCAG AAA compliance.
+- **UX & Accessibility Validation (`docs/validation/ux-validation.md`)**: Assessed user onboarding, 5-pose guided enrollment, desktop HUD, and evaluated interaction paths against applicable WCAG criteria.
 - **Backend Abstraction Aliases**: Added `DetectorBackend`, `EmbedderBackend`, and `LivenessBackend` type aliases to `packages/vision/src/interfaces.ts`.
 - **Phase 11 Final Validation Report (`docs/validation/PHASE-11-FINAL-VALIDATION.md`)**: Formal 30-section validation report and 29-category scorecard (`docs/validation/phase-11-scorecard.md`).
 

@@ -25,13 +25,13 @@ OpenFaceID was evaluated across a representative interactive session to assess u
 
 ## 2. Accessibility & Universal Design Audit
 
-In accordance with Section 24, OpenFaceID's user-facing surfaces (CLI, Desktop Tray, Quick Glance HUD) were audited for accessible interaction:
+In accordance with Section 17 & 24, OpenFaceID's user-facing surfaces (CLI, Desktop Tray, Quick Glance HUD) were audited for accessible interaction. Accessibility was evaluated against applicable WCAG criteria, with the tested interaction paths documented below (formal full-product WCAG AAA certification was not conducted and is not claimed):
 
 | Accessibility Standard | Implementation in OpenFaceID | Verification Result | Status |
 | :--- | :--- | :--- | :---: |
 | **Non-Color-Only Communication** | State changes are communicated via distinct text labels, iconography, and ASCII glyphs (`● Authorized`, `○ Looking for you...`, `▲ Multiple Faces`, `■ Paused`), not just red/green colors. | Screen reader and monochrome display testing confirms states are distinguishable without color vision. | **VERIFIED** |
 | **Keyboard Navigability** | CLI commands are 100% keyboard-navigable with standard shell tab-completion and flag aliases (`-h`, `-v`, `--json`). Desktop tray menus adhere to standard OS keyboard navigation conventions. | All functions accessible via keyboard alone. | **VERIFIED** |
-| **High-Contrast Visible Focus** | Desktop HUD overlay uses dark mode glassmorphism with high-contrast foreground text (contrast ratio $> 7.2:1$ for primary text, exceeding WCAG AAA standard). | Legible across varying ambient desktop backgrounds. | **VERIFIED** |
+| **High-Contrast Visible Focus** | Desktop HUD overlay uses dark mode glassmorphism with high-contrast foreground text (measured contrast ratio $> 7.2:1$ for primary text against dark backdrop). | Legible across varying ambient desktop backgrounds. Evaluated against applicable high-contrast criteria. | **VERIFIED** |
 | **Readable Error Messages** | Every unauthorized or failure state provides an actionable remediation hint (e.g., *"Connect a USB webcam"*, *"Move closer to camera"*, *"Increase room lighting"*). | `openfaceid doctor` and `ActivityLog` output actionable hints. | **VERIFIED** |
 | **Screen-Reader & Scripting Output** | CLI supports `--json` across all commands, emitting strict machine-readable payloads with zero ANSI color escape codes to stderr/stdout. | Screen readers and headless automation parse outputs without interference. | **VERIFIED** |
 | **Reduced Motion Preference** | Desktop HUD contains no rapid flashing, strobe animations, or parallax motion effects that could trigger vestibular sensitivity. | Static, elegant fade transitions only. | **VERIFIED** |

@@ -39,20 +39,22 @@ In biometric systems, selecting an operating threshold $\tau \in [0.0, 1.0]$ gov
      │        \           ▲             /
      │         \         / \           /
      │          \       /   \         /
-  0% └───────────▼─────/─────\───────▼────────► Similarity Threshold (τ)
-               0.60  0.68   0.72   0.82
+  0% └───────────▼─────────────────▲──────────────▼────────► Similarity Threshold (τ)
+                0.50             0.70           0.80           0.88
 ```
 
-### Empirical Threshold Profile (MobileFaceNet / ArcFace 512D)
+### Certified Threshold Profiles (ArcFace 512D Cosine Similarity)
 
-| Threshold $\tau$ | Operating Profile | Target FAR | Typical FRR | Use Case |
-| :--- | :--- | :--- | :--- | :--- |
-| **$\tau \ge 0.82$** | **Maximum Security** | $< 0.001\%$ ($1 \text{ in } 100,000$) | $8.5\%$ | High-security screen unlock; sensitive administrative access |
-| **$\tau = 0.72$ (Default)** | **Balanced Desktop** | $< 0.01\%$ ($1 \text{ in } 10,000$) | $1.8\%$ | Everyday continuous presence monitoring and desktop convenience |
-| **$\tau = 0.65$** | **Permissive / Low Light** | $< 0.1\%$ ($1 \text{ in } 1,000$) | $0.4\%$ | Dim ambient rooms, low-grade webcams, heavy eyeglass glare |
+In accordance with Section 10 & 48, OpenFaceID standardizes on three certified operational operating points:
+
+| Preset Profile | Threshold ($\tau$) | Genuine Cooperative TAR | Impostor FAR | Use Case & Security Profile |
+| :--- | :---: | :---: | :---: | :--- |
+| **Balanced (Default)** | **`0.70`** | **100.0%** (240 / 240) | **0.000%** (0 / 500 disjoint) | Everyday continuous presence monitoring and desktop automation under standard office lighting (150–500 lux). |
+| **Strict** | **`0.80`** | **58.75%** (141 / 240) | **0.000%** (0 / 750 overall) | High-security desktop presence where zero false accepts from near-neighbors/look-alikes is strictly mandated. |
+| **Very Strict** | **`0.88`** | **0.00%** (0 / 240) | **0.000%** (0 / 750 overall) | Maximum discrimination; requires rolling multi-frame temporal averaging in bright, uniform lighting. |
 
 > [!IMPORTANT]
-> The default threshold of `0.72` is a **configurable starting point**, not an absolute security guarantee. Biometric matching thresholds are influenced by sensor noise, camera ISP sharpness, and ambient illumination.
+> The default threshold of `0.70` is a **calibrated operating point**, not an absolute security guarantee. Biometric matching thresholds are influenced by sensor noise, camera ISP sharpness, and ambient illumination. For detailed empirical evaluation data across 1,950 probe comparisons, see [Phase 11 Threshold Calibration](file:///Users/jayantolhyan/Desktop/my%20projects/open%20source%20/OpenFaceID/docs/validation/threshold-calibration.md).
 
 ---
 
@@ -70,7 +72,7 @@ Where:
 - Required matches $k = 4$ out of 5 frames.
 - Exponential moving average weights newer frames: $w_i = 1.2^i$.
 
-This temporal gate reduces single-frame False Accepts by over $95\%$ while tolerating natural brief blinks.
+This temporal gate reduces single-frame False Accepts while tolerating natural brief blinks.
 
 ---
 
@@ -80,13 +82,13 @@ This temporal gate reduces single-frame False Accepts by over $95\%$ while toler
    - Backlighting (e.g. sitting in front of a bright window) reduces facial contrast, lowering match scores by $0.08 - 0.15$.
    - Dim lighting increases sensor noise, elevating Laplacian blur rejections.
 2. **Eyeglasses & Accessories**:
-   - Enrolling an identity profile with and without glasses (using multiple poses) significantly lowers the FRR.
+   - Enrolling an identity profile with and without glasses (using 5-pose guided capture) significantly lowers the FRR.
 3. **Camera Resolution & Optics**:
    - A 1080p webcam yields higher Laplacian sharpness scores than a 480p sensor.
 
 ---
 
 ## 5. Summary Recommendation
-- For standard personal laptop workstations: keep threshold at `0.72`.
-- If experiencing frequent unexpected rejections in evening lighting: adjust to `0.68` and ensure multi-pose enrollment is completed.
-- For enterprise lock policies: increase threshold to `0.78` and require Strong (active challenge) liveness mode.
+- For standard personal laptop workstations: keep threshold at **`0.70`** (Balanced).
+- For enterprise lock policies: increase threshold to **`0.80`** (Strict) and require active challenge liveness mode.
+- Valid configurable range: `0.50` to `0.98`. Values outside this range are rejected by `ConfigValidator`.

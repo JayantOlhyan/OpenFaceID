@@ -84,7 +84,7 @@ Because embeddings are unit-normalized (\(\|\mathbf{u}\| = \|\mathbf{v}\| = 1\))
 $$\text{Cosine Similarity}(\mathbf{u}, \mathbf{v}) = \mathbf{u} \cdot \mathbf{v} = \sum_{i=1}^{d} u_i v_i$$
 $$\text{Euclidean Distance } D(\mathbf{u}, \mathbf{v}) = \sqrt{2 - 2 \cdot (\mathbf{u} \cdot \mathbf{v})}$$
 
-- Match threshold: \(\text{Cosine Similarity} \ge \theta_{\text{match}}\) (default: \(0.72\), configurable \(0.60 - 0.85\)).
+- Match threshold: \(\text{Cosine Similarity} \ge \theta_{\text{match}}\) (default: \(0.70\) Balanced; Strict: \(0.80\), Very Strict: \(0.88\); configurable \(0.50 - 0.98\)).
 
 ---
 

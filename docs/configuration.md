@@ -11,7 +11,7 @@ OpenFaceID stores user configuration in JSON format at `~/.openfaceid/config.jso
 ```json
 {
   "recognition": {
-    "threshold": 0.72,
+    "threshold": 0.70,
     "temporalWindowSize": 5,
     "requiredMatchesInWindow": 4,
     "maxFaceAngleDeviationDeg": 25
@@ -63,7 +63,7 @@ OpenFaceID stores user configuration in JSON format at `~/.openfaceid/config.jso
 
 | Parameter | Type | Default | Valid Range | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| `threshold` | `number` | `0.72` | `0.50` – `0.98` | Minimum cosine similarity required to authorize an enrolled identity. |
+| `threshold` | `number` | `0.70` | `0.50` – `0.98` | Minimum cosine similarity required to authorize an enrolled identity (Balanced: 0.70, Strict: 0.80, Very Strict: 0.88). |
 | `temporalWindowSize` | `number` | `5` | `1` – `20` | Number of recent inference frames tracked in the sliding evaluation window. |
 | `requiredMatchesInWindow` | `number` | `4` | `1` – `temporalWindowSize` | Minimum frames matching threshold within the window to declare authorization. |
 | `maxFaceAngleDeviationDeg` | `number` | `25` | `10` – `45` | Maximum head yaw/pitch allowed before frame is rejected as severe angle. |

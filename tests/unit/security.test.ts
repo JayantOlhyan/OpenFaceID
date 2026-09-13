@@ -131,7 +131,7 @@ describe('ActivityLog & ConfigStore', () => {
   it('loads, validates, and persists configuration', () => {
     const cfgStore = new ConfigStore(cfgPath);
     const cfg = cfgStore.loadConfig();
-    assert.equal(cfg.recognition.threshold, 0.72);
+    assert.equal(cfg.recognition.threshold, 0.70);
 
     const saved = cfgStore.saveConfig({
       recognition: { ...cfg.recognition, threshold: 0.80 },

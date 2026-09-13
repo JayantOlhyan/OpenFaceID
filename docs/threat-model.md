@@ -86,7 +86,7 @@ The desktop background daemon (`DesktopEngine`) exposes a local HTTP/SSE interfa
 
 1. **Webcams Lack Hardware Depth**: Without an infrared dot projector (Apple TrueDepth) or dual-sensor IR camera (Windows Hello), 2D optical face recognition **cannot guarantee absolute physical presence**. OpenFaceID must be used for convenience and presence-based locking, not for high-threat physical security scenarios.
 2. **Root / Kernel Compromise**: An adversary possessing root/admin privileges on the host machine can inspect volatile memory, hook kernel display drivers, or manipulate the camera device stream.
-3. **Twin / Close Relative Resemblance**: As with all 2D deep embedding models, identical twins or close biological relatives with high facial resemblance may produce similarity scores exceeding the standard 0.72 threshold.
+3. **Twin / Close Relative Resemblance**: As with all 2D deep embedding models, identical twins or close biological relatives with high facial resemblance may produce similarity scores exceeding the standard 0.70 threshold.
 
 ---
 

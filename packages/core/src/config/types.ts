@@ -2,7 +2,7 @@ export type LivenessMode = 'off' | 'light' | 'strong';
 export type BatteryProfile = 'performance' | 'balanced' | 'battery_saver';
 
 export interface RecognitionConfig {
-  threshold: number; // 0.60 to 0.95 (default: 0.72)
+  threshold: number; // 0.50 to 0.98 (default: 0.70 Balanced, Strict: 0.80, Very Strict: 0.88)
   temporalWindowSize: number; // e.g. 5 frames
   requiredMatchesInWindow: number; // e.g. 4 frames
   maxFaceAngleDeviationDeg: number; // e.g. 25 deg

@@ -60,8 +60,8 @@ test('Public API Contract & Stability Invariants (Section 60 & 86)', async (t) =
     assert.strictEqual(valid.valid, true);
     assert.strictEqual(valid.errors.length, 0);
 
-    // Default threshold is safe (0.72)
-    assert.strictEqual(DEFAULT_CONFIG.recognition.threshold, 0.72);
+    // Default threshold is safe (0.70: Balanced)
+    assert.strictEqual(DEFAULT_CONFIG.recognition.threshold, 0.70);
 
     // Insecure threshold (< 0.50) is rejected
     const invalidThreshold = JSON.parse(JSON.stringify(DEFAULT_CONFIG));

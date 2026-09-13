@@ -132,3 +132,17 @@ export interface ILivenessDetector {
 
 * **In-Tree Code Signatures**: Since analytical formulations are implemented directly as TypeScript modules, code integrity is verified via git commit SHA and package lockfile integrity (`npm audit`, SHA-512 hashes).
 * **Security Check Command**: Running `openfaceid security check` verifies that model modules and math formulations are unmodified.
+
+---
+
+## 5. Fitness for Purpose & Deployment Suitability (Section 13 Final Decision)
+
+In accordance with Section 13 ("Model Quality Final Decision"), the shipping in-tree analytical model has been formally evaluated across four operational domains:
+
+| Deployment Domain | Suitability | Empirical Evidence & Technical Basis |
+| :--- | :---: | :--- |
+| **1. Desktop Presence Awareness** | **SUITABLE** | 5-frame temporal rolling consensus with 20s absence grace period maintains continuous presence without nuisance screen locks. Evaluated across 54,000 continuous frames (1-hour physical macOS soak). |
+| **2. Desktop Workflow Automation** | **SUITABLE** | ActionDispatcher triggers local scripts, screen dimming, and session lock dispatch cleanly on state transitions (`USER_PRESENT`, `USER_LEFT`, `PRIVACY_PAUSED`). Zero unhandled state corruptions. |
+| **3. General Recognition** | **PARTIALLY SUITABLE** | Achieves 100.0% TAR (240/240) for cooperative frontal desktop webcam interaction under standard office lighting (150–500 lux) at $\tau = 0.70$. However, severe pose yaw ($>20^\circ$) or dim lighting ($<35\text{ lux}$) triggers fail-closed rejection (0/960 adverse TAR). Unsuitable for unconstrained surveillance or mobile environments. |
+| **4. Security-Sensitive Authentication** | **NOT SUITABLE / NOT INTENDED** | **OpenFaceID DOES NOT replace OS login, PAM, sudo, BitLocker, FileVault, or financial authentication.** 2D RGB optical sensing lacks hardware-backed structured-light depth/IR sensors and cannot attest camera hardware integrity against virtual webcam loopbacks (OBS/DirectShow). It must strictly function as a local presence awareness and convenience tool. |
+

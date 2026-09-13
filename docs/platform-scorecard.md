@@ -78,5 +78,5 @@
 | **Physical Camera Verified** | **FaceTime HD (AVFoundation)** | **None (Unverified)** | **None (Unverified)** |
 | **Biometric Authorization Verified** | **YES (Strict Fail-Closed)** | **NO (Hardware Unverified)** | **NO (Hardware Unverified)** |
 | **Desktop Notifications Verified** | **YES (Native macOS Center)** | **NO (Hardware Unverified)** | **NO (Hardware Unverified)** |
-| **Status for Release** | **PRODUCTION READY (v0.2.0-rc.1)** | **EXPERIMENTAL / PREVIEW** | **EXPERIMENTAL / PREVIEW** |
+| **Status for Release** | **SOURCE-ONLY RELEASE READY (v0.2.1-rc.1)** | **EXPERIMENTAL / UNVERIFIED HARDWARE** | **EXPERIMENTAL / UNVERIFIED HARDWARE** |
 

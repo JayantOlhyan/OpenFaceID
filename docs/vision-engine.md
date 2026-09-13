@@ -59,7 +59,7 @@ $$\hat{\mathbf{v}} = \frac{\mathbf{v}}{\|\mathbf{v}\|_2} = \frac{\mathbf{v}}{\sq
 ### 3.3 Metric & Similarity Calculation
 Because embeddings are unit-normalized, the cosine similarity between enrolled vector \(\mathbf{u}\) and query vector \(\mathbf{v}\) simplifies to their dot product:
 $$\text{Cosine Similarity}(\mathbf{u}, \mathbf{v}) = \mathbf{u} \cdot \mathbf{v} = \sum_{i=1}^{512} u_i v_i$$
-- **Match threshold**: \(\text{Cosine Similarity} \ge 0.72\) (configurable from \(0.60\) to \(0.85\)).
+- **Match threshold**: \(\text{Cosine Similarity} \ge 0.70\) (Balanced default; Strict: \(0.80\), Very Strict: \(0.88\); configurable from \(0.50\) to \(0.98\)).
 
 ---
 
