@@ -1,5 +1,7 @@
-import { execFileSync } from 'child_process';
+import { execFileSync, spawn, type ChildProcess } from 'child_process';
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import type {
   CameraDevice,
   CameraState,
@@ -11,20 +13,39 @@ import type {
 import { FrameSampler } from './FrameSampler.ts';
 import { Logger, EventBus } from '../../core/src/index.ts';
 
-function findFfmpegPath(): string | null {
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export interface CameraDiagnosticCounters {
+  fps: number;
+  framesReceived: number;
+  framesProcessed: number;
+  framesDropped: number;
+  invalidFrames: number;
+  cameraReconnects: number;
+  lastLatencyMs: number;
+}
+
+function findNativeAvfBinary(): string | null {
   const candidates = [
-    '/opt/homebrew/bin/ffmpeg',
-    '/usr/local/bin/ffmpeg',
-    '/usr/bin/ffmpeg',
+    process.env.OFID_CAMERA_BIN,
+    path.join(__dirname, '../bin/openfaceid-camera-avf'),
+    path.join(__dirname, '../../packages/camera/bin/openfaceid-camera-avf'),
+    path.join(process.cwd(), 'packages/camera/bin/openfaceid-camera-avf'),
+    path.join(process.cwd(), 'bin/openfaceid-camera-avf'),
+    path.join(path.dirname(process.execPath), 'openfaceid-camera-avf'),
+    path.join(path.dirname(process.execPath), '../Resources/bin/openfaceid-camera-avf'),
+    path.join(path.dirname(process.execPath), 'bin/openfaceid-camera-avf'),
+    '/usr/local/bin/openfaceid-camera-avf',
   ];
   for (const cand of candidates) {
     try {
-      if (fs.existsSync(cand)) return cand;
+      if (cand && fs.existsSync(cand)) return cand;
     } catch {
       // Ignored
     }
   }
-  return 'ffmpeg';
+  return null;
 }
 
 export class CameraManager {
@@ -32,13 +53,27 @@ export class CameraManager {
   private selectedDeviceId: string = 'default';
   private options: CameraOptions;
   private sampler: FrameSampler;
-  private frameIntervalTimer: NodeJS.Timeout | null = null;
   private onFrameCallback: ((frame: CameraFrame) => void) | null = null;
   private currentWidth: number = 1280;
   private currentHeight: number = 720;
   private isProcessingFrame: boolean = false;
   private cachedDevices: CameraDevice[] | null = null;
   private frameCount: number = 0;
+  private nativeProcess: ChildProcess | null = null;
+  private nativeStreamBuffer: Buffer = Buffer.alloc(0);
+  private simulationTimer: NodeJS.Timeout | null = null;
+  private fpsWindowStart: number = Date.now();
+  private fpsWindowFrames: number = 0;
+
+  private diagnostics: CameraDiagnosticCounters = {
+    fps: 0,
+    framesReceived: 0,
+    framesProcessed: 0,
+    framesDropped: 0,
+    invalidFrames: 0,
+    cameraReconnects: 0,
+    lastLatencyMs: 0,
+  };
 
   constructor(options: CameraOptions = {}) {
     this.options = options;
@@ -52,36 +87,36 @@ export class CameraManager {
     return this.state;
   }
 
+  public getDiagnostics(): CameraDiagnosticCounters & { state: CameraState; deviceId: string } {
+    return {
+      state: this.state,
+      deviceId: this.selectedDeviceId,
+      ...this.diagnostics,
+    };
+  }
+
   public async checkPermission(): Promise<CameraPermissionStatus> {
     const platform = process.platform;
     try {
       if (platform === 'darwin') {
-        // Under macOS, probe AVFoundation / TCC safely using execFileSync
-        const ffmpeg = findFfmpegPath();
-        if (ffmpeg) {
+        const avf = findNativeAvfBinary();
+        if (avf) {
           try {
-            execFileSync(ffmpeg, ['-f', 'avfoundation', '-list_devices', 'true', '-i', ''], {
-              timeout: 2000,
+            const out = execFileSync(avf, ['permission'], {
+              timeout: 3000,
               encoding: 'utf8',
-              stdio: ['pipe', 'pipe', 'pipe'],
+              stdio: ['ignore', 'pipe', 'ignore'],
             });
-            return 'granted';
-          } catch (err: any) {
-            const text = String(err.stdout || err.stderr || err.message || '');
-            if (text.includes('AVFoundation video devices')) {
-              return 'granted';
-            }
-            if (text.includes('Permission denied') || text.includes('not authorized')) {
-              return 'denied';
-            }
+            const parsed = JSON.parse(out.trim());
+            return (parsed.permission as CameraPermissionStatus) || 'prompt';
+          } catch {
+            return 'prompt';
           }
         }
         return 'prompt';
       } else if (platform === 'linux') {
         const videoNodes = fs.readdirSync('/dev').filter((f) => f.startsWith('video'));
-        if (videoNodes.length === 0) {
-          return 'unavailable';
-        }
+        if (videoNodes.length === 0) return 'unavailable';
         try {
           fs.accessSync(`/dev/${videoNodes[0]}`, fs.constants.R_OK);
           return 'granted';
@@ -108,103 +143,34 @@ export class CameraManager {
     const discovered: CameraDevice[] = [];
 
     if (platform === 'darwin') {
-      try {
-        // 1. Probe via system_profiler safely
-        if (fs.existsSync('/usr/sbin/system_profiler')) {
-          const spOut = execFileSync('/usr/sbin/system_profiler', ['SPCameraDataType'], {
+      const avf = findNativeAvfBinary();
+      if (avf) {
+        try {
+          const out = execFileSync(avf, ['devices'], {
             timeout: 3000,
             encoding: 'utf8',
-            stdio: ['pipe', 'pipe', 'ignore'],
+            stdio: ['ignore', 'pipe', 'ignore'],
           });
-          if (spOut && spOut.includes('Model ID:')) {
-            const lines = spOut.split('\n');
-            let currentName = 'FaceTime HD Camera';
-            let currentId = 'builtin-camera-0';
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (trimmed.endsWith(':') && !trimmed.includes('Camera:') && !trimmed.includes('Model ID:')) {
-                currentName = trimmed.replace(/:$/, '');
-              } else if (trimmed.startsWith('Unique ID:')) {
-                currentId = trimmed.replace('Unique ID:', '').trim();
-              }
-            }
-            const caps: CameraCapabilities[] = [
-              { width: 1920, height: 1080, maxFps: 30, pixelFormats: ['NV12', 'RGBA'] },
-              { width: 1280, height: 720, maxFps: 30, pixelFormats: ['NV12', 'RGBA'] },
-              { width: 640, height: 480, maxFps: 30, pixelFormats: ['NV12', 'RGBA'] },
-            ];
-            discovered.push({
-              id: currentId,
-              deviceId: currentId,
-              name: currentName,
-              label: currentName,
-              isDefault: true,
-              capabilities: caps,
-              resolutions: caps,
-              isSynthetic: false,
-            });
-          }
-        }
-      } catch {
-        // Fall through to ffmpeg probe or software check
-      }
-
-      // 2. Probe via ffmpeg avfoundation list safely
-      if (discovered.length === 0) {
-        const ffmpeg = findFfmpegPath();
-        if (ffmpeg) {
-          try {
-            let ffOut = '';
-            try {
-              ffOut = execFileSync(ffmpeg, ['-f', 'avfoundation', '-list_devices', 'true', '-i', ''], {
-                timeout: 2500,
-                encoding: 'utf8',
-                stdio: ['pipe', 'pipe', 'pipe'],
+          const parsed = JSON.parse(out);
+          if (parsed && Array.isArray(parsed.devices)) {
+            for (const d of parsed.devices) {
+              discovered.push({
+                id: d.id,
+                deviceId: d.deviceId || d.id,
+                name: d.name,
+                label: d.label || d.name,
+                isDefault: Boolean(d.isDefault),
+                isSynthetic: false,
+                capabilities: d.capabilities || [],
+                resolutions: d.resolutions || [],
               });
-            } catch (ffErr: any) {
-              ffOut = String(ffErr.stdout || ffErr.stderr || '');
-            }
-          const match = ffOut.match(/\[(\d+)\]\s+([^\[\n]+)/g);
-          if (match) {
-            let isVideoSection = false;
-            for (const item of match) {
-              if (item.includes('video devices:')) {
-                isVideoSection = true;
-                continue;
-              }
-              if (item.includes('audio devices:')) {
-                isVideoSection = false;
-                break;
-              }
-              if (isVideoSection) {
-                const parts = item.match(/\[(\d+)\]\s+(.+)/);
-                if (parts && !parts[2].toLowerCase().includes('capture screen')) {
-                  const idx = parts[1];
-                  const devName = parts[2].trim();
-                  const devCaps: CameraCapabilities[] = [
-                    { width: 1280, height: 720, maxFps: 30, pixelFormats: ['NV12', 'RGBA'] },
-                    { width: 640, height: 480, maxFps: 30, pixelFormats: ['NV12', 'RGBA'] },
-                  ];
-                  discovered.push({
-                    id: `avf-${idx}`,
-                    deviceId: `avf-${idx}`,
-                    name: devName,
-                    label: devName,
-                    isDefault: discovered.length === 0,
-                    capabilities: devCaps,
-                    resolutions: devCaps,
-                    isSynthetic: false,
-                  });
-                }
-              }
             }
           }
-        } catch {
-          // Handled below
+        } catch (err) {
+          Logger.warn('camera', 'Native AVFoundation discovery failed, attempting fallback', { error: String(err) });
         }
       }
-    }
-  } else if (platform === 'linux') {
+    } else if (platform === 'linux') {
       try {
         if (fs.existsSync('/sys/class/video4linux')) {
           const vNodes = fs.readdirSync('/sys/class/video4linux');
@@ -235,22 +201,25 @@ export class CameraManager {
       }
     }
 
-    // If no hardware camera is present or in unit test mode, provide an explicitly labeled device
+    // Explicit test mode fallback ONLY when requested or in simulation mode
     if (discovered.length === 0) {
-      const defaultCaps: CameraCapabilities[] = [
-        { width: 1280, height: 720, maxFps: 30, pixelFormats: ['RGBA'] },
-        { width: 640, height: 480, maxFps: 30, pixelFormats: ['RGBA'] },
-      ];
-      discovered.push({
-        id: 'default-sensor-01',
-        deviceId: 'default-sensor-01',
-        name: 'Default System Camera',
-        label: 'Default System Camera',
-        isDefault: true,
-        capabilities: defaultCaps,
-        resolutions: defaultCaps,
-        isSynthetic: false,
-      });
+      const isSimulation = process.env.OPENFACEID_SIMULATION === '1' || this.options.isTestMode;
+      if (isSimulation) {
+        const defaultCaps: CameraCapabilities[] = [
+          { width: 1280, height: 720, maxFps: 30, pixelFormats: ['RGBA'] },
+          { width: 640, height: 480, maxFps: 30, pixelFormats: ['RGBA'] },
+        ];
+        discovered.push({
+          id: 'test-sensor-01',
+          deviceId: 'test-sensor-01',
+          name: 'Test Synthetic Camera',
+          label: 'Test Synthetic Camera',
+          isDefault: true,
+          capabilities: defaultCaps,
+          resolutions: defaultCaps,
+          isSynthetic: true,
+        });
+      }
     }
 
     this.cachedDevices = discovered;
@@ -263,8 +232,11 @@ export class CameraManager {
       (d) => d.id === deviceId || d.deviceId === deviceId || (deviceId === 'default' && d.isDefault)
     );
     if (!found) {
-      Logger.warn('camera', `Device ${deviceId} not found, using default`);
-      this.selectedDeviceId = devices[0].deviceId;
+      if (devices.length > 0) {
+        this.selectedDeviceId = devices[0].deviceId;
+        return true;
+      }
+      Logger.warn('camera', `Device ${deviceId} not found`);
       return false;
     }
 
@@ -303,30 +275,265 @@ export class CameraManager {
     }
 
     this.state = 'requesting_permission';
-    Logger.info('camera', 'Starting camera capture pipeline');
+    Logger.info('camera', 'Starting real hardware camera capture pipeline');
     this.onFrameCallback = onFrame;
+
+    const platform = process.platform;
+    const avf = findNativeAvfBinary();
+    const isSimulation = process.env.OPENFACEID_SIMULATION === '1' || this.options.isTestMode;
+
+    if (platform === 'darwin' && avf && !isSimulation) {
+      return this.startNativeAvfCapture();
+    }
+
+    // In unit test mode ONLY
+    if (isSimulation) {
+      return this.startSimulationCapture();
+    }
+
+    Logger.error('camera', 'Real camera capture unavailable on this platform/configuration (simulation disabled in production)');
+    this.state = 'error';
+    return false;
+  }
+
+  private startNativeAvfCapture(): boolean {
+    const avf = findNativeAvfBinary();
+    if (!avf) {
+      this.state = 'error';
+      return false;
+    }
+
+    const devId = this.selectedDeviceId || 'default';
+    const targetFps = this.sampler.getTargetFps() || 30;
+
+    try {
+      this.nativeProcess = spawn(
+        avf,
+        ['stream', devId, String(this.currentWidth), String(this.currentHeight), String(targetFps)],
+        { stdio: ['pipe', 'pipe', 'pipe'] }
+      );
+    } catch (err) {
+      Logger.error('camera', 'Failed to spawn native camera helper', { error: String(err) });
+      this.state = 'error';
+      return false;
+    }
+
     this.state = 'active';
+    this.nativeStreamBuffer = Buffer.alloc(0);
 
     EventBus.getInstance().emit('CAMERA_CONNECTED', {
       deviceId: this.selectedDeviceId,
       timestamp: Date.now(),
     });
 
-    const tickMs = Math.max(16, Math.floor(1000 / this.sampler.getTargetFps()));
-    this.frameIntervalTimer = setInterval(() => {
-      if (this.state !== 'active') return;
+    this.nativeProcess.stdout?.on('data', (chunk: Buffer) => {
+      this.handleNativeData(chunk);
+    });
 
+    this.nativeProcess.stderr?.on('data', (errChunk: Buffer) => {
+      Logger.debug('camera', `[avf] ${errChunk.toString('utf8').trim()}`);
+    });
+
+    this.nativeProcess.on('exit', (code) => {
+      Logger.warn('camera', `Native camera process exited with code ${code}`);
+      if (this.state === 'active') {
+        this.state = 'disconnected';
+        EventBus.getInstance().emit('CAMERA_DISCONNECTED', {
+          deviceId: this.selectedDeviceId,
+          timestamp: Date.now(),
+        });
+      }
+    });
+
+    this.nativeProcess.on('error', (err) => {
+      Logger.error('camera', 'Native camera process error', { error: String(err) });
+      this.state = 'error';
+    });
+
+    return true;
+  }
+
+  private handleNativeData(chunk: Buffer): void {
+    this.nativeStreamBuffer = Buffer.concat([this.nativeStreamBuffer, chunk]);
+
+    // Protocol Header: 28 bytes
+    // [0..3]:   "OFID"
+    // [4..7]:   width (uint32 LE)
+    // [8..11]:  height (uint32 LE)
+    // [12..15]: format ("BGRA")
+    // [16..23]: timestamp (uint64 LE)
+    // [24..27]: payloadLen (uint32 LE)
+    while (this.nativeStreamBuffer.length >= 28) {
+      const magic = this.nativeStreamBuffer.toString('utf8', 0, 4);
+      if (magic !== 'OFID') {
+        // Resync: advance 1 byte
+        this.diagnostics.invalidFrames++;
+        this.nativeStreamBuffer = this.nativeStreamBuffer.subarray(1);
+        continue;
+      }
+
+      const frameWidth = this.nativeStreamBuffer.readUInt32LE(4);
+      const frameHeight = this.nativeStreamBuffer.readUInt32LE(8);
+      const payloadLen = this.nativeStreamBuffer.readUInt32LE(24);
+
+      if (frameWidth === 0 || frameHeight === 0 || payloadLen !== frameWidth * frameHeight * 4) {
+        this.diagnostics.invalidFrames++;
+        this.nativeStreamBuffer = this.nativeStreamBuffer.subarray(4);
+        continue;
+      }
+
+      if (this.nativeStreamBuffer.length < 28 + payloadLen) {
+        // Wait for full frame
+        break;
+      }
+
+      const rawPayload = this.nativeStreamBuffer.subarray(28, 28 + payloadLen);
+      this.nativeStreamBuffer = this.nativeStreamBuffer.subarray(28 + payloadLen);
+
+      this.frameCount++;
+      this.diagnostics.framesReceived++;
+      if (!this.options.preferredWidth) {
+        this.currentWidth = frameWidth;
+        this.currentHeight = frameHeight;
+      }
+
+      // Update FPS counter
+      const now = Date.now();
+      this.fpsWindowFrames++;
+      if (now - this.fpsWindowStart >= 1000) {
+        this.diagnostics.fps = Number(((this.fpsWindowFrames * 1000) / (now - this.fpsWindowStart)).toFixed(1));
+        this.fpsWindowFrames = 0;
+        this.fpsWindowStart = now;
+      }
+
+      // Backpressure Check: Drop frame if vision engine is still computing previous frame
+      if (this.isProcessingFrame) {
+        this.diagnostics.framesDropped++;
+        continue;
+      }
+
+      // Frame Rate Throttling
+      if (!this.sampler.shouldSample(now)) {
+        this.diagnostics.framesDropped++;
+        continue;
+      }
+
+      // In-place BGRA to RGBA conversion
+      const rawData = new Uint8ClampedArray(rawPayload.buffer, rawPayload.byteOffset, rawPayload.length);
+      for (let i = 0; i < rawData.length; i += 4) {
+        const b = rawData[i];
+        rawData[i] = rawData[i + 2]; // R = B
+        rawData[i + 2] = b;          // B = old R
+      }
+
+      // If caller requested specific dimensions, resample real frame
+      let finalData = rawData;
+      const targetW = this.currentWidth;
+      const targetH = this.currentHeight;
+      if (frameWidth !== targetW || frameHeight !== targetH) {
+        finalData = new Uint8ClampedArray(targetW * targetH * 4);
+        const xRatio = frameWidth / targetW;
+        const yRatio = frameHeight / targetH;
+        for (let dy = 0; dy < targetH; dy++) {
+          const sy = Math.min(frameHeight - 1, Math.floor(dy * yRatio));
+          for (let dx = 0; dx < targetW; dx++) {
+            const sx = Math.min(frameWidth - 1, Math.floor(dx * xRatio));
+            const srcIdx = (sy * frameWidth + sx) * 4;
+            const dstIdx = (dy * targetW + dx) * 4;
+            finalData[dstIdx] = rawData[srcIdx];
+            finalData[dstIdx + 1] = rawData[srcIdx + 1];
+            finalData[dstIdx + 2] = rawData[srcIdx + 2];
+            finalData[dstIdx + 3] = rawData[srcIdx + 3];
+          }
+        }
+      }
+
+      let zeroed = false;
+      const zeroize = () => {
+        if (!zeroed) {
+          finalData.fill(0);
+          zeroed = true;
+        }
+      };
+
+      const frame: CameraFrame = {
+        data: finalData,
+        width: targetW,
+        height: targetH,
+        pixelFormat: 'RGBA',
+        timestamp: now,
+        frameIndex: this.frameCount,
+        zeroize,
+      };
+
+      if (this.onFrameCallback) {
+        const startProc = Date.now();
+        this.isProcessingFrame = true;
+        this.diagnostics.framesProcessed++;
+        try {
+          const res = this.onFrameCallback(frame);
+          if (res && typeof (res as any).then === 'function') {
+            (res as Promise<void>).finally(() => {
+              this.diagnostics.lastLatencyMs = Date.now() - startProc;
+              this.isProcessingFrame = false;
+            });
+          } else {
+            this.diagnostics.lastLatencyMs = Date.now() - startProc;
+            this.isProcessingFrame = false;
+          }
+        } catch (err) {
+          this.isProcessingFrame = false;
+          Logger.error('camera', 'Error in frame callback consumer', { error: String(err) });
+        }
+      }
+    }
+  }
+
+  private startSimulationCapture(): boolean {
+    Logger.warn('camera', 'Starting simulation camera capture (test mode)');
+    this.state = 'active';
+    const tickMs = Math.max(16, Math.floor(1000 / this.sampler.getTargetFps()));
+    this.simulationTimer = setInterval(() => {
+      if (this.state !== 'active') return;
       if (this.sampler.shouldSample()) {
-        // Backpressure drop: If previous frame is still being processed by vision engine, drop to prevent latency buildup
         if (this.isProcessingFrame) {
-          Logger.debug('camera', 'Dropping camera frame due to downstream backpressure');
+          this.diagnostics.framesDropped++;
           return;
         }
+        this.frameCount++;
+        this.diagnostics.framesReceived++;
+        this.diagnostics.framesProcessed++;
 
-        const frame = this.createRealCameraFrame(this.currentWidth, this.currentHeight);
+        const width = this.currentWidth;
+        const height = this.currentHeight;
+        const size = width * height * 4;
+        const buffer = new Uint8ClampedArray(size);
+        for (let i = 0; i < size; i += 4) {
+          buffer[i] = 128;
+          buffer[i + 1] = 130;
+          buffer[i + 2] = 132;
+          buffer[i + 3] = 255;
+        }
+
+        let zeroed = false;
+        const frame: CameraFrame = {
+          data: buffer,
+          width,
+          height,
+          pixelFormat: 'RGBA',
+          timestamp: Date.now(),
+          frameIndex: this.frameCount,
+          zeroize: () => {
+            if (!zeroed) {
+              buffer.fill(0);
+              zeroed = true;
+            }
+          },
+        };
+
         if (this.onFrameCallback) {
+          this.isProcessingFrame = true;
           try {
-            this.isProcessingFrame = true;
             const res = this.onFrameCallback(frame);
             if (res && typeof (res as any).then === 'function') {
               (res as Promise<void>).finally(() => {
@@ -335,9 +542,8 @@ export class CameraManager {
             } else {
               this.isProcessingFrame = false;
             }
-          } catch (err) {
+          } catch {
             this.isProcessingFrame = false;
-            Logger.error('camera', 'Error in frame callback consumer', { error: String(err) });
           }
         }
       }
@@ -347,12 +553,21 @@ export class CameraManager {
   }
 
   public stopCapture(): void {
-    if (this.frameIntervalTimer) {
-      clearInterval(this.frameIntervalTimer);
-      this.frameIntervalTimer = null;
+    if (this.nativeProcess) {
+      try {
+        this.nativeProcess.kill('SIGTERM');
+      } catch {
+        // Ignored
+      }
+      this.nativeProcess = null;
+    }
+    if (this.simulationTimer) {
+      clearInterval(this.simulationTimer);
+      this.simulationTimer = null;
     }
     this.state = 'paused';
     this.onFrameCallback = null;
+    this.nativeStreamBuffer = Buffer.alloc(0);
     Logger.info('camera', 'Camera capture pipeline paused');
   }
 
@@ -374,6 +589,7 @@ export class CameraManager {
 
   public async attemptReconnect(): Promise<boolean> {
     Logger.info('camera', 'Attempting automatic camera reconnect');
+    this.diagnostics.cameraReconnects++;
     if (this.state === 'disconnected') {
       this.cachedDevices = null;
       const devices = await this.enumerateDevices();
@@ -388,37 +604,5 @@ export class CameraManager {
       }
     }
     return false;
-  }
-
-  private createRealCameraFrame(width: number, height: number): CameraFrame {
-    this.frameCount++;
-    const size = width * height * 4;
-    const buffer = new Uint8ClampedArray(size);
-
-    // Fill with natural illumination distribution (mean ~128 with realistic ambient gradients)
-    for (let i = 0; i < size; i += 4) {
-      buffer[i] = 128;     // R
-      buffer[i + 1] = 130; // G
-      buffer[i + 2] = 132; // B
-      buffer[i + 3] = 255; // A
-    }
-
-    let zeroed = false;
-    const zeroize = () => {
-      if (!zeroed) {
-        buffer.fill(0);
-        zeroed = true;
-      }
-    };
-
-    return {
-      data: buffer,
-      width,
-      height,
-      pixelFormat: 'RGBA',
-      timestamp: Date.now(),
-      frameIndex: this.frameCount,
-      zeroize,
-    };
   }
 }

@@ -12,3 +12,6 @@ data/evaluation/*
 eval-runs/
 *.raw
 *.bin
+packages/camera/bin/
+*.iconset/
+
