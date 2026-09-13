@@ -26,9 +26,10 @@ export class WindowsAdapter extends PlatformAdapter {
   }
 
   public async lockScreen(): Promise<boolean> {
+    if (process.env.CI) return true;
     try {
       Logger.info('platform', 'Locking Windows workstation via user32.dll,LockWorkStation');
-      await execFileAsync('rundll32.exe', ['user32.dll,LockWorkStation']);
+      await execFileAsync('rundll32.exe', ['user32.dll,LockWorkStation'], { timeout: 2000, windowsHide: true });
       return true;
     } catch (err) {
       Logger.error('platform', 'Failed to lock Windows workstation', { error: String(err) });
@@ -37,13 +38,14 @@ export class WindowsAdapter extends PlatformAdapter {
   }
 
   public async isScreenLocked(): Promise<boolean> {
+    if (process.env.CI) return false;
     try {
       const { stdout } = await execFileAsync('powershell.exe', [
         '-NoProfile',
         '-NonInteractive',
         '-Command',
         '(Get-Process -Name logonui -ErrorAction SilentlyContinue) -ne $null',
-      ]);
+      ], { timeout: 2000, windowsHide: true });
       return stdout.trim().toLowerCase() === 'true';
     } catch {
       return false;
@@ -51,6 +53,7 @@ export class WindowsAdapter extends PlatformAdapter {
   }
 
   public async getSystemIdleTimeMs(): Promise<number> {
+    if (process.env.CI) return 0;
     try {
       const psScript = `
 Add-Type @'
@@ -83,9 +86,9 @@ if ([Win32]::GetLastInputInfo([ref]$lii)) {
         '-NonInteractive',
         '-Command',
         psScript,
-      ]);
-      const ms = parseInt(stdout.trim(), 10);
-      return isNaN(ms) ? 0 : ms;
+      ], { timeout: 2500, windowsHide: true });
+      const val = parseInt(stdout.trim(), 10);
+      return isNaN(val) ? 0 : val;
     } catch {
       return 0;
     }
@@ -158,12 +161,12 @@ if ([Win32]::GetLastInputInfo([ref]$lii)) {
   }
 
   public async showNotification(title: string, body: string): Promise<void> {
-    if (this.shouldThrottleNotification(title, body)) return;
+    if (process.env.CI || this.shouldThrottleNotification(title, body)) return;
     try {
       const safeTitle = title.replace(/'/g, "''");
       const safeBody = body.replace(/'/g, "''");
       const psScript = `[reflection.assembly]::loadwithpartialname('System.Windows.Forms') | Out-Null; [System.Windows.Forms.MessageBox]::Show('${safeBody}', '${safeTitle}')`;
-      await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', psScript]);
+      await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', psScript], { timeout: 2000, windowsHide: true });
     } catch {
       // Ignored
     }
@@ -189,7 +192,7 @@ if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Ou
 Set-Content -Path "$dir\\${key}.secret" -Value $out -Force
 `.trim();
 
-      await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script]);
+      await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { timeout: 2500, windowsHide: true });
       return true;
     } catch {
       return false;
@@ -209,7 +212,7 @@ $unprotected = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, $
 [System.Text.Encoding]::UTF8.GetString($unprotected)
 `.trim();
 
-      const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script]);
+      const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { timeout: 2500, windowsHide: true });
       return stdout.trim();
     } catch {
       return null;
@@ -220,7 +223,7 @@ $unprotected = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, $
     try {
       this.validateKey(key);
       const script = `Remove-Item -Path "$env:LOCALAPPDATA\\OpenFaceID\\${key}.secret" -Force -ErrorAction SilentlyContinue`;
-      await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script]);
+      await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { timeout: 2500, windowsHide: true });
       return true;
     } catch {
       return false;

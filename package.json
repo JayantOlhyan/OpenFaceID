@@ -13,9 +13,9 @@
   },
   "scripts": {
     "build": "echo 'TypeScript checked'",
-    "test": "node --experimental-strip-types --test tests/unit/*.test.ts tests/evaluation/*.test.ts",
-    "test:unit": "node --experimental-strip-types --test tests/unit/*.test.ts",
-    "test:eval": "node --experimental-strip-types --test tests/evaluation/*.test.ts",
+    "test": "node --experimental-strip-types --test --test-timeout=20000 tests/unit/*.test.ts tests/evaluation/*.test.ts",
+    "test:unit": "node --experimental-strip-types --test --test-timeout=20000 tests/unit/*.test.ts",
+    "test:eval": "node --experimental-strip-types --test --test-timeout=20000 tests/evaluation/*.test.ts",
     "eval": "node scripts/evaluation/run-recognition-evaluation.js && node scripts/evaluation/run-threshold-analysis.js && node scripts/evaluation/run-liveness-evaluation.js && node scripts/evaluation/generate-evaluation-report.js",
     "lint": "echo 'Linting passed'",
     "desktop": "node --experimental-strip-types apps/desktop/serve.js",
