@@ -222,3 +222,61 @@
 1. **Apple Developer ID & Notarization (RB-01)**: First launch requires right-click &rarr; Open or enabling under macOS System Settings &rarr; Privacy & Security.
 2. **Intel Mac Binary**: Current binary targets Apple Silicon arm64 natively. Intel x86_64 builds require compilation on Intel hardware or Universal 2 toolchain setup.
 3. **Hardware-Attested Biometric Notice**: OpenFaceID operates on standard 2D optical webcams and is designed for presence awareness; it is not a hardware-attested substitute for Apple Touch ID / Face ID hardware secure enclaves.
+
+---
+
+## 23. macOS Distribution Certification Scorecard (Section 37)
+
+### Application
+* **Version**: `0.2.1-rc.1`
+* **Commit**: `2bbe16710c389ff378d1686207431599b502d352`
+* **Bundle ID**: `com.jayantolhyan.openfaceid`
+* **Architecture**: Apple Silicon (`arm64`)
+
+### Build
+* **Build**: **PASS** (`./scripts/build-macos.sh`)
+
+### Bundle
+* **Bundle valid**: **PASS**
+* **Info.plist**: **PASS** (`NSCameraUsageDescription` verified)
+* **Icon**: **PASS** (`OpenFaceID.icns` with 10 high-DPI tiers)
+* **Camera usage description**: **PASS**
+* **Native camera helper**: **PASS** (`openfaceid-camera-avf` Mach-O arm64)
+* **Node runtime**: **PASS** (Official standalone Darwin arm64, 0 Homebrew dependencies)
+* **Dependencies**: **PASS** (Zero external runtime npm packages)
+
+### Signing
+* **Ad-hoc**: **PASS** (`codesign -s -` verified on disk)
+* **Developer ID**: **UNAVAILABLE**
+* **Notarization**: **DEFERRED (RB-01)**
+* **Gatekeeper**: **EXPECTED WARNING (Ad-hoc open-source community release)**
+
+### DMG
+* **DMG created**: **PASS** (`dist/OpenFaceID-0.2.1-rc.1-arm64.dmg`)
+* **DMG mounts**: **PASS** (`hdiutil attach` verified)
+* **Applications shortcut**: **PASS** (`Applications -> /Applications`)
+* **App copy**: **PASS**
+* **DMG checksum**: `a2191ebdf3e95de25737895632abf76d3fe057ba0b834bcbfc421fa75e42d6e0`
+
+### Clean Installation
+* **Download**: **PASS**
+* **DMG open**: **PASS**
+* **Drag to Applications**: **PASS**
+* **Launch**: **PASS**
+* **Camera permission**: **PASS**
+* **Camera**: **PASS**
+* **Frames**: **PASS**
+* **Face detection**: **PASS**
+* **Embedding**: **PASS**
+* **Recognition**: **PASS**
+* **Liveness**: **PASS**
+* **Presence**: **PASS**
+
+### Website
+* **Download button**: **PASS**
+* **Release asset**: **PASS**
+* **Actual downloadable artifact**: **PASS**
+
+### Final Classification
+**INSTALLABLE WITH GATEKEEPER WARNING**
+*(Full DMG → /Applications → Clean Launch flow verified)*
