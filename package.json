@@ -39,6 +39,7 @@
     "hardware:recovery": "node scripts/hardware/recovery-test.js",
     "hardware:report": "node scripts/hardware/report.js",
     "docs:check-links": "node scripts/check-doc-links.js",
+    "test:install:mac": "./scripts/validation/test-macos-install.sh",
     "typecheck": "node --experimental-strip-types -e 'console.log(\"Typecheck verified\")'"
   },
   "keywords": [

@@ -51,23 +51,27 @@ chmod +x "$MACOS_DIR/OpenFaceID"
 echo "  ✓ Created Mach-O launcher at Contents/MacOS/OpenFaceID"
 
 # 5. Bundle Runtime (Node.js)
-echo "[4/6] Bundling embedded Node runtime..."
-NODE_SRC="$(which node || echo "/opt/homebrew/bin/node")"
-if [ ! -f "$NODE_SRC" ]; then
-  echo "Error: Node.js binary not found on build host!"
+echo "[4/6] Bundling embedded standalone Node runtime..."
+CACHE_NODE="$DIR/.cache/node-darwin-arm64/bin/node"
+if [ ! -f "$CACHE_NODE" ]; then
+  echo "  Downloading official standalone Node.js (Darwin arm64)..."
+  mkdir -p "$DIR/.cache/node-darwin-arm64"
+  curl -sSL "https://nodejs.org/dist/v22.14.0/node-v22.14.0-darwin-arm64.tar.gz" | tar -xz -C "$DIR/.cache/node-darwin-arm64" --strip-components=1
+fi
+
+if [ ! -f "$CACHE_NODE" ]; then
+  echo "Error: Failed to obtain standalone Node runtime!"
   exit 1
 fi
-REAL_NODE="$(python3 -c "import os, sys; print(os.path.realpath(sys.argv[1]))" "$NODE_SRC")"
-cp "$REAL_NODE" "$BIN_DIR/node"
-chmod +x "$BIN_DIR/node"
-echo "  ✓ Embedded Node binary from $REAL_NODE"
 
-# Copy libnode if present in ../lib
-NODE_LIB_DIR="$(dirname "$REAL_NODE")/../lib"
-if [ -d "$NODE_LIB_DIR" ]; then
-  mkdir -p "$RESOURCES_DIR/lib"
-  cp -p "$NODE_LIB_DIR"/libnode*.dylib "$RESOURCES_DIR/lib/" 2>/dev/null || true
-  echo "  ✓ Bundled libnode runtime libraries"
+cp "$CACHE_NODE" "$BIN_DIR/node"
+chmod +x "$BIN_DIR/node"
+echo "  ✓ Embedded standalone Node binary (zero Homebrew dependencies)"
+
+# Verify no Homebrew references in embedded node
+if otool -L "$BIN_DIR/node" | grep -q "/opt/homebrew"; then
+  echo "Error: Embedded Node binary still references /opt/homebrew!"
+  exit 1
 fi
 
 # 6. Copy App Payload & Info.plist
@@ -86,8 +90,11 @@ if [ -f "$DIR/tsconfig.json" ]; then
 fi
 echo "  ✓ Bundled application payload (apps/desktop, packages, configurations)"
 
-# 7. Ad-Hoc Code Signing
+# 7. Ad-Hoc Code Signing (Nested binaries first, then outer bundle)
 echo "[6/6] Applying ad-hoc codesign to bundle..."
+codesign --force --sign - "$BIN_DIR/openfaceid-camera-avf"
+codesign --force --sign - "$BIN_DIR/node"
+codesign --force --sign - "$MACOS_DIR/OpenFaceID"
 codesign --force --deep --sign - "$APP_DIR"
 echo "  ✓ Verifying bundle signature:"
 codesign --verify --deep --strict --verbose=2 "$APP_DIR"

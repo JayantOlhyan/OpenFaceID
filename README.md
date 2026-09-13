@@ -237,7 +237,7 @@ Open the `.dmg` file and drag OpenFaceID to `/Applications` , then open it.
 #### SHA-256 Checksum Verification
 ```bash
 shasum -a 256 OpenFaceID-0.2.1-rc.1-arm64.dmg
-# Expected: 4e3231a7f5acff3abd21bc2fff11bac94fb22a7c30ec7058fc52fde591c14b77
+# Expected: a2191ebdf3e95de25737895632abf76d3fe057ba0b834bcbfc421fa75e42d6e0
 ```
 
 > [!NOTE]
