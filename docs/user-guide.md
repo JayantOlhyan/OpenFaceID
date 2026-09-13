@@ -50,9 +50,9 @@ The OpenFaceID Desktop interface is organized into intuitive, accessible views:
 - **General**: Configures startup launch, tray visibility, and notification throttling.
 - **Camera**: Selects video capture sensor, resolution (`640x480`, `1280x720`, `1920x1080`), and frame rate (15–30 FPS).
 - **Recognition Presets**:
-  - **Balanced (Default)**: Cosine distance threshold `0.72` (recommended for general desktop environments).
-  - **Strict**: Threshold `0.65` (higher security for sensitive workstations).
-  - **Very Strict**: Threshold `0.58` (maximum discrimination requiring consistent front-facing alignment).
+  - **Balanced (Default)**: Cosine similarity threshold `0.70` (recommended for general desktop environments).
+  - **Strict**: Threshold `0.80` (higher security for sensitive workstations).
+  - **Very Strict**: Threshold `0.88` (maximum discrimination requiring consistent front-facing alignment).
 - **Liveness Mode**: Select between `passive` (temporal EAR eye-blink tracking + micro-motion) or `active` (pose challenges).
 
 ### 5. Security Center

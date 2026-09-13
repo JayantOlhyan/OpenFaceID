@@ -4,3 +4,11 @@ dist/
 .DS_Store
 *.log
 .openfaceid/
+
+# Evaluation & Biometric Data Quarantine
+data/evaluation/*
+!data/evaluation/.gitkeep
+*.eval.json
+eval-runs/
+*.raw
+*.bin

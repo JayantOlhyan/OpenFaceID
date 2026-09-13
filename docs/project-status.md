@@ -24,6 +24,7 @@ This document is the authoritative status ledger for OpenFaceID, maintained in a
 | **Face Detection Engine** (`packages/vision/src/detector`) | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `READY` | **`VERIFIED`** |
 | **Face Embedding Engine** (`packages/vision/src/embedder`) | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `READY` | **`VERIFIED`** |
 | **Liveness Anti-Spoofing (PAD)** (`packages/vision/src/liveness`)| `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `READY` | **`VERIFIED`** |
+| **Biometric Evaluation Framework** (`tests/evaluation`, `scripts/eval`)| `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `READY` | **`VERIFIED`** |
 | **Model Cryptographic Integrity** (`packages/vision/src/registry`)| `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `READY` | **`VERIFIED`** |
 | **Presence Authorization Engine** (`packages/presence`) | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `READY` | **`VERIFIED`** |
 | **Fail-Closed Multi-Face Policy** (`packages/presence`) | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `READY` | **`VERIFIED`** |

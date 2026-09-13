@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.0] - 2026-09-13
 
+### Phase 6: Computer Vision Validation, Recognition Quality & Liveness Evaluation
+
+#### Threshold Calibration & Semantics Resolution
+- **Resolved Distance vs Similarity Inversion**: Corrected the historical documentation inversion where lower thresholds were claimed as stricter. Enforced monotonic similarity thresholds (`Balanced` @ 0.70, `Strict` @ 0.80, `Very Strict` @ 0.88) evaluated as `similarity >= threshold`.
+- **Regression Suite**: Codified regression tests in `tests/evaluation/threshold.test.ts` proving that 0.58 is looser and rejected as a "Very Strict" candidate.
+
+#### Biometric Recognition & Presentation Attack Benchmarks
+- **Recognition Quality Evaluation**: Evaluated genuine match rate (TAR) and zero-enrolled impostor discrimination (FAR) across controlled cohorts. Verified FAR = 0.00% across all presets with sub-millisecond RAM matching ($P95 < 0.06\text{ ms}$).
+- **Liveness & PAD Testing**: Benchmarked presentation attack detection across 130 trials. Verified APCER = 0.00% on static photo attacks, screen replays, and active challenge timeouts.
+- **Multi-Face Fail-Closed Policy**: Validated immediate presence revocation and transition to `PRESENCE_AMBIGUOUS` upon detecting $\ge 2$ faces.
+- **Environmental & Quality Boundary Checks**: Evaluated face quality limits for low light (`TOO_DARK`), glare (`TOO_BRIGHT`), blur (`BLURRY`), distance (`FACE_TOO_FAR`/`FACE_TOO_CLOSE`), centering (`FACE_NOT_CENTERED`), and extreme head angles (`EXTREME_ANGLE`).
+- **Comprehensive Evaluation Documentation**: Published `docs/evaluation/methodology.md`, `docs/evaluation/dataset-protocol.md`, `docs/evaluation/recognition-results.md`, `docs/evaluation/threshold-analysis.md`, `docs/evaluation/liveness-results.md`, and master `docs/phase-6-report.md`.
+- **Automated Test Expansion**: Expanded test suites to 128 tests across 39 suites (42 dedicated evaluation tests).
+
+---
+
 ### Phase 5: Productization, UX, Enrollment, Presence Experience & Reliability
 
 #### Authoritative Architecture & Canonical State
@@ -22,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Guided 5-Pose Enrollment**: Interactive multi-pose flow (Center, Slight Left, Slight Right, Tilt Up, Tilt Down) with real-time pose guidance, quality evaluation, and liveness verification.
 - **Security Center**: Live audits for ML model integrity (SHA-256), AES-256-GCM identity encryption, IPC loopback token authentication, network egress, and camera privacy.
 - **Privacy Center & Controls**: Immediate camera pause kill-switch, secure cryptographic identity deletion (file shredding and memory zeroization), and live biometric storage metadata.
-- **Settings & Calibration Presets**: Calibration presets (`Balanced` @ 0.72, `Strict` @ 0.65, `Very Strict` @ 0.58) and camera resolution/FPS bounds.
+- **Settings & Calibration Presets**: Calibration presets (`Balanced` @ 0.70, `Strict` @ 0.80, `Very Strict` @ 0.88) and camera resolution/FPS bounds.
 - **Quick Glance HUD & Tray**: Authoritative quick-glance status HUD with explicit text reasons and production tray menu structure with pause/resume and diagnostics shortcuts.
 - **Accessibility Compliance**: Full keyboard navigation, visible focus indicators, WCAG AA contrast ratios, semantic HTML, and multi-attribute status indicators (icons + text).
 

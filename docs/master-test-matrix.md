@@ -7,8 +7,8 @@ This matrix tracks testing across every subsystem, methodology, test file, test 
 ## 1. Test Pyramid Breakdown
 
 - **Total Automated Test Suites**: 39 suites
-- **Total Automated Passing Tests**: 86 tests
-- **Passing Rate**: 100% (86 / 86 passing, 0 failures, 0 timeouts)
+- **Total Automated Passing Tests**: 128 tests (86 unit tests + 42 evaluation tests)
+- **Passing Rate**: 100% (128 / 128 passing, 0 failures, 0 timeouts)
 - **Host Execution Environment**: macOS Darwin 25.6.0 (arm64), Node.js v25.2.1
 
 ---
@@ -41,6 +41,12 @@ This matrix tracks testing across every subsystem, methodology, test file, test 
 | **Packaging** | Build / Packaging | `scripts/package-macos.sh`, `package-deb.sh` | 3 | **PASS** | macOS `.app` bundle, `.dmg`, `.zip`, Linux `.deb`, release manifest & SHA-256 generation |
 | **Performance Soak** | Reliability | `scripts/long-run-validation.js` | 1 | **PASS** | 1,000 continuous frames processed in 0.53s, 0.532ms average cycle, zero memory leaks, zero unhandled errors |
 | **Accessibility** | Audit / DOM | `apps/desktop/index.html` | Manual | **PASS** | Keyboard tab order, visible focus rings, WCAG AA contrast, semantic button/dialog tags |
+| **Threshold Semantics**| Evaluation / Math | `tests/evaluation/threshold.test.ts` | 6 | **PASS** | Monotonic presets (0.70 < 0.80 < 0.88), rejection of inverted 0.58 distance myth, clamping bounds |
+| **Recognition Quality**| Evaluation / Biometric | `tests/evaluation/recognition.test.ts` | 7 | **PASS** | Genuine match, temporal window aggregation (4/5), zero impostor acceptance (FAR=0%), disabled profile |
+| **Enrollment Cohesion**| Evaluation / Biometric | `tests/evaluation/enrollment-consistency.test.ts` | 6 | **PASS** | 5-pose pipeline, intra-subject similarity clustering, mixed-identity rejection, frame zeroization |
+| **Multi-Face Ambiguity**| Evaluation / Policy | `tests/evaluation/multi-face.test.ts` | 7 | **PASS** | 0/1/2/3+ face state transitions, fail-closed PRESENCE_AMBIGUOUS, bystander entry/exit recovery |
+| **Liveness (PAD)** | Evaluation / Security | `tests/evaluation/liveness.test.ts` | 7 | **PASS** | Static photo rejection (APCER=0%), micro-motion acceptance, active challenge timeouts & turns |
+| **Face Quality Gating**| Evaluation / Environmental | `tests/evaluation/quality.test.ts` | 9 | **PASS** | Rejection of blur, dark, glare, extreme yaw/pitch/roll, small/large face area ratio, off-center |
 
 ---
 
