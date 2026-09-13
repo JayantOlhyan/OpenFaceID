@@ -184,6 +184,14 @@ export class EnrollmentManager {
       recognitionStats: {
         matchCount: 0,
       },
+      modelMetadata: {
+        modelId: 'arcface-analytical-512d',
+        modelVersion: '1.0.0',
+        embeddingDim: ArcFaceEmbedder.EMBEDDING_DIM,
+        embeddingFormat: 'float32-l2-normalized',
+        normalization: 'unit-hypersphere-l2',
+        creationVersion: '0.2.0',
+      },
     };
   }
 }

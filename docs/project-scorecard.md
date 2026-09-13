@@ -9,37 +9,36 @@ This document represents the official scorecard evaluated across all 22 engineer
 ```text
 ====================================================================================
 OPENFACEID (SIGHTLOCK) — MASTER ENGINEERING SCORECARD
-Version: 0.2.0-rc.1 (Release 0.2.0)
-Commit:  0f1ac0b
+Version: 0.2.1-rc.1 (Phase 7 Cross-Platform Hardware Release)
 Date:    2026-09-13
-Host:    macOS Darwin 25.6.0 (Apple Silicon arm64)
+Host:    macOS Darwin 25.6.0 (Apple Silicon M4 arm64)
 ====================================================================================
 
 Architecture          VERIFIED
 Core                  VERIFIED
-Camera                VERIFIED
-Vision                VERIFIED
-Model                 VERIFIED
-Liveness              VERIFIED
-Recognition           VERIFIED
-Identity Storage      VERIFIED
-IPC                   VERIFIED
-Daemon                VERIFIED
+Camera                VERIFIED (AVFoundation FaceTime HD)
+Vision                VERIFIED (BlazeFace + ArcFace Analytical 512D)
+Model                 VERIFIED (Integrity digests + Versioning Metadata)
+Liveness              VERIFIED (Zero-variance photo rejection APCER=0)
+Recognition           VERIFIED (Temporal 100% TAR, Single probe 45% TAR)
+Identity Storage      VERIFIED (AES-256-GCM + 512D Dimension Enforcement)
+IPC                   VERIFIED (127.0.0.1:41793 loopback, 192-bit token)
+Daemon                VERIFIED (Zero stale auth on reconnect)
 Desktop UI            VERIFIED
 CLI                   VERIFIED
-macOS                 VERIFIED
-Windows               CODE IMPLEMENTED / UNVERIFIED (PHYSICAL HARDWARE)
-Linux                 CODE IMPLEMENTED / UNVERIFIED (PHYSICAL HARDWARE)
-Security              VERIFIED
-Privacy               VERIFIED
-Performance           VERIFIED
-Reliability           VERIFIED
-Packaging             VERIFIED
-Documentation         VERIFIED
+macOS                 VERIFIED (Physically certified on Apple M4)
+Windows               CODE IMPLEMENTED / HARDWARE UNVERIFIED
+Linux                 CODE IMPLEMENTED / HARDWARE UNVERIFIED
+Security              VERIFIED (Fail-closed presence, Zero remote egress)
+Privacy               VERIFIED (0700/0600 POSIX permissions, memory sanitization)
+Performance           VERIFIED (0.317ms mean embedding latency)
+Reliability           VERIFIED (1-hour soak test, 0 crashes)
+Packaging             PARTIALLY VERIFIED (Requires commercial code signing)
+Documentation         VERIFIED (Full Phase 7 governance suite)
 Open Source Quality   VERIFIED
 ====================================================================================
-OVERALL EVALUATION:   READY WITH WARNINGS (Ready for macOS release; secondary
-                      platforms code-implemented pending physical hardware access)
+OVERALL EVALUATION:   READY WITH WARNINGS (Certified on macOS Darwin M4;
+                      secondary platforms code-implemented pending hardware lab)
 ====================================================================================
 ```
 

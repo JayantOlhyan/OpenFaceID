@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-09-13T10:59:37.679Z",
+  "testLog": [
+    {
+      "step": "zero_faces",
+      "presence": "PRESENCE_UNAUTHORIZED",
+      "authorized": false
+    },
+    {
+      "step": "single_user_authorized",
+      "presence": "PRESENCE_AUTHORIZED",
+      "authorized": true
+    },
+    {
+      "step": "multiple_faces_fail_closed",
+      "presence": "PRESENCE_AMBIGUOUS",
+      "authorized": false
+    },
+    {
+      "step": "privacy_paused",
+      "presence": "PRESENCE_UNAUTHORIZED",
+      "authorized": false
+    },
+    {
+      "step": "privacy_resumed",
+      "presence": "PRESENCE_AMBIGUOUS",
+      "authorized": false
+    }
+  ],
+  "allPassed": true
+}

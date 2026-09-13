@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-09-13T10:59:15.529Z",
+  "embeddingLatency": {
+    "meanMs": 0.317,
+    "p50Ms": 0.24,
+    "p95Ms": 0.453
+  },
+  "galleryScaling": [
+    {
+      "size": 1,
+      "meanMs": 0.0218,
+      "p95Ms": 0.088
+    },
+    {
+      "size": 5,
+      "meanMs": 0.014,
+      "p95Ms": 0.0165
+    },
+    {
+      "size": 10,
+      "meanMs": 0.025,
+      "p95Ms": 0.0261
+    },
+    {
+      "size": 25,
+      "meanMs": 0.0635,
+      "p95Ms": 0.0724
+    }
+  ]
+}

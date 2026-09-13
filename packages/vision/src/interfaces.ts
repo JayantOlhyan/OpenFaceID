@@ -57,6 +57,14 @@ export interface EnrolledIdentity {
     lastRecognizedAt?: number;
     lastConfidence?: number;
   };
+  modelMetadata?: {
+    modelId: string;
+    modelVersion: string;
+    embeddingDim: number;
+    embeddingFormat: string;
+    normalization: string;
+    creationVersion: string;
+  };
 }
 
 export interface MatchResult {

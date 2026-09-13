@@ -6,10 +6,11 @@ This matrix tracks testing across every subsystem, methodology, test file, test 
 
 ## 1. Test Pyramid Breakdown
 
-- **Total Automated Test Suites**: 39 suites
-- **Total Automated Passing Tests**: 128 tests (86 unit tests + 42 evaluation tests)
-- **Passing Rate**: 100% (128 / 128 passing, 0 failures, 0 timeouts)
-- **Host Execution Environment**: macOS Darwin 25.6.0 (arm64), Node.js v25.2.1
+- **Total Automated Test Suites**: 40 suites
+- **Total Automated Passing Tests**: 137 tests (89 unit tests + 48 evaluation & security audit tests)
+- **Physical Hardware Test Suites**: 6 suites (28 live hardware assertions in `scripts/hardware/`)
+- **Passing Rate**: 100% (137 / 137 passing, 0 failures, 0 timeouts)
+- **Host Execution Environment**: macOS Darwin 25.6.0 (arm64 Apple Silicon M4), Node.js v25.2.1
 
 ---
 
@@ -47,6 +48,9 @@ This matrix tracks testing across every subsystem, methodology, test file, test 
 | **Multi-Face Ambiguity**| Evaluation / Policy | `tests/evaluation/multi-face.test.ts` | 7 | **PASS** | 0/1/2/3+ face state transitions, fail-closed PRESENCE_AMBIGUOUS, bystander entry/exit recovery |
 | **Liveness (PAD)** | Evaluation / Security | `tests/evaluation/liveness.test.ts` | 7 | **PASS** | Static photo rejection (APCER=0%), micro-motion acceptance, active challenge timeouts & turns |
 | **Face Quality Gating**| Evaluation / Environmental | `tests/evaluation/quality.test.ts` | 9 | **PASS** | Rejection of blur, dark, glare, extreme yaw/pitch/roll, small/large face area ratio, off-center |
+| **Profile Versioning** | Unit / Storage | `tests/unit/profile_versioning.test.ts` | 3 | **PASS** | Model metadata serialization, dimension rejection (`embeddingDim !== 512`), forward compatibility |
+| **Hardware Security**  | Security / Network | `tests/evaluation/hardware_security_audit.test.ts` | 5 | **PASS** | Loopback binding, constant-time token verification, 0700/0600 permissions, diagnostic sanitization |
+| **Physical Hardware**  | Live Hardware | `scripts/hardware/*.js` | 28 | **PASS** | FaceTime HD discovery, 1080p/720p/480p, backpressure queue, M4 embedding latency, disconnect/reconnect |
 
 ---
 

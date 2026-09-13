@@ -42,7 +42,10 @@ This document is the authoritative status ledger for OpenFaceID, maintained in a
 | **CLI Administration Tool** (`apps/cli/bin/openfaceid`) | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `READY` | **`VERIFIED`** |
 | **Sanitized Diagnostics Export** (`serve.js`, `openfaceid.ts`) | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `READY` | **`VERIFIED`** |
 | **Zero Network Egress Policy** (`ActionDispatcher`, `serve.js`) | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `READY` | **`VERIFIED`** |
-| **macOS Native Platform Adapter** (`MacOSAdapter`) | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `READY` | **`VERIFIED`** |
+| **Biometric Profile Versioning** (`IdentityStore`, `interfaces`)| `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `READY` | **`VERIFIED`** |
+| **Physical Hardware Diagnostics** (`scripts/hardware`) | `VERIFIED` | `VERIFIED` | `VERIFIED` (macOS) | `VERIFIED` | `VERIFIED` | `READY` | **`VERIFIED`** |
+| **Failure Taxonomy & Registry (P01-P21)** (`failure-taxonomy.md`)| `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `VERIFIED` | `READY` | **`VERIFIED`** |
+| **macOS Native Platform Adapter** (`MacOSAdapter`) | `VERIFIED` | `VERIFIED` | `VERIFIED` (M4) | `VERIFIED` | `VERIFIED` | `READY` | **`VERIFIED`** |
 | **Windows Native Platform Adapter** (`WindowsAdapter`) | `IMPLEMENTED` | `VERIFIED` | `UNVERIFIED` | `VERIFIED` | `VERIFIED` | `WARNING` | **`CODE ONLY`** |
 | **Linux Native Platform Adapter** (`LinuxAdapter`) | `IMPLEMENTED` | `VERIFIED` | `UNVERIFIED` | `VERIFIED` | `VERIFIED` | `WARNING` | **`CODE ONLY`** |
 | **macOS Packaging (.app / .dmg / .zip)** | `VERIFIED` | `VERIFIED` | `VERIFIED` | `WARNING` (Unsigned)| `VERIFIED`| `READY` | **`PARTIALLY VERIFIED`** |
@@ -53,6 +56,8 @@ This document is the authoritative status ledger for OpenFaceID, maintained in a
 
 ## 2. Release Readiness Verdict
 
-- **macOS (Darwin Apple Silicon arm64)**: **READY WITH WARNINGS** (Ready for distribution; unsigned developer build requiring initial Gatekeeper approval).
-- **Secondary Platforms (Windows / Linux)**: **CODE ONLY — HARDWARE UNVERIFIED** (Functional in automated tests and mock runs; awaiting physical multi-platform hardware test lab).
-- **Security Blockers**: **0 active P0 blockers**.
+- **Phase 6 Baseline Reconciliation**: **RECONCILED & FROZEN** (`docs/evaluation/frozen-baseline.md`).
+- **macOS (Darwin Apple Silicon M4 arm64)**: **VERIFIED & READY WITH WARNINGS** (Ready for distribution; self-signed build requiring initial Gatekeeper approval).
+- **Secondary Platforms (Windows / Linux)**: **CODE ONLY — HARDWARE UNVERIFIED** (Functional in automated regression tests; awaiting physical multi-platform hardware test lab).
+- **Security Invariants**: **0 active P0 blockers**, 137/137 tests passing across 40 suites. Zero stale authorization bug resolved.
+

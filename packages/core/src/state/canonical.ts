@@ -101,6 +101,17 @@ export class CanonicalStateMachine {
 
   public setCameraState(state: CameraCoreState): void {
     this.camera = state;
+    if (state !== 'CAMERA_READY') {
+      this.detection = 'NO_FACE';
+      this.faceCount = 0;
+      this.liveness = 'LIVENESS_REQUIRED';
+      this.identity = 'IDENTITY_UNKNOWN';
+      this.activeIdentityId = null;
+      this.activeIdentityName = null;
+      this.presenceSession.authorizedAt = null;
+      this.presenceSession.lastConfirmedAt = null;
+      this.presenceSession.expiresAt = null;
+    }
     this.recomputeAuthoritativePresence();
   }
 

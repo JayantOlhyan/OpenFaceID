@@ -137,6 +137,42 @@ This backlog tracks all architectural, security, vision, platform, and reliabili
 
 ---
 
+### `OFID-SEC-04`: Camera Reconnect Stale Authorization State Retention
+- **Category**: Security / Session Management / Hardware Recovery
+- **Severity**: **P0 (Critical)**
+- **Component**: `packages/core/src/state/canonical.ts`
+- **Description**: During hardware hot-plug recovery testing, `setCameraState` previously did not clear active identity IDs or presence expiration timestamps when the camera disconnected. Reconnecting the camera caused `recomputeAuthoritativePresence` to evaluate prior transient state as valid without requiring fresh liveness and identity matching.
+- **Impact**: If a user unplugged their webcam while authenticated, an unauthorized bystander reconnecting the webcam could inherit the authenticated session.
+- **Proposed Fix**: Update `CanonicalStateMachine.setCameraState` so that any state transition away from `CAMERA_READY` unconditionally zeroes `activeIdentityId`, `activeIdentityName`, `presenceSession.authorizedAt`, `presenceSession.lastConfirmedAt`, and `presenceSession.expiresAt`.
+- **Status**: **RESOLVED**
+- **Verification**: Verified via `scripts/hardware/recovery-test.js` and `tests/evaluation/hardware_security_audit.test.ts`.
+
+---
+
+### `OFID-BIO-01`: Biometric Profile Versioning & Incompatible Model Representation
+- **Category**: Vision / Storage / Migration
+- **Severity**: **P2 (Medium)**
+- **Component**: `packages/storage/src/IdentityStore.ts`, `packages/vision/src/interfaces.ts`
+- **Description**: Stored biometric profiles previously lacked embedded metadata recording the embedding model ID, version, and vector dimensions. Upgrading the underlying vision engine to a different vector dimension would cause silent cosine distance failures or crashes.
+- **Impact**: Corrupted matching behavior across application upgrades.
+- **Proposed Fix**: Attach `modelMetadata` (`modelId`, `modelVersion`, `embeddingDim`, `embeddingFormat`, `normalization`, `creationVersion`) to enrolled identities. Enforce strict rejection of incompatible dimensions (`embeddingDim !== 512`) during retrieval in `IdentityStore`.
+- **Status**: **RESOLVED**
+- **Verification**: Verified via `tests/unit/profile_versioning.test.ts`.
+
+---
+
+### `OFID-PLAT-01`: Physical Hardware Test Bench for Windows & Linux
+- **Category**: Platform / Hardware Lab
+- **Severity**: **P2 (Medium)**
+- **Component**: Cross-platform CI / Physical runners
+- **Description**: Windows 11 and Linux (Ubuntu 24.04 Wayland/X11) implementations are complete in tree and pass all unit/mock tests, but require physical workstation testing with physical webcams.
+- **Impact**: Windows and Linux cannot be certified as `VERIFIED` on hardware until tested on real machines.
+- **Proposed Fix**: Set up self-hosted GitHub Actions runners with physical USB cameras on Windows 11 and Ubuntu 24.04 hardware.
+- **Status**: **OPEN (SCHEDULED FOR PHASE 8)**
+- **Verification**: Target for Phase 8 release readiness.
+
+---
+
 ### `OFID-TEST-01`: Automated Headless Browser E2E UI Suite
 - **Category**: Testing / QA
 - **Severity**: **P4 (Enhancement)**

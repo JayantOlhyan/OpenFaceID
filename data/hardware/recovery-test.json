@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-09-13T11:00:10.209Z",
+  "recoveryLog": [
+    {
+      "event": "initial_authorized",
+      "presence": "PRESENCE_AUTHORIZED"
+    },
+    {
+      "event": "camera_disconnected",
+      "presence": "PRESENCE_UNAUTHORIZED",
+      "passed": true
+    },
+    {
+      "event": "camera_reconnected",
+      "presence": "PRESENCE_UNAUTHORIZED",
+      "passed": true
+    },
+    {
+      "event": "wake_reset",
+      "presence": "PRESENCE_UNAUTHORIZED",
+      "passed": true
+    }
+  ],
+  "allPassed": true
+}

@@ -19,6 +19,14 @@ interface SerializedIdentity {
     lastRecognizedAt?: number;
     lastConfidence?: number;
   };
+  modelMetadata?: {
+    modelId: string;
+    modelVersion: string;
+    embeddingDim: number;
+    embeddingFormat: string;
+    normalization: string;
+    creationVersion: string;
+  };
 }
 
 export class IdentityStore {
@@ -93,6 +101,14 @@ export class IdentityStore {
           identity.averageEmbedding.byteLength
         ).toString('base64'),
         recognitionStats: identity.recognitionStats,
+        modelMetadata: identity.modelMetadata || {
+          modelId: 'arcface-analytical-512d',
+          modelVersion: '1.0.0',
+          embeddingDim: 512,
+          embeddingFormat: 'float32-l2-normalized',
+          normalization: 'unit-hypersphere-l2',
+          creationVersion: '0.2.0',
+        },
       };
 
       const jsonStr = JSON.stringify(serialized);
@@ -121,6 +137,12 @@ export class IdentityStore {
       const decryptedBuffer = CryptoManager.decrypt(encrypted, masterSecret);
       const serialized: SerializedIdentity = JSON.parse(decryptedBuffer.toString('utf8'));
 
+      // Section 51: Validate Model Metadata and Embedding Dimension
+      if (serialized.modelMetadata && serialized.modelMetadata.embeddingDim !== 512) {
+        Logger.error('storage', `Identity ${id} rejected: Incompatible embedding dimension ${serialized.modelMetadata.embeddingDim}`);
+        return null;
+      }
+
       // Convert Base64 back to Float32Array
       const embeddings = serialized.embeddingsBase64.map((b64) => {
         const buf = Buffer.from(b64, 'base64');
@@ -143,6 +165,7 @@ export class IdentityStore {
         embeddings,
         averageEmbedding,
         recognitionStats: serialized.recognitionStats,
+        modelMetadata: serialized.modelMetadata,
       };
     } catch (err) {
       Logger.error('storage', `Failed to load identity ${id}`, { error: String(err) });

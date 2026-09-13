@@ -22,6 +22,13 @@
     "package:linux": "./scripts/package-linux.sh",
     "package:deb": "./scripts/package-deb.sh",
     "package:release": "node --experimental-strip-types scripts/generate-release-manifest.js",
+    "hardware:doctor": "node scripts/hardware/doctor.js",
+    "hardware:camera": "node scripts/hardware/camera-test.js",
+    "hardware:recognition": "node scripts/hardware/recognition-test.js",
+    "hardware:liveness": "node scripts/hardware/liveness-test.js",
+    "hardware:presence": "node scripts/hardware/presence-test.js",
+    "hardware:recovery": "node scripts/hardware/recovery-test.js",
+    "hardware:report": "node scripts/hardware/report.js",
     "typecheck": "node --experimental-strip-types -e 'console.log(\"Typecheck verified\")'"
   },
   "keywords": [

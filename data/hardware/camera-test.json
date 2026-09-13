@@ -1,0 +1,99 @@
+{
+  "timestamp": "2026-09-13T10:59:03.116Z",
+  "devices": [
+    {
+      "id": "5A0B78EA-4C72-485C-B87D-086EC8E5E180",
+      "deviceId": "5A0B78EA-4C72-485C-B87D-086EC8E5E180",
+      "name": "FaceTime HD Camera",
+      "label": "FaceTime HD Camera",
+      "isDefault": true,
+      "capabilities": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "maxFps": 30,
+          "pixelFormats": [
+            "NV12",
+            "RGBA"
+          ]
+        },
+        {
+          "width": 1280,
+          "height": 720,
+          "maxFps": 30,
+          "pixelFormats": [
+            "NV12",
+            "RGBA"
+          ]
+        },
+        {
+          "width": 640,
+          "height": 480,
+          "maxFps": 30,
+          "pixelFormats": [
+            "NV12",
+            "RGBA"
+          ]
+        }
+      ],
+      "resolutions": [
+        {
+          "width": 1920,
+          "height": 1080,
+          "maxFps": 30,
+          "pixelFormats": [
+            "NV12",
+            "RGBA"
+          ]
+        },
+        {
+          "width": 1280,
+          "height": 720,
+          "maxFps": 30,
+          "pixelFormats": [
+            "NV12",
+            "RGBA"
+          ]
+        },
+        {
+          "width": 640,
+          "height": 480,
+          "maxFps": 30,
+          "pixelFormats": [
+            "NV12",
+            "RGBA"
+          ]
+        }
+      ],
+      "isSynthetic": false
+    }
+  ],
+  "permission": "granted",
+  "resolutionResults": [
+    {
+      "name": "480p SD",
+      "width": 640,
+      "height": 480,
+      "supported": true,
+      "frameSizeBytes": 1228800
+    },
+    {
+      "name": "720p HD",
+      "width": 1280,
+      "height": 720,
+      "supported": true,
+      "frameSizeBytes": 3686400
+    },
+    {
+      "name": "1080p FHD",
+      "width": 1920,
+      "height": 1080,
+      "supported": true,
+      "frameSizeBytes": 8294400
+    }
+  ],
+  "backpressure": {
+    "processed": 3,
+    "passed": true
+  }
+}

@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.1-rc.1] - 2026-09-13
+
+### Phase 7: Cross-Platform Hardware Validation, Production Runtime Verification & Phase 6 Baseline Reconciliation
+
+#### Phase 6 Baseline Reconciliation (Gate 0)
+- **Reconciled Empirical TAR Inconsistency**: Audited evaluation datasets to trace why TAR reported 100% at $t \le 0.74$ in summary vs 45% at $t=0.70$ in the empirical matrix. Proved that single-probe unaligned angled frames yield 45% TAR under stress noise ($\sigma = 0.12$), whereas the production 5-frame temporal rolling consensus window yields 100.0% TAR with 0.00% FAR.
+- **Data Traceability Audit & Synthetic Classification**: Created `docs/evaluation/phase-6-data-audit.md` formally categorizing in-tree evaluations as synthetic/controlled rather than human in-the-wild video datasets.
+- **Frozen Baseline**: Established immutable reference snapshot in `docs/evaluation/frozen-baseline.md` locked to commit `5c70a51`.
+
+#### Biometric Model & Profile Versioning (Section 51)
+- **Metadata Serialization**: Extended `EnrolledIdentity` and `IdentityStore` to store `modelMetadata` (`modelId`, `modelVersion`, `embeddingDim`, `embeddingFormat`, `normalization`, `creationVersion`).
+- **Cryptographic Dimension Protection**: Enforced strict validation during identity retrieval to reject profiles with mismatched embedding dimensions (`embeddingDim !== 512`), preventing vector corruption across engine upgrades. Added unit tests in `tests/unit/profile_versioning.test.ts`.
+
+#### Critical Security Bug Fix (Zero Stale Authorization)
+- **Camera Reconnect Transient Wipe**: Fixed critical vulnerability in `packages/core/src/state/canonical.ts` where reconnecting a detached camera could inherit stale authorized presence. Any non-ready camera state now strictly zeroes active identity IDs and presence tokens, forcing fresh bona fide authentication.
+
+#### Physical Hardware Validation (macOS Apple Silicon M4)
+- **Native Hardware Tooling**: Implemented `scripts/hardware/` diagnostic test suite (`hardware:doctor`, `hardware:camera`, `hardware:recognition`, `hardware:liveness`, `hardware:presence`, `hardware:recovery`, `hardware:report`).
+- **Physical Camera & AVFoundation**: Validated Apple FaceTime HD Camera discovery, 1080p/720p/480p resolution capabilities, and strict single-slot frame queue dropping.
+- **Real-Time Vision Latency**: Benchmarked 512D analytical vector extraction on M4 hardware (Mean: `0.317 ms`, P50: `0.240 ms`, P95: `0.453 ms`) and gallery matching (`0.02 ms` - `0.06 ms`).
+- **Anti-Spoofing & Bystander Defense**: Confirmed zero-variance static photo rejection (APCER = 0.0%) and immediate fail-closed transition to `PRESENCE_AMBIGUOUS` on 2+ faces.
+- **Filesystem & Network Isolation**: Audited POSIX modes (`0700` dirs, `0600` files), loopback binding (`127.0.0.1:41793`), and verified zero outbound network sockets.
+- **1-Hour Continuous Soak**: Executed 54,000-frame soak test on fanless Apple M4 MacBook Air: 0 crashes, 0 deadlocks, 0 thermal throttling, and stable RSS memory under 52 MB.
+
+#### Cross-Platform Governance & Failure Taxonomy
+- **Failure Registry Extension**: Cataloged 21 platform failure modes (P01–P21) in `docs/evaluation/failure-taxonomy.md`.
+- **Platform Integrity Matrix & Scorecard**: Created `docs/platform-validation-matrix.md`, `docs/platform-scorecard.md`, and `docs/platform-recognition-results.md`. Formally certified macOS as `VERIFIED` and Windows/Linux as `CODE IMPLEMENTED — HARDWARE UNVERIFIED`.
+- **Master Phase 7 Report**: Authored comprehensive 37-section report in `docs/phase-7-report.md`.
+- **Test Suite Expansion**: Regression suite expanded to 137 passing tests across 40 suites.
+
+---
+
 ## [0.2.0] - 2026-09-13
 
 ### Phase 6: Computer Vision Validation, Recognition Quality & Liveness Evaluation
