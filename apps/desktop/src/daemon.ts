@@ -3,8 +3,10 @@ import {
   RecognitionStateMachine,
   SecurityStateMachine,
   PresenceStateMachine,
+  CanonicalStateMachine,
   EventBus,
   Logger,
+  type CanonicalStateSnapshot,
 } from '../../../packages/core/src/index.ts';
 import { getPlatformAdapter, type PlatformAdapter } from '../../../packages/platform/src/index.ts';
 import { CameraManager, type CameraFrame } from '../../../packages/camera/src/index.ts';
@@ -14,6 +16,7 @@ import {
   LivenessDetector,
   FaceQualityAnalyzer,
   FaceRecognizer,
+  EnrollmentManager,
   ModelRegistry,
   type FaceLandmarks,
 } from '../../../packages/vision/src/index.ts';
@@ -46,9 +49,15 @@ export class DesktopEngine {
   public readonly recognizer: FaceRecognizer;
   public readonly presenceTracker: PresenceTracker;
 
-  // State Machines
+  // Canonical Authoritative State Machine (Phase 5)
+  public readonly canonicalFsm: CanonicalStateMachine;
+
+  // Legacy FSMs for backward compatibility
   private recognitionFsm: RecognitionStateMachine;
   private securityFsm: SecurityStateMachine;
+
+  // Active Enrollment Manager (if session in progress)
+  private activeEnrollment: EnrollmentManager | null = null;
 
   // Authoritative State
   private startTime: number = Date.now();
@@ -63,6 +72,7 @@ export class DesktopEngine {
   private isProcessingFrame: boolean = false;
   private isShuttingDown: boolean = false;
   private powerCheckInterval: NodeJS.Timeout | null = null;
+  private sessionCheckInterval: NodeJS.Timeout | null = null;
   private lastPowerCheckTime: number = Date.now();
 
   constructor(options: DesktopEngineOptions = {}) {
@@ -78,12 +88,14 @@ export class DesktopEngine {
     this.quality = new FaceQualityAnalyzer();
     this.recognizer = new FaceRecognizer();
 
+    const leaveTimeout = options.leaveTimeoutSec ?? 20;
     this.presenceTracker = new PresenceTracker({
-      leaveTimeoutSec: options.leaveTimeoutSec ?? 20,
+      leaveTimeoutSec: leaveTimeout,
       gracePeriodSec: options.gracePeriodSec ?? 5,
       requireAuthorizedIdentity: true,
     });
 
+    this.canonicalFsm = new CanonicalStateMachine(leaveTimeout);
     this.recognitionFsm = new RecognitionStateMachine('IDLE');
     this.securityFsm = new SecurityStateMachine('UNKNOWN');
 
@@ -100,6 +112,8 @@ export class DesktopEngine {
   public async initialize(): Promise<void> {
     Logger.info('core', `Initializing ${BRANDING.name} Desktop Engine (v${BRANDING.version})`);
     this.visionState = 'LOADING_MODEL';
+    this.canonicalFsm.setSystemState('SYSTEM_STARTING');
+    this.canonicalFsm.setCameraState('CAMERA_INITIALIZING');
 
     try {
       // 1. Load configuration and initialize storage
@@ -112,29 +126,41 @@ export class DesktopEngine {
       if (!integrityCheck.allValid) {
         Logger.error('vision', 'MODEL_INTEGRITY_FAILURE: Vision model cryptographic integrity check failed');
         this.visionState = 'ERROR';
+        this.canonicalFsm.setSystemState('SYSTEM_ERROR');
         this.activityLog.logEvent('MODEL_INTEGRITY_FAILURE', { details: integrityCheck.results });
         return;
       }
 
-      // 3. Query hardware camera devices
+      // 3. Query hardware camera devices & permission
       const devices = await this.cameraManager.enumerateDevices();
       const permission = await this.cameraManager.checkPermission();
 
-      if (devices.length === 0 || permission === 'denied') {
-        Logger.warn('camera', 'Camera unavailable or permission denied; entering safe degraded mode');
-        this.cameraState = permission === 'denied' ? 'ERROR' : 'DISCONNECTED';
+      if (permission === 'denied') {
+        Logger.warn('camera', 'Camera permission denied; entering safe degraded mode');
+        this.cameraState = 'ERROR';
+        this.canonicalFsm.setCameraState('CAMERA_PERMISSION_REQUIRED');
+        this.visionState = 'READY';
+      } else if (devices.length === 0) {
+        Logger.warn('camera', 'No camera devices detected; entering disconnected state');
+        this.cameraState = 'DISCONNECTED';
+        this.canonicalFsm.setCameraState('CAMERA_DISCONNECTED');
         this.visionState = 'READY';
       } else {
-        this.cameraState = 'IDLE';
+        this.cameraState = 'ACTIVE';
+        this.canonicalFsm.setCameraState('CAMERA_READY');
         this.visionState = 'READY';
       }
 
-      // 3. Start background sleep/wake power monitor
+      // 4. Start background power monitor (sleep/wake)
       this.startPowerMonitor();
 
-      // 4. Register process shutdown hooks
+      // 5. Start periodic session expiration checker (every 1000ms)
+      this.startSessionExpirationChecker();
+
+      // 6. Register process shutdown hooks
       this.registerShutdownHooks();
 
+      this.canonicalFsm.setSystemState('SYSTEM_READY');
       this.activityLog.logEvent('ENGINE_INITIALIZED', {
         version: BRANDING.version,
         os: this.adapter.getPlatformInfo().os,
@@ -145,6 +171,8 @@ export class DesktopEngine {
       Logger.error('core', 'Engine initialization encountered an error; entering degraded state', { error: String(err) });
       this.cameraState = 'ERROR';
       this.visionState = 'ERROR';
+      this.canonicalFsm.setSystemState('SYSTEM_ERROR');
+      this.canonicalFsm.setCameraState('CAMERA_UNAVAILABLE');
     }
   }
 
@@ -165,23 +193,52 @@ export class DesktopEngine {
       // 1. Face Detection (BlazeFace 896 Anchors)
       const detections = await this.detector.detect(frame);
 
+      // Condition: No faces detected
       if (detections.length === 0) {
         this.recognitionFsm.transition('SEARCHING');
         this.presenceTracker.onNoFaceDetected(Date.now());
+        this.canonicalFsm.updateVisionState({
+          faceCount: 0,
+          detectionState: 'NO_FACE',
+          livenessState: 'LIVENESS_REQUIRED',
+          identityState: 'IDENTITY_UNKNOWN',
+        });
 
-        // Check if user has left
+        // Check if absence timeout reached
         if (this.presenceTracker.getState() === 'USER_LEFT') {
           await this.handleUserLeft();
         }
         return;
       }
 
-      // 2. Face Quality Check on primary detection
+      // Section 8: Hard Fail-Closed Multiple-Face Policy
+      if (detections.length >= 2) {
+        Logger.warn('vision', `Multiple faces detected (${detections.length}); fail-closed policy enforced`);
+        this.presenceTracker.onMultipleFacesDetected(detections.length);
+        this.recognitionFsm.transition('SEARCHING');
+        this.canonicalFsm.updateVisionState({
+          faceCount: detections.length,
+          detectionState: 'MULTIPLE_FACES',
+          livenessState: 'LIVENESS_REQUIRED',
+          identityState: 'IDENTITY_UNKNOWN',
+        });
+        return;
+      }
+
+      // Exactly 1 face in field of view
       const primaryFace = detections[0];
+
+      // 2. Face Quality Check on primary detection
       const qualityCheck = this.quality.evaluate(primaryFace.box, primaryFace.landmarks, frame.width, frame.height);
 
       if (!qualityCheck.isAcceptable) {
         this.recognitionFsm.transition('QUALITY_CHECK');
+        this.canonicalFsm.updateVisionState({
+          faceCount: 1,
+          detectionState: 'FACE_MATCHING',
+          livenessState: 'LIVENESS_REQUIRED',
+          identityState: 'IDENTITY_UNKNOWN',
+        });
         return;
       }
 
@@ -224,8 +281,26 @@ export class DesktopEngine {
           // 6. Authorized Presence Verification
           this.presenceTracker.onAuthorizedPresence(matchResult.identity.id, matchResult.identity.name);
           this.securityFsm.transition('POLICY_APPROVED');
+
+          // Update Canonical State Machine to AUTHORIZED
+          this.canonicalFsm.updateVisionState({
+            faceCount: 1,
+            detectionState: 'FACE_DETECTED',
+            livenessState: 'LIVENESS_PASSED',
+            identityState: 'IDENTITY_RECOGNIZED',
+            identityId: matchResult.identity.id,
+            identityName: matchResult.identity.name,
+          });
         } else {
           Logger.debug('vision', `Liveness check pending or failed: ${livenessResult.reason}`);
+          this.canonicalFsm.updateVisionState({
+            faceCount: 1,
+            detectionState: 'FACE_DETECTED',
+            livenessState: 'LIVENESS_FAILED',
+            identityState: 'IDENTITY_RECOGNIZED',
+            identityId: matchResult.identity.id,
+            identityName: matchResult.identity.name,
+          });
         }
       } else {
         // Unknown face detected
@@ -233,11 +308,18 @@ export class DesktopEngine {
         this.activeIdentityName = null;
         this.lastConfidence = matchResult.confidence;
         this.presenceTracker.onUnknownFaceDetected();
+
+        this.canonicalFsm.updateVisionState({
+          faceCount: 1,
+          detectionState: 'UNKNOWN_FACE',
+          livenessState: 'LIVENESS_REQUIRED',
+          identityState: 'IDENTITY_UNKNOWN',
+        });
       }
     } catch (err) {
       Logger.error('vision', 'Error during frame pipeline execution', { error: String(err) });
     } finally {
-      // MANDATORY: Zeroize camera frame RAM buffer
+      // MANDATORY BIOMETRIC PRIVACY RULE: Zeroize camera frame RAM buffer
       frame.zeroize();
       this.isProcessingFrame = false;
       this.visionState = this.privacyPaused ? 'PAUSED' : 'READY';
@@ -256,6 +338,7 @@ export class DesktopEngine {
     this.activeIdentityId = null;
     this.activeIdentityName = null;
     this.presenceTracker.reset();
+    this.canonicalFsm.setPrivacyPaused(true);
 
     this.activityLog.logEvent('PRIVACY_PAUSE_ACTIVATED', { timestamp: Date.now() });
     EventBus.getInstance().emit('PRIVACY_PAUSED' as any, { timestamp: Date.now() });
@@ -266,6 +349,7 @@ export class DesktopEngine {
     this.privacyPaused = false;
     this.cameraState = 'ACTIVE';
     this.visionState = 'READY';
+    this.canonicalFsm.setPrivacyPaused(false);
 
     this.activityLog.logEvent('PRIVACY_PAUSE_DEACTIVATED', { timestamp: Date.now() });
     EventBus.getInstance().emit('PRIVACY_RESUMED' as any, { timestamp: Date.now() });
@@ -289,6 +373,22 @@ export class DesktopEngine {
   }
 
   /**
+   * Interactive Enrollment Session Management
+   */
+  public startEnrollmentSession(name: string): EnrollmentManager {
+    this.activeEnrollment = new EnrollmentManager(name);
+    return this.activeEnrollment;
+  }
+
+  public getActiveEnrollment(): EnrollmentManager | null {
+    return this.activeEnrollment;
+  }
+
+  public cancelEnrollmentSession(): void {
+    this.activeEnrollment = null;
+  }
+
+  /**
    * Authoritative Single Source of Truth Application State
    */
   public async getAuthoritativeState(): Promise<ApplicationState> {
@@ -298,6 +398,8 @@ export class DesktopEngine {
     const identities = await this.identityStore.listIdentities();
     const perm = await this.cameraManager.checkPermission();
 
+    const snapshot: CanonicalStateSnapshot = this.canonicalFsm.getSnapshot();
+
     let trayStatus: ApplicationState['tray']['status'] = '● Active';
     let indicator = 'active';
     let tooltip = `${BRANDING.name}: Protection Active`;
@@ -306,6 +408,10 @@ export class DesktopEngine {
       trayStatus = '○ Paused';
       indicator = 'paused';
       tooltip = `${BRANDING.name}: Recognition Paused`;
+    } else if (snapshot.presence === 'PRESENCE_AMBIGUOUS') {
+      trayStatus = '⚠ Multiple Faces';
+      indicator = 'warning';
+      tooltip = `${BRANDING.name}: Multiple Faces Visible`;
     } else if (this.cameraState === 'ERROR' || this.cameraState === 'DISCONNECTED' || perm === 'denied') {
       trayStatus = '⚠ Camera Unavailable';
       indicator = 'warning';
@@ -333,29 +439,33 @@ export class DesktopEngine {
         status: this.visionState,
         model: 'BlazeFace (896 Anchors, IoU NMS)',
         embedder: 'ArcFace / MobileFaceNet (512D Aligned)',
-        faceDetected: this.recognitionFsm.getState() !== 'IDLE' && this.recognitionFsm.getState() !== 'SEARCHING',
+        faceDetected: snapshot.faceCount > 0,
         landmarkCount: 6,
       },
       recognition: {
         state: this.recognitionFsm.getState(),
-        activeIdentityId: this.activeIdentityId,
-        activeIdentityName: this.activeIdentityName,
+        activeIdentityId: snapshot.activeIdentityId,
+        activeIdentityName: snapshot.activeIdentityName,
         lastConfidence: Number(this.lastConfidence.toFixed(3)),
         lastMatchTimestamp: this.lastMatchTimestamp,
       },
       liveness: {
         state: this.liveness.getState(),
         mode: 'light',
-        score: 0.95,
+        score: snapshot.liveness === 'LIVENESS_PASSED' ? 0.95 : 0.0,
         blinkDetected: false,
         motionVariance: 0.015,
       },
       presence: {
         state: this.presenceTracker.getState(),
-        authorizedIdentity: this.presenceTracker.getLastAuthorizedIdentity(),
+        authorizedIdentity: snapshot.activeIdentityName || snapshot.activeIdentityId,
         elapsedAbsentMs: this.presenceTracker.getElapsedAbsentMs(),
         leaveTimeoutSec: 20,
         gracePeriodSec: 5,
+        canonicalPresence: snapshot.presence,
+        isAuthorized: snapshot.presence === 'PRESENCE_AUTHORIZED',
+        unauthorizedReason: snapshot.unauthorizedReason,
+        session: snapshot.presenceSession,
       },
       security: {
         state: this.securityFsm.getState(),
@@ -374,12 +484,14 @@ export class DesktopEngine {
         enrolledIdentitiesCount: identities.length,
         keystoreType: info.os === 'macos' ? 'macOS Keychain' : info.os === 'windows' ? 'Windows DPAPI' : 'Secret Service',
       },
+      canonicalState: snapshot,
     };
   }
 
   /**
    * Sleep / Wake Power Monitor:
-   * Detects sleep cycles and recovers camera/vision state upon wake.
+   * Section 27: After wake, do NOT blindly restore authorization.
+   * Presence must be re-established according to policy.
    */
   private startPowerMonitor(): void {
     this.powerCheckInterval = setInterval(async () => {
@@ -387,34 +499,52 @@ export class DesktopEngine {
       const elapsed = now - this.lastPowerCheckTime;
       this.lastPowerCheckTime = now;
 
-      // If elapsed time is significantly longer than timer interval (> 4000ms for a 1000ms tick),
-      // the system was asleep and just woke up
+      // Sleep threshold: timer ticks > 4000ms indicate system was suspended
       if (elapsed > 4000) {
-        Logger.info('platform', `System wake detected after ${Math.round(elapsed / 1000)}s sleep; verifying camera`);
+        Logger.info('platform', `System wake detected after ${Math.round(elapsed / 1000)}s sleep; resetting presence`);
         this.activityLog.logEvent('SYSTEM_WAKE_DETECTED', { elapsedSleepSeconds: Math.round(elapsed / 1000) });
+
+        // INVARIANT: Reset presence authorization on wake
+        this.canonicalFsm.resetOnWake();
+        this.presenceTracker.resetOnWake();
 
         if (!this.privacyPaused) {
           try {
             await this.cameraManager.enumerateDevices();
             this.cameraState = 'ACTIVE';
-            Logger.info('camera', 'Camera successfully recovered post-wake');
+            this.canonicalFsm.setCameraState('CAMERA_READY');
+            Logger.info('camera', 'Camera successfully verified post-wake');
           } catch (err) {
             Logger.warn('camera', 'Camera reinitialization pending post-wake', { error: String(err) });
+            this.cameraState = 'RECOVERING';
+            this.canonicalFsm.setCameraState('CAMERA_RECOVERING');
           }
         }
       }
     }, 1000);
 
-    // Unref interval so it does not block Node exit
     this.powerCheckInterval.unref();
+  }
+
+  /**
+   * Periodic Session Expiration Checker:
+   * Periodically checks if the authorized presence session has passed expiration.
+   */
+  private startSessionExpirationChecker(): void {
+    this.sessionCheckInterval = setInterval(() => {
+      this.canonicalFsm.checkSessionExpiration(Date.now());
+    }, 1000);
+
+    this.sessionCheckInterval.unref();
   }
 
   private setupEventHandlers(): void {
     const bus = EventBus.getInstance();
 
     bus.subscribe('CAMERA_DISCONNECTED', () => {
-      Logger.warn('camera', 'Camera disconnect detected; transitioning to degraded mode');
+      Logger.warn('camera', 'Camera disconnect detected; transitioning to recovering/disconnected');
       this.cameraState = 'DISCONNECTED';
+      this.canonicalFsm.setCameraState('CAMERA_DISCONNECTED');
       this.adapter.showNotification(BRANDING.name, 'Camera disconnected. Reconnect device to resume protection.');
     });
 
@@ -422,6 +552,7 @@ export class DesktopEngine {
       Logger.info('camera', 'Camera connected; resuming protection');
       if (!this.privacyPaused) {
         this.cameraState = 'ACTIVE';
+        this.canonicalFsm.setCameraState('CAMERA_READY');
       }
     });
   }
@@ -434,6 +565,11 @@ export class DesktopEngine {
     if (this.powerCheckInterval) {
       clearInterval(this.powerCheckInterval);
       this.powerCheckInterval = null;
+    }
+
+    if (this.sessionCheckInterval) {
+      clearInterval(this.sessionCheckInterval);
+      this.sessionCheckInterval = null;
     }
 
     this.cameraManager.stopCapture();

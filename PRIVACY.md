@@ -58,14 +58,21 @@ In Phase 3, OpenFaceID introduces an authoritative, single-click **Privacy Pause
 ---
 
 ## 7. Ephemeral Local IPC Token Isolation
-The local daemon (`DesktopEngine`) listens on `127.0.0.1:41793`:
-- Mutating endpoints (enrollment, identity deletion, policy updates, privacy pause) require an ephemeral **192-bit cryptographically secure Bearer token** generated at daemon launch.
-- The token is stored locally with user-only permissions (`0600`) or retained exclusively in memory.
-- Cross-origin browser scripts or untrusted localhost processes cannot trigger biometric operations without presenting this bearer token.
+The local daemon (`DesktopEngine`) listens on `127.0.0.1:4173`:
+- Mutating endpoints (enrollment, identity deletion, camera selection, privacy pause) require an ephemeral **256-bit cryptographically secure Bearer token** generated at daemon launch.
+- The token is stored locally in `~/.openfaceid/token` with user-only permissions (`0600`) and unlinked upon daemon shutdown.
+- Cross-origin browser scripts or untrusted localhost processes cannot trigger biometric operations without presenting this bearer token via constant-time verification (`crypto.timingSafeEqual`).
 
 ---
 
 ## 8. V8 Memory Zeroization Guarantees & Runtime Limits
-- **TypedArray Buffers**: All raw image pixel buffers (`Uint8ClampedArray`) and normalized mathematical embeddings (`Float32Array`) are zeroized in-place using `buffer.fill(0)` and explicit `.zeroize()` hooks before release.
+- **TypedArray Buffers**: All raw image pixel buffers (`Uint8ClampedArray`) and normalized mathematical embeddings (`Float32Array`) are zeroized in-place using `buffer.fill(0)` and explicit `MemorySanitizer.zeroizeBuffer()` hooks before release.
 - **V8 JIT Runtime Limitation**: In high-level JavaScript/TypeScript engines (V8), temporary string copies or JSON serialized representations of metadata are managed by the V8 Garbage Collector. While binary typed buffers are securely scrubbed, developers and security auditors should note that V8 heap compaction and garbage collection timing is non-deterministic. Sensitive keys and raw vectors are therefore restricted to pinned TypedArray memory wherever possible.
+
+---
+
+## 9. Sanitized Diagnostic Export & Automated Scrubbing
+When generating diagnostic archives via `openfaceid export-diagnostics` or the Desktop UI:
+- An automated pattern-matching scanner verifies that no raw image buffers, 512D float embeddings, tokens, master keys, or passwords exist in the archive.
+- Any potentially sensitive values are scrubbed or replaced with `[REDACTED]` before saving.
 

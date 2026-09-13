@@ -123,6 +123,7 @@ export class LinuxAdapter extends PlatformAdapter {
   }
 
   public async showNotification(title: string, body: string): Promise<void> {
+    if (this.shouldThrottleNotification(title, body)) return;
     try {
       await execFileAsync('notify-send', [title, body]);
     } catch (err) {

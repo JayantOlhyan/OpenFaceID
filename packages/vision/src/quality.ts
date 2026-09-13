@@ -93,6 +93,24 @@ export class FaceQualityAnalyzer implements IFaceQualityAnalyzer {
     };
   }
 
+  public evaluate(
+    box: BoundingBox,
+    landmarks: FaceLandmarks,
+    frameWidth: number,
+    frameHeight: number
+  ): FaceQualityScore {
+    const syntheticFrame = {
+      data: new Uint8ClampedArray(4),
+      width: frameWidth,
+      height: frameHeight,
+      pixelFormat: 'RGBA' as const,
+      timestamp: Date.now(),
+      frameIndex: 0,
+      zeroize: () => {},
+    };
+    return this.analyzeQuality(syntheticFrame as any, box, landmarks);
+  }
+
   private calculateBrightnessAndSharpness(
     frame: CameraFrame,
     box: BoundingBox

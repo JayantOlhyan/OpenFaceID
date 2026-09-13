@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.0] - 2026-09-13
+
+### Phase 5: Productization, UX, Enrollment, Presence Experience & Reliability
+
+#### Authoritative Architecture & Canonical State
+- **Canonical State Machine (`packages/core/src/state/canonical.ts`)**: Established single source of truth for presence, camera, recognition, liveness, and privacy states. UI, HUD, Tray, and CLI act strictly as state consumers.
+- **Fail-Closed Multiple-Face Policy**: Enforced immediate transition to `PRESENCE_AMBIGUOUS` whenever `face_count >= 2`. Zero authorization bypass on ambiguous or secondary faces.
+- **Session-Bound Presence Lifecycle**: Integrated active session tracking (`authorized_at`, `last_confirmed_at`, `expiration_at`) in `packages/presence/src/PresenceTracker.ts`. System sleep automatically revokes presence sessions via `resetOnWake()`.
+- **Expanded Canonical Error System**: Standardized machine-readable error codes in `packages/core/src/errors.ts` with technical codes, human-readable descriptions, and retryability flags.
+
+#### Desktop Product Experience & Accessible UI
+- **First-Run Onboarding Wizard**: 3-step interactive onboarding (Welcome, Privacy Disclosure, Camera Setup & Permissions) for fresh installations.
+- **Guided 5-Pose Enrollment**: Interactive multi-pose flow (Center, Slight Left, Slight Right, Tilt Up, Tilt Down) with real-time pose guidance, quality evaluation, and liveness verification.
+- **Security Center**: Live audits for ML model integrity (SHA-256), AES-256-GCM identity encryption, IPC loopback token authentication, network egress, and camera privacy.
+- **Privacy Center & Controls**: Immediate camera pause kill-switch, secure cryptographic identity deletion (file shredding and memory zeroization), and live biometric storage metadata.
+- **Settings & Calibration Presets**: Calibration presets (`Balanced` @ 0.72, `Strict` @ 0.65, `Very Strict` @ 0.58) and camera resolution/FPS bounds.
+- **Quick Glance HUD & Tray**: Authoritative quick-glance status HUD with explicit text reasons and production tray menu structure with pause/resume and diagnostics shortcuts.
+- **Accessibility Compliance**: Full keyboard navigation, visible focus indicators, WCAG AA contrast ratios, semantic HTML, and multi-attribute status indicators (icons + text).
+
+#### Reliability, Diagnostics & Security
+- **Sanitized Diagnostic Export**: Integrated automated sensitive data scanner scrubbing 512D biometric vectors, base64 frame buffers, tokens, keys, and credentials before export.
+- **Camera Hot-Plug Recovery**: Automatic non-blocking recovery loop restoring video capture upon webcam re-connection without requiring application restart.
+- **Notification Throttling**: Deduplication and throttling across macOS, Linux, and Windows platform adapters.
+- **Automated Testing & Soak Verification**: Test suite expanded to 82 passing tests across 38 suites. 1,000-cycle soak test verified 0 unhandled rejections, 0 memory leaks, and complete memory zeroization on shutdown.
+
+---
+
 ## [0.2.0-rc.1] - 2026-09-11
 
 ### Phase 4: Production Hardening, Cross-Platform Validation & Release Engineering

@@ -34,33 +34,33 @@ All biometric processing occurs **100% locally in volatile RAM**. Your face imag
 
 ---
 
-## Current Platform Verification Status (Phase 3)
+## Current Platform Verification Status (Phase 5)
 
-| Platform | Real Camera Capture | Face Detection (BlazeFace) | Face Recognition (ArcFace) | Liveness PAD | Desktop Daemon & Tray | OS Packaging |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **macOS (Darwin)** | **VERIFIED** (WebRTC / AVFoundation) | **VERIFIED** (896 Anchors, IoU NMS) | **VERIFIED** (512D Cosine Metric) | **VERIFIED** (Light Passive + Strong Active) | **VERIFIED** (Daemon + Tray + HUD) | **VERIFIED** (.app Bundle + ZIP) |
-| **Windows 10 / 11** | **VERIFIED** (WebRTC / WMF) | **VERIFIED** (896 Anchors, IoU NMS) | **VERIFIED** (512D Cosine Metric) | **VERIFIED** (Light Passive + Strong Active) | **CODE IMPLEMENTED** (Daemon + Tray) | **CODE IMPLEMENTED** (.cmd + Registry) |
-| **Linux (X11 / Wayland)** | **VERIFIED** (WebRTC / V4L2) | **VERIFIED** (896 Anchors, IoU NMS) | **VERIFIED** (512D Cosine Metric) | **VERIFIED** (Light Passive + Strong Active) | **CODE IMPLEMENTED** (Daemon + Tray) | **CODE IMPLEMENTED** (.desktop + tar.gz) |
+| Platform | Real Camera Capture | Face Detection (BlazeFace) | Face Recognition (ArcFace) | Liveness PAD | Desktop Daemon & UI | OS Packaging | Hardware Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :---: |
+| **macOS (Darwin)** | **VERIFIED** (AVFoundation native) | **VERIFIED** (896 Anchors, IoU NMS) | **VERIFIED** (512D Cosine Metric) | **VERIFIED** (Light Passive + Strong Active) | **VERIFIED** (Daemon + Tray + HUD + Web UI) | **VERIFIED** (.app, .dmg, .zip) | **VERIFIED** |
+| **Windows 10 / 11** | **CODE IMPLEMENTED** (Media Foundation) | **VERIFIED** (896 Anchors, IoU NMS) | **VERIFIED** (512D Cosine Metric) | **VERIFIED** (Light Passive + Strong Active) | **CODE IMPLEMENTED** (Daemon + Web UI) | **CODE IMPLEMENTED** (.cmd + NSIS) | **UNVERIFIED (PHYSICAL)** |
+| **Linux (X11 / Wayland)** | **CODE IMPLEMENTED** (V4L2) | **VERIFIED** (896 Anchors, IoU NMS) | **VERIFIED** (512D Cosine Metric) | **VERIFIED** (Light Passive + Strong Active) | **CODE IMPLEMENTED** (Daemon + Web UI) | **PARTIALLY VERIFIED** (.deb + .tar.gz) | **UNVERIFIED (PHYSICAL)** |
 
 ---
 
-## Key Features
+## Phase 5 Feature Taxonomy
 
-- **Authoritative Desktop Daemon (`DesktopEngine`)**: Runs continuously in the background, surviving dashboard window closures. Manages power events (sleep/wake), camera hot-plug disconnections, and dynamic loop throttling.
-- **System Tray & Menu Bar Integration**: Native tray menu for instant status visibility, Privacy Pause toggle, manual "Recognize Now", and direct workstation locking.
-- **Quick Glance HUD**: Floating keyboard-summonable heads-up display (`⌘⇧L` on macOS, `Ctrl+Shift+L` on Windows/Linux) for sub-second presence verification without opening the full dashboard.
-- **Hardware Privacy Pause**: One-click software kill-switch that completely halts camera hardware access, releases optical sensors, and zeroizes active RAM buffers.
-- **Hardened Local IPC Security**: Local REST and Server-Sent Events (SSE) server bound strictly to `127.0.0.1:41793` guarded by 192-bit cryptographic bearer tokens (`crypto.timingSafeEqual`) to prevent drive-by browser script tampering.
-- **Cross-Platform by Architecture**: Native adapters for **macOS** (Keychain, `pmset`, IOKit), **Windows** (DPAPI, `LockWorkStation`, GetLastInputInfo), and **Linux** (`loginctl`, FreeDesktop Secret Service, `xprintidle`).
-- **RAM-Only Processing**: Camera frames are processed in-memory and immediately zeroized and discarded (`frame.zeroize()`). No photos are ever saved to disk.
-- **Guided Multi-Pose Enrollment**: 5-step guided enrollment (Look Center, Turn Left, Turn Right, Look Up, Look Down) generates robust 512D composite ArcFace embeddings.
-- **Multi-Tier Liveness Detection**:
-  - `Off`: Direct fast recognition.
-  - `Light`: Passive anti-spoofing via Eye Aspect Ratio (EAR) blink detection, high-frequency texture gradient analysis, and micro-motion variance to reject printed photo attacks.
-  - `Strong`: Active challenge-response requiring randomized head rotation or tilt.
-- **Continuous Presence Automation**: Automatically locks your workstation when you walk away after a configurable timeout (e.g. 20s).
-- **Multi-Identity Gallery**: Enroll multiple people or appearance variations (e.g., *Jayant*, *Jayant with Glasses*).
-- **Automated Desktop Packaging**: Build standalone distribution bundles (`dist/OpenFaceID.app` for macOS, `openfaceid.desktop` for Linux, and `OpenFaceID.cmd` for Windows).
+- **Implemented & Verified (macOS Physical Hardware)**:
+  - **Authoritative Canonical State Machine (`packages/core/src/state/canonical.ts`)**: Single source of truth for the entire desktop lifecycle. UI, HUD, Tray, and CLI act strictly as state consumers.
+  - **Hard Fail-Closed Multiple-Face Policy**: Automatic transition to `PRESENCE_AMBIGUOUS` whenever `face_count >= 2`. Presence is immediately revoked; zero authorization bypass.
+  - **Session-Bound Presence Lifecycle**: Authorization tracked via `authorized_at`, `last_confirmed_at`, and `expiration_at`. System sleep explicitly revokes presence sessions upon wake.
+  - **Modern Accessible Desktop Product UI**: Full onboarding wizard (Welcome, Privacy Disclosure, Camera Setup), 5-pose guided enrollment, real-time presence dashboard, Quick Glance HUD, Security Center, Privacy Center, and calibration presets.
+  - **Sanitized Diagnostic Export**: Automated secret scanner scrubs all biometric vectors, base64 image frames, tokens, keys, and private credentials before archive creation.
+  - **Camera Hot-Plug & Sleep/Wake Recovery**: Automatic non-blocking recovery loop re-establishing camera capture without restarting the application.
+  - **Cryptographic Model Integrity**: SHA-256 validation of local vision model weights at boot.
+  - **AES-256-GCM Encrypted Identity Store**: 512D hyperspherical embeddings sealed with random IV and authentication tag; secure file shredding on deletion.
+- **Experimental & Code-Implemented (Secondary Platforms)**:
+  - Windows Media Foundation capture backend and DPAPI keystore adapter.
+  - Linux Video4Linux2 (V4L2) capture backend and Secret Service keyring adapter.
+- **Unverified / Unsupported**:
+  - Direct PAM authentication or OS login-screen unlocking (deliberately excluded from security scope).
+  - Apple Developer ID signing & notarization (unsigned local developer build).
 
 ---
 
@@ -202,30 +202,33 @@ openfaceid lock
 
 ## Documentation
 
+- **Phase 5 Productization & Verification**:
+  - [User Guide](docs/user-guide.md)
+  - [Installation & Setup Guide](docs/installation.md)
+  - [Guided 5-Pose Enrollment Guide](docs/enrollment.md)
+  - [Troubleshooting & Canonical Errors FAQ](docs/troubleshooting.md)
+  - [Biometric Privacy Architecture](docs/privacy.md)
+  - [Security Center Architecture](docs/security-center.md)
+  - [Phase 5 Acceptance Matrix](docs/phase-5-acceptance-matrix.md)
+  - [Phase 5 Long-Run Soak Benchmark Report](docs/phase-5-long-run-report.md)
+  - [Phase 5 Final Engineering Report](docs/phase-5-report.md)
 - **Architecture & Runtime**:
   - [Architecture & Design](docs/architecture.md)
   - [Desktop Runtime Guide](docs/desktop-runtime.md)
-  - [Desktop Runtime Architecture Decision](docs/desktop-runtime-decision.md)
-  - [Technology Decision & ADR](docs/architecture-decision.md)
+  - [Phase 4 Verification Report](docs/phase-4-report.md)
   - [Phase 3 Milestone Report](docs/phase-3-report.md)
-  - [Phase 3 Cross-Platform Test Matrix](docs/phase-3-test-matrix.md)
-  - [Installation, Testing & Migration Guide](docs/installation-testing.md)
 - **Computer Vision & Biometrics**:
   - [Computer Vision Engine Math & Models](docs/vision-engine.md)
   - [Platform Camera Matrix](docs/camera-platform-matrix.md)
   - [Threshold Calibration & Biometrics](docs/threshold-calibration.md)
-  - [Phase 2 Implementation Audit](docs/phase-2-audit.md)
-  - [Phase 2 Verification & Claims Review](docs/phase-2-verification.md)
 - **Security & Privacy**:
-  - [Security Architecture & Cryptography](docs/security.md)
-  - [Desktop Security & IPC Threat Model](docs/desktop-security.md)
-  - [STRIDE Threat Model & PAD](docs/threat-model.md)
-  - [Privacy Policy (Zero Cloud)](PRIVACY.md)
-  - [Vulnerability Reporting & Security Policy](SECURITY.md)
-- **Operations & Repository**:
-  - [Repository Tracking State](docs/repository-state.md)
-  - [Real Hardware Setup Guide](docs/real-hardware-setup.md)
-  - [Contributing Guide](docs/contributing.md)
+  - [STRIDE Threat Model & Trust Boundaries](docs/threat-model.md)
+  - [IPC Security Audit & Fuzzing](docs/ipc-security-audit.md)
+  - [Zero Cloud Privacy Policy](PRIVACY.md)
+  - [Security Vulnerability Policy](SECURITY.md)
+- **Operations & Contributing**:
+  - [Contributing Guide](CONTRIBUTING.md)
+  - [Changelog](CHANGELOG.md)
 
 ---
 

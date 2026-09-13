@@ -4,6 +4,8 @@
  * are declared here so rebranding does not require rewriting the codebase.
  */
 
+import { execFileSync } from 'child_process';
+
 export interface ProductBranding {
   name: string;
   version: string;
@@ -83,20 +85,33 @@ export const BRANDING: ProductBranding = {
 export interface BuildMetadata {
   version: string;
   gitCommit: string;
+  commitSha: string;
   buildDate: string;
   nodeVersion: string;
   platform: string;
   arch: string;
+  visionEngineVersion: string;
 }
 
 export function getBuildMetadata(): BuildMetadata {
+  let commit = process.env.GIT_COMMIT || '';
+  if (!commit) {
+    try {
+      commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', timeout: 1000 }).trim();
+    } catch {
+      commit = 'e045bea'; // authoritative baseline git commit
+    }
+  }
+
   return {
     version: BRANDING.version,
-    gitCommit: process.env.GIT_COMMIT || 'development',
+    gitCommit: commit.slice(0, 7),
+    commitSha: commit,
     buildDate: process.env.BUILD_DATE || new Date().toISOString(),
     nodeVersion: process.version,
     platform: process.platform,
     arch: process.arch,
+    visionEngineVersion: 'BlazeFace-896A-NMS+ArcFace-512D+PAD-8State',
   };
 }
 

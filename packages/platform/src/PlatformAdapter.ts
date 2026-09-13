@@ -27,6 +27,19 @@ export interface SecureStorageResult {
 }
 
 export abstract class PlatformAdapter {
+  private static lastNotificationTime = new Map<string, number>();
+
+  protected shouldThrottleNotification(title: string, body: string, windowMs = 8000): boolean {
+    const key = `${title}:::${body}`;
+    const now = Date.now();
+    const last = PlatformAdapter.lastNotificationTime.get(key) || 0;
+    if (now - last < windowMs) {
+      return true;
+    }
+    PlatformAdapter.lastNotificationTime.set(key, now);
+    return false;
+  }
+
   public abstract getPlatformInfo(): PlatformInfo;
   public abstract lockScreen(): Promise<boolean>;
   public abstract isScreenLocked(): Promise<boolean>;

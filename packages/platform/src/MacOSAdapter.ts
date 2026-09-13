@@ -111,6 +111,7 @@ export class MacOSAdapter extends PlatformAdapter {
   }
 
   public async showNotification(title: string, body: string): Promise<void> {
+    if (this.shouldThrottleNotification(title, body)) return;
     try {
       const script = `display notification ${JSON.stringify(body)} with title ${JSON.stringify(title)}`;
       await execFileAsync('/usr/bin/osascript', ['-e', script]);

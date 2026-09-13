@@ -1,5 +1,12 @@
 import type { PlatformInfo } from '../../../packages/platform/src/index.ts';
-import type { RecognitionState, SecurityState, PresenceState } from '../../../packages/core/src/index.ts';
+import type {
+  RecognitionState,
+  SecurityState,
+  PresenceState,
+  CanonicalStateSnapshot,
+  PresenceSession,
+  PresenceCoreState,
+} from '../../../packages/core/src/index.ts';
 import type { LivenessState } from '../../../packages/vision/src/index.ts';
 
 export type CameraLifecycleState =
@@ -9,6 +16,7 @@ export type CameraLifecycleState =
   | 'ACTIVE'
   | 'PAUSED'
   | 'DISCONNECTED'
+  | 'RECOVERING'
   | 'ERROR'
   | 'CLOSING';
 
@@ -61,6 +69,11 @@ export interface ApplicationState {
     elapsedAbsentMs: number;
     leaveTimeoutSec: number;
     gracePeriodSec: number;
+    // Canonical Phase 5 extensions
+    canonicalPresence: PresenceCoreState;
+    isAuthorized: boolean;
+    unauthorizedReason: string | null;
+    session: PresenceSession;
   };
   security: {
     state: SecurityState;
@@ -71,7 +84,7 @@ export interface ApplicationState {
     ramOnlyProcessing: true;
   };
   tray: {
-    status: '● Active' | '○ Paused' | '⚠ Camera Unavailable' | '⏳ Loading Model' | '✕ Engine Error';
+    status: '● Active' | '○ Paused' | '⚠ Camera Unavailable' | '⏳ Loading Model' | '✕ Engine Error' | '⚠ Multiple Faces' | '✖ Unauthorized';
     indicator: string;
     tooltip: string;
   };
@@ -79,4 +92,5 @@ export interface ApplicationState {
     enrolledIdentitiesCount: number;
     keystoreType: string;
   };
+  canonicalState: CanonicalStateSnapshot;
 }

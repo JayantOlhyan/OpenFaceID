@@ -158,6 +158,7 @@ if ([Win32]::GetLastInputInfo([ref]$lii)) {
   }
 
   public async showNotification(title: string, body: string): Promise<void> {
+    if (this.shouldThrottleNotification(title, body)) return;
     try {
       const safeTitle = title.replace(/'/g, "''");
       const safeBody = body.replace(/'/g, "''");

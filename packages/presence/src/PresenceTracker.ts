@@ -16,6 +16,10 @@ export class PresenceTracker {
   private lastFaceSeenTimestamp: number = Date.now();
   private lastAuthorizedIdentity: string | null = null;
   private unknownFaceCount: number = 0;
+  private multipleFacesCount: number = 0;
+  private authorizedAt: number | null = null;
+  private lastConfirmedAt: number | null = null;
+  private expirationAt: number | null = null;
 
   constructor(options: PresenceTrackerOptions = {}) {
     this.stateMachine = new PresenceStateMachine('UNKNOWN');
@@ -33,14 +37,36 @@ export class PresenceTracker {
     return this.lastAuthorizedIdentity;
   }
 
+  public getSessionInfo() {
+    return {
+      authorizedAt: this.authorizedAt,
+      lastConfirmedAt: this.lastConfirmedAt,
+      expirationAt: this.expirationAt,
+      isExpired: this.isSessionExpired(),
+    };
+  }
+
+  public isSessionExpired(now: number = Date.now()): boolean {
+    if (this.expirationAt === null) return false;
+    return now > this.expirationAt;
+  }
+
   /**
    * Phase 3 Verified Multi-Stage Presence:
    * Face Detected + Identity Recognized + Liveness Passed -> Authorized Presence
    */
   public onAuthorizedPresence(identityId: string, name: string): void {
-    this.lastFaceSeenTimestamp = Date.now();
+    const now = Date.now();
+    this.lastFaceSeenTimestamp = now;
     this.lastAuthorizedIdentity = identityId;
     this.unknownFaceCount = 0;
+    this.multipleFacesCount = 0;
+
+    if (!this.authorizedAt) {
+      this.authorizedAt = now;
+    }
+    this.lastConfirmedAt = now;
+    this.expirationAt = now + this.leaveTimeoutMs;
 
     if (this.stateMachine.getState() !== 'USER_PRESENT') {
       Logger.info('vision', `Authorized presence verified for ${name} (${identityId})`);
@@ -50,6 +76,40 @@ export class PresenceTracker {
         name,
         timestamp: this.lastFaceSeenTimestamp,
       });
+    }
+  }
+
+  /**
+   * Section 8 Multiple-Face Fail-Closed Policy:
+   * If face_count >= 2, presence authorization is immediately revoked.
+   */
+  public onMultipleFacesDetected(count: number = 2): void {
+    this.multipleFacesCount = count;
+    this.lastAuthorizedIdentity = null;
+    this.authorizedAt = null;
+    this.expirationAt = null;
+
+    Logger.warn('vision', `Multiple faces detected in camera field (${count}); presence authorization suspended`);
+    EventBus.getInstance().emit('MULTIPLE_FACES_DETECTED' as any, {
+      count,
+      timestamp: Date.now(),
+    });
+
+    if (this.stateMachine.getState() === 'USER_PRESENT' || this.stateMachine.getState() === 'GRACE_PERIOD') {
+      this.stateMachine.transition('USER_LEFT');
+    }
+  }
+
+  public resetOnWake(): void {
+    this.lastAuthorizedIdentity = null;
+    this.authorizedAt = null;
+    this.lastConfirmedAt = null;
+    this.expirationAt = null;
+    this.unknownFaceCount = 0;
+    this.multipleFacesCount = 0;
+    this.lastFaceSeenTimestamp = 0; // force absence check if not immediately refreshed
+    if (this.stateMachine.getState() !== 'UNKNOWN') {
+      this.stateMachine.transition('USER_LEFT');
     }
   }
 

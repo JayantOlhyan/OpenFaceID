@@ -15,7 +15,6 @@ export interface TrayMenuItem {
 
 export class DesktopTrayManager {
   private engine: DesktopEngine;
-  private currentStatusText: string = '● Protection Active';
 
   constructor(engine?: DesktopEngine) {
     this.engine = engine || DesktopEngine.getInstance();
@@ -25,33 +24,36 @@ export class DesktopTrayManager {
     const state = await this.engine.getAuthoritativeState();
     const isPaused = this.engine.isPrivacyPaused();
 
+    const presenceLabel = state.presence.isAuthorized
+      ? 'Active (Authorized)'
+      : state.canonicalState.presence === 'PRESENCE_AMBIGUOUS'
+      ? 'Ambiguous (Multiple Faces)'
+      : state.canonicalState.presence === 'PRESENCE_EXPIRED'
+      ? 'Expired'
+      : 'Unauthorized';
+
+    const cameraLabel = isPaused
+      ? 'Paused (Privacy)'
+      : state.camera.status === 'ACTIVE'
+      ? 'Active'
+      : state.camera.status === 'DISCONNECTED'
+      ? 'Disconnected'
+      : state.camera.status === 'RECOVERING'
+      ? 'Recovering'
+      : 'Unavailable';
+
     return [
       {
         id: 'header',
-        label: `${BRANDING.name} — ${BRANDING.tagline}`,
-        enabled: false,
+        label: `Open ${BRANDING.name}`,
+        action: async () => {
+          Logger.info('platform', 'Open OpenFaceID requested from tray');
+        },
       },
-      {
-        id: 'status',
-        label: state.tray.status,
-        enabled: false,
-      },
+      { id: 'status', label: state.tray.status, enabled: false },
+      { id: 'presence_status', label: `Presence: ${presenceLabel}`, enabled: false },
+      { id: 'camera_status', label: `Camera: ${cameraLabel}`, enabled: false },
       { id: 'sep1', label: '', separator: true },
-      {
-        id: 'open_dashboard',
-        label: 'Open Dashboard',
-        action: async () => {
-          Logger.info('platform', 'Open Dashboard requested from Tray');
-        },
-      },
-      {
-        id: 'recognize_now',
-        label: 'Recognize Now',
-        enabled: !isPaused,
-        action: async () => {
-          Logger.info('vision', 'Instant recognition triggered from Tray');
-        },
-      },
       {
         id: 'privacy_pause',
         label: isPaused ? 'Resume Recognition' : 'Pause Recognition (Privacy)',
@@ -65,30 +67,34 @@ export class DesktopTrayManager {
       },
       { id: 'sep2', label: '', separator: true },
       {
-        id: 'camera_info',
-        label: `Camera: ${state.camera.activeDeviceName || 'Default Sensor'}`,
-        enabled: false,
-      },
-      {
-        id: 'presence_info',
-        label: `Presence: ${state.presence.state}`,
-        enabled: false,
-      },
-      {
-        id: 'lock_workstation',
-        label: 'Lock Workstation Now',
+        id: 'security_check',
+        label: 'Run Security Check',
         action: async () => {
-          await this.engine.adapter.lockScreen();
+          Logger.info('security', 'Run Security Check triggered from tray');
+        },
+      },
+      {
+        id: 'privacy_check',
+        label: 'Run Privacy Check',
+        action: async () => {
+          Logger.info('security', 'Run Privacy Check triggered from tray');
+        },
+      },
+      {
+        id: 'open_settings',
+        label: 'Open Settings',
+        action: async () => {
+          Logger.info('platform', 'Open Settings requested from tray');
+        },
+      },
+      {
+        id: 'open_diagnostics',
+        label: 'Open Diagnostics',
+        action: async () => {
+          Logger.info('security', 'Open Diagnostics requested from tray');
         },
       },
       { id: 'sep3', label: '', separator: true },
-      {
-        id: 'diagnostics',
-        label: 'Diagnostics & Security Status',
-        action: async () => {
-          Logger.info('security', 'Diagnostics requested from Tray');
-        },
-      },
       {
         id: 'quit',
         label: `Quit ${BRANDING.name}`,
@@ -102,6 +108,6 @@ export class DesktopTrayManager {
 
   public async renderTrayText(): Promise<string> {
     const state = await this.engine.getAuthoritativeState();
-    return `${state.tray.status} | ${BRANDING.name}`;
+    return state.tray.status;
   }
 }

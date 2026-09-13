@@ -4,7 +4,8 @@
 
 | Version | Supported | Notes |
 | :--- | :--- | :--- |
-| **v0.1.x** | :white_check_mark: | Active Development |
+| **v0.2.x** | :white_check_mark: | Active Release (Phase 5 Productization) |
+| **v0.1.x** | :white_check_mark: | Maintenance |
 
 ---
 
@@ -19,17 +20,19 @@
 2. **No Plaintext Passwords**: OpenFaceID **never** prompts for, stores, or automates typing of user login passwords.
 3. **No Keystroke Injection**: OpenFaceID will never inject synthetic keystrokes to simulate lock screen unlocking.
 4. **Anti-Spoofing Disclaimer**: OpenFaceID implements Presentation Attack Detection (PAD) including blink detection, micro-motion analysis, and active challenge-response. However, no software-based 2D anti-spoofing mechanism is 100% spoof-proof against determined physical adversaries with high-resolution video or silicone masks.
+5. **Fail-Closed Multiple-Face Defense**: If 2 or more faces are detected in view (`face_count >= 2`), OpenFaceID immediately transitions to `PRESENCE_AMBIGUOUS` and revokes presence authorization. It never authorizes presence merely because one face in a group matched.
 
 ---
 
 ## 3. Threat Mitigations in OpenFaceID
 
+- **Cryptographic Model Integrity**: All vision models (`blazeface-detector`, `arcface-embedder`, `liveness-pad-evaluator`) are verified using SHA-256 digests at boot. Corrupted or tampered weights trigger `MODEL_INTEGRITY_FAILURE` and halt execution.
 - **Presentation Attacks**: Mitigated via modular liveness checks (`Light` passive blink/motion variance, `Strong` active head rotation challenges).
-- **Credential & Database Theft**: Biometric embeddings on disk are encrypted using **AES-256-GCM** with keys sealed inside OS keystores (Keychain, DPAPI, Secret Service).
-- **Memory Inspection**: In-memory camera frame buffers and cryptographic keys are zeroized immediately following inference using TypedArray `.fill(0)` and explicit `zeroize()` calls.
-- **Local API Abuse & Cross-Origin CSRF**: Local REST/SSE server binds strictly to `127.0.0.1:41793`. Mutating and sensitive routes require an ephemeral 192-bit Bearer token validated via constant-time comparison (`crypto.timingSafeEqual`) to prevent timing side-channel attacks.
+- **Credential & Database Theft**: Biometric embeddings on disk are encrypted using **AES-256-GCM** with keys sealed inside OS keystores (Keychain, DPAPI, Secret Service) or a machine-bound PBKDF2 key.
+- **Memory Inspection**: In-memory camera frame buffers and cryptographic keys are zeroized immediately following inference using `MemorySanitizer.zeroizeBuffer()`.
+- **Local API Abuse & Cross-Origin CSRF**: Local REST/SSE server binds strictly to `127.0.0.1:4173`. Mutating and sensitive routes require an ephemeral 256-bit Bearer token validated via constant-time comparison (`crypto.timingSafeEqual`) to prevent timing side-channel attacks.
 - **Biometric Vector Secrecy**: Vector representations are never exposed over public HTTP responses or log outputs; API responses return only Boolean status, confidence scores, and identity IDs.
-- **Log Leakage**: The structured logger automatically scrubs biometric vectors, raw image arrays, and secrets.
+- **Log & Diagnostic Leakage**: Automated scanning scrubs biometric vectors, raw image arrays, tokens, and secrets from all diagnostic exports.
 
 ---
 
@@ -37,9 +40,9 @@
 
 | Tier | Endpoints | Authentication | Threat Mitigated |
 | :--- | :--- | :--- | :--- |
-| **Public** | `GET /api/status`, `GET /api/health`, `GET /events` | None (Localhost only) | Status observation without state disruption |
-| **Protected** | `POST /api/recognize`, `POST /api/camera/privacy-pause`, `POST /api/lock` | Ephemeral Bearer Token | Unauthorized action triggering by untrusted local scripts |
-| **Sensitive** | `POST /api/identities/enroll`, `DELETE /api/identities/:id`, `PUT /api/policies` | Ephemeral Bearer Token | Biometric gallery tampering, identity replacement |
+| **Public** | `GET /api/v1/health`, `GET /api/v1/branding` | None (Localhost loopback only) | Basic health monitoring without state disclosure |
+| **Protected** | `GET /api/v1/state`, `GET /api/v1/hud`, `POST /api/v1/privacy/*`, `POST /api/v1/camera/select` | Ephemeral Bearer Token | Unauthorized action triggering by untrusted local scripts |
+| **Sensitive** | `POST /api/v1/enrollment/*`, `DELETE /api/v1/identities/*`, `GET /api/v1/diagnostics/*` | Ephemeral Bearer Token | Biometric gallery tampering, identity replacement, log exfiltration |
 
 ---
 
