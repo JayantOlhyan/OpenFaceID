@@ -15,4 +15,5 @@ eval-runs/
 packages/camera/bin/
 *.iconset/
 .cache/
+website/downloads/
 
