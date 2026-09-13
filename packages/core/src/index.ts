@@ -9,4 +9,5 @@ export * from './events/bus.ts';
 export * from './logger/logger.ts';
 export * from './session/session.ts';
 export * from './errors.ts';
+export * from './notifications/index.ts';
 export { BRANDING, getBuildMetadata, type BuildMetadata } from '../../branding/src/index.ts';

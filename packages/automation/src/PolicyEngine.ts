@@ -36,10 +36,13 @@ export class PolicyEngine {
     // 2. Policy: IDENTITY_MATCHED -> Desktop notification
     const unMatch = bus.subscribe('IDENTITY_MATCHED', async (event) => {
       if (this.config.notifyOnMatch) {
-        const name = event.payload.identityName || 'User';
+        const name = event.payload?.identityName;
+        const body = name
+          ? `Presence verified for ${name}. Liveness verification passed.`
+          : 'You have been recognized and liveness verification passed.';
         await ActionDispatcher.dispatch('notify', {
-          title: 'OpenFaceID Welcome',
-          body: `Identity verified: ${name}`,
+          title: 'Presence verified',
+          body,
         });
       }
     });

@@ -4,6 +4,7 @@ import {
   SecurityStateMachine,
   PresenceStateMachine,
   CanonicalStateMachine,
+  NotificationManager,
   EventBus,
   Logger,
   type CanonicalStateSnapshot,
@@ -40,6 +41,7 @@ export class DesktopEngine {
   public readonly activityLog: ActivityLog;
   public readonly configStore: ConfigStore;
   public readonly cameraManager: CameraManager;
+  public readonly notificationManager: NotificationManager;
 
   // Vision Pipeline
   public readonly detector: BlazeFaceDetector;
@@ -81,6 +83,7 @@ export class DesktopEngine {
     this.activityLog = new ActivityLog();
     this.configStore = new ConfigStore();
     this.cameraManager = new CameraManager();
+    this.notificationManager = NotificationManager.getInstance({ adapter: this.adapter });
 
     this.detector = new BlazeFaceDetector();
     this.embedder = new ArcFaceEmbedder();
@@ -545,7 +548,6 @@ export class DesktopEngine {
       Logger.warn('camera', 'Camera disconnect detected; transitioning to recovering/disconnected');
       this.cameraState = 'DISCONNECTED';
       this.canonicalFsm.setCameraState('CAMERA_DISCONNECTED');
-      this.adapter.showNotification(BRANDING.name, 'Camera disconnected. Reconnect device to resume protection.');
     });
 
     bus.subscribe('CAMERA_CONNECTED', () => {
@@ -575,6 +577,8 @@ export class DesktopEngine {
     this.cameraManager.stopCapture();
     this.cameraState = 'CLOSING';
     this.visionState = 'SHUTDOWN';
+
+    this.notificationManager.destroy();
 
     this.activityLog.logEvent('ENGINE_SHUTDOWN', { timestamp: Date.now() });
     Logger.info('core', 'Engine shutdown complete. All sensitive buffers cleared.');

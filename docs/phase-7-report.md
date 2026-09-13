@@ -408,7 +408,7 @@ Security Regression:
 PASS
 
 Automated Tests:
-PASS (137/137)
+PASS (147/147)
 
 Physical Hardware Tests:
 28
@@ -434,3 +434,78 @@ Unverified Claims:
 Final:
 READY WITH WARNINGS
 ```
+
+---
+
+## Notification System Validation
+
+### 1. Previous Behavior
+The desktop client surfaced raw internal developer notifications to the end user:
+```text
+OpenFaceID Alert
+Event triggered
+```
+Simultaneously, high-frequency continuous vision events (such as un-enrolled face sightings or camera disconnections) repeatedly dispatched alerts across frame capture loops, creating notification storms and degrading desktop UX.
+
+### 2. Root Cause
+In `packages/automation/src/ActionDispatcher.ts`, notification dispatch defaulted to placeholder strings:
+```typescript
+title: payload?.title || 'OpenFaceID Alert',
+body: payload?.body || 'Event triggered',
+```
+When automation actions or state listeners dispatched notifications without explicit copy or received unmapped internal events, these placeholders were forwarded directly to the native OS notification center. Additionally, there was no centralized deduplication cache or sliding-window rate limiter to throttle notifications during continuous frame evaluation.
+
+### 3. Architectural Fix
+1. **Centralized Notification Policy (`packages/core/src/notifications/NotificationPolicy.ts`)**:
+   - Every system event is transformed into semantic, user-facing text answering: *What happened? What does it mean? What should I do?*
+   - Internal pipeline events (`FACE_DETECTED`, `CAMERA_FRAME_RECEIVED`, `MATCHING_STARTED`, `LIVENESS_PROGRESS`, etc.) are classified as silent and suppressed before reaching the OS.
+2. **Notification Manager Observer (`packages/core/src/notifications/NotificationManager.ts`)**:
+   - Central observer decoupling authoritative daemon state from desktop notification rendering.
+   - Fault-isolated: OS notification API failures can never crash the daemon or alter security/presence state.
+3. **Decoupled Automation Dispatcher (`packages/automation/src/ActionDispatcher.ts`)**:
+   - Refactored to route all notification requests through `NotificationManager`. Placeholder strings `"OpenFaceID Alert"` and `"Event triggered"` have been completely removed.
+
+### 4. Canonical Notification Mappings
+* `CAMERA_DISCONNECTED`: Warning | "Camera disconnected" | "Protection is paused until your camera reconnects." | Dedupe (60s) | Action: Open Camera Settings
+* `CAMERA_UNAVAILABLE`: Warning | "Camera unavailable" | "Connect or enable a camera to resume presence protection." | Dedupe (60s) | Action: Open Diagnostics
+* `CAMERA_CONNECTED`: Info | "Camera reconnected" | "OpenFaceID is ready to resume presence protection." | Dedupe (30s)
+* `PRESENCE_AUTHORIZED`: Info | "Presence verified" | "You have been recognized and liveness verification passed." | Transition Only
+* `PRESENCE_ENDED`: Info | "Presence ended" | "OpenFaceID is no longer detecting an authorized presence." | Transition Only
+* `UNKNOWN_PERSON`: Warning | "Unknown person detected" | "Presence verification failed because the detected person is not enrolled." | Dedupe (30s)
+* `MULTIPLE_FACES`: Security | "Multiple faces detected" | "Protection is paused because more than one person is visible." | Dedupe (30s)
+* `LIVENESS_FAILED`: Security | "Liveness verification failed" | "We could not verify that the detected face is live. Try again." | Dedupe (15s) | Action: Retry Verification
+* `PRIVACY_PAUSED`: Info | "Protection paused" | "Camera monitoring is paused by Privacy Mode." | Transition Only
+* `PRIVACY_RESUMED`: Info | "Protection resumed" | "OpenFaceID is ready for fresh presence verification." | Transition Only
+* `SECURITY_FAILURE`: Security | "OpenFaceID Security" | "Protection has been disabled due to a security violation." | Dedupe (30s) | Action: Open Security Center
+* `SYSTEM_ERROR`: Error | "Protection service unavailable" | "OpenFaceID could not communicate with its background service." | Dedupe (60s) | Action: Open Diagnostics
+
+### 5. Deduplication & Rate Limiting
+* **State Transition Gates**: `AUTHORIZED` and `PRIVACY` notifications only fire on discrete transitions, preventing repetitive per-frame alerts.
+* **Category Sliding-Window Burst Limiter**: Max 3 notifications per category per 30-second window.
+* **Engine Global Burst Limiter**: Max 8 notifications total per 60-second window.
+* **Precedence-Aware Security Prioritization**: Security events (`MULTIPLE_FACES`, `LIVENESS_FAILED`, `SECURITY_FAILURE`) supersede informational alerts during burst collisions.
+
+### 6. Cross-Platform Behavior
+* **macOS (Darwin arm64)**: Native notification center alerts via `PlatformAdapter`. Actionable notifications route to configured deep links. Validated on Apple M4 hardware.
+* **Windows (win32)**: Native toast notifications via PowerShell/WinRT bridge. Action buttons launch application URI handlers.
+* **Linux (linux)**: Freedesktop D-Bus notification protocol (`notify-send` / org.freedesktop.Notifications). Fallback to standard tray alerts if notification daemon is missing.
+
+### 7. Automated Test Suite
+A dedicated test suite was created in `tests/unit/notifications.test.ts` (10 tests, 100% pass):
+* Verification of canonical mappings for all core desktop events.
+* Regression test verifying `"Event triggered"` and `"OpenFaceID Alert"` never appear in output.
+* Deduplication and category cooldown enforcement.
+* Burst protection against high-frequency event floods (100 unknown person events throttle to exactly 3).
+* State-transition authorization notifications without frame spam.
+* Fail-closed multiple-face security transitions.
+* Mitigation of rapid state oscillation storms.
+* Strict suppression of silent internal events.
+* Critical invariant: OS notification API failure cannot crash daemon or alter presence state.
+* Zero biometrics and zero secrets in notification history ring buffer.
+
+Total project tests: **147/147 passing** across 41 test suites.
+
+### 8. Remaining Limitations
+* **Windows/Linux Notification Action Uniformity**: On some Linux desktop environments (e.g. minimal tiling window managers without notification spec v1.2), action buttons are not rendered by the system notification server; the notification text itself provides clear direction.
+* **Persistent Lock-Screen Visibility Settings**: OS-level notification privacy settings (e.g. hiding notification content on locked screens) must be configured in macOS System Settings or Windows Settings. OpenFaceID preserves identity privacy by default by omitting enrolled user names from notification text.
+

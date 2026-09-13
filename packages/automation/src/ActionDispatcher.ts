@@ -1,6 +1,6 @@
 import http from 'http';
 import { getPlatformAdapter } from '../../platform/src/index.ts';
-import { Logger } from '../../core/src/index.ts';
+import { Logger, NotificationManager } from '../../core/src/index.ts';
 
 export type ActionType = 'lock_screen' | 'notify' | 'webhook';
 
@@ -22,9 +22,17 @@ export class ActionDispatcher {
       }
 
       case 'notify': {
-        const title = (payload.title || 'OpenFaceID Alert').slice(0, 100);
-        const body = (payload.body || 'Event triggered').slice(0, 300);
-        await adapter.showNotification(title, body);
+        const notifMgr = NotificationManager.getInstance();
+        const safeTitle = (payload.title && payload.title.trim()) ? payload.title.trim().slice(0, 100) : 'OpenFaceID';
+        const safeBody = (payload.body && payload.body.trim()) ? payload.body.trim().slice(0, 300) : 'System notification';
+        await notifMgr.notify({
+          id: `disp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          category: 'system',
+          severity: 'info',
+          title: safeTitle,
+          body: safeBody,
+          timestamp: Date.now(),
+        });
         return true;
       }
 
