@@ -123,3 +123,9 @@ export interface ILivenessDetector {
     mode: LivenessMode
   ): Promise<LivenessResult>;
 }
+
+// Backend Abstraction Aliases (Section 17)
+export type DetectorBackend = IFaceDetector;
+export type EmbedderBackend = IFaceEmbedder;
+export type LivenessBackend = ILivenessDetector;
+

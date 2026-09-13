@@ -18,6 +18,7 @@
     "test:eval": "node --experimental-strip-types --test --test-timeout=30000 tests/evaluation/*.test.ts",
     "test:perf": "node --experimental-strip-types --test --test-timeout=30000 tests/performance/*.test.ts",
     "eval": "node scripts/evaluation/run-recognition-evaluation.js && node scripts/evaluation/run-threshold-analysis.js && node scripts/evaluation/run-liveness-evaluation.js && node scripts/evaluation/generate-evaluation-report.js",
+    "eval:realworld": "node scripts/evaluation/run-realworld-evaluation.js",
     "perf": "node scripts/performance/run-pipeline-benchmark.js && node scripts/performance/run-resource-benchmark.js && node scripts/performance/run-stress-soak.js && node scripts/performance/generate-performance-report.js",
     "lint": "echo 'Linting passed'",
     "desktop": "node --experimental-strip-types apps/desktop/serve.js",
