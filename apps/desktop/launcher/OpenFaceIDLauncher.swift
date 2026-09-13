@@ -24,7 +24,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         setupStatusBarItem()
 
         // 2. Locate Bundled Resources
-        let resourcesUrl = Bundle.main.resourceURL ?? URL(fileURLWithPath: "/Applications/OpenFaceID.app/Contents/Resources")
+        var resUrl: URL? = Bundle.main.resourceURL
+        if resUrl == nil || !FileManager.default.fileExists(atPath: resUrl!.path) {
+            let exeUrl = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+            let bundleUrl = exeUrl.deletingLastPathComponent().deletingLastPathComponent() // MacOS -> Contents
+            let candidate = bundleUrl.appendingPathComponent("Resources")
+            if FileManager.default.fileExists(atPath: candidate.path) {
+                resUrl = candidate
+            }
+        }
+        let resourcesUrl = resUrl ?? URL(fileURLWithPath: "/Applications/OpenFaceID.app/Contents/Resources")
         let bundledNode = resourcesUrl.appendingPathComponent("bin/node").path
         let fallbackNode = "/opt/homebrew/bin/node"
         let nodePath = FileManager.default.fileExists(atPath: bundledNode) ? bundledNode :
@@ -70,7 +79,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
 
         // 4. Create Native macOS Window
-        let rect = NSRect(x: 0, y: 0, width: 1120, height: 800)
+        let rect = NSRect(x: 0, y: 0, width: 1140, height: 780)
         window = NSWindow(
             contentRect: rect,
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
@@ -78,8 +87,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             defer: false
         )
         window.center()
+        window.minSize = NSSize(width: 980, height: 680)
         window.title = "OpenFaceID"
         window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.backgroundColor = NSColor(red: 12.0/255.0, green: 14.0/255.0, blue: 18.0/255.0, alpha: 1.0)
         window.isReleasedWhenClosed = false
         window.delegate = self
 
@@ -137,6 +149,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettingsTab), keyEquivalent: ",")
         menu.addItem(settingsItem)
 
+        let privCenterItem = NSMenuItem(title: "Privacy…", action: #selector(openPrivacyTab), keyEquivalent: "")
+        menu.addItem(privCenterItem)
+
         let diagItem = NSMenuItem(title: "Diagnostics…", action: #selector(openDiagnosticsTab), keyEquivalent: "d")
         menu.addItem(diagItem)
 
@@ -161,6 +176,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc func openSettingsTab() {
         showMainWindow()
         webView?.evaluateJavaScript("switchTab('settings')", completionHandler: nil)
+    }
+
+    @objc func openPrivacyTab() {
+        showMainWindow()
+        webView?.evaluateJavaScript("switchTab('privacy')", completionHandler: nil)
     }
 
     @objc func openDiagnosticsTab() {

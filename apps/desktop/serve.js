@@ -669,6 +669,29 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 14b. Bulk Deletion of All Biometric Data (Protected)
+  if (url.pathname === '/api/v1/identities' && method === 'DELETE') {
+    if (!verifyAuth()) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized: Missing bearer token' }));
+      return;
+    }
+    try {
+      const all = await engine.identityStore.listIdentities();
+      for (const item of all) {
+        await engine.identityStore.deleteIdentity(item.id);
+      }
+      engine.presenceTracker.reset();
+      engine.activityLog.logEvent('ALL_IDENTITIES_DELETED', { count: all.length });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, deletedCount: all.length }));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
+    }
+    return;
+  }
+
   // 15. Security Center Diagnostics (Section 22)
   if (url.pathname === '/api/v1/diagnostics/security' && method === 'GET') {
     if (!verifyAuth()) {

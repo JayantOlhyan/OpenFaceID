@@ -131,6 +131,11 @@ export function resolveDesktopUiHtml(): string {
   }
 
   // 3. Local desktop app relative paths
+  if (process.argv[1]) {
+    const scriptDir = path.dirname(process.argv[1]);
+    candidates.push(path.resolve(scriptDir, 'index.html'));
+    candidates.push(path.resolve(scriptDir, 'apps/desktop/index.html'));
+  }
   candidates.push(path.resolve(__dirname, 'index.html'));
   candidates.push(path.resolve(__dirname, '../index.html'));
   candidates.push(path.resolve(__dirname, '../../apps/desktop/index.html'));
@@ -185,6 +190,11 @@ export function resolveDesktopAsset(assetPath: string): string | null {
     candidates.push(path.resolve(repoRoot, 'apps/desktop', clean));
   }
 
+  if (process.argv[1]) {
+    const scriptDir = path.dirname(process.argv[1]);
+    candidates.push(path.resolve(scriptDir, clean));
+    candidates.push(path.resolve(scriptDir, 'apps/desktop', clean));
+  }
   candidates.push(path.resolve(__dirname, clean));
   candidates.push(path.resolve(__dirname, '../../apps/desktop', clean));
   candidates.push(path.resolve(process.cwd(), clean));

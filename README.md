@@ -5,7 +5,7 @@
 # OpenFaceID
 
 ### Open-Source Facial Presence Detection for Desktop Systems
-**Local webcam recognition, liveness verification, and privacy-first presence awareness for macOS, Windows, and Linux.**
+**Your Mac knows when you're there. Private. Local. Open Source.**
 
 *Face-ID-like convenience using an ordinary webcam — without pretending a webcam is a depth-sensing security system.*
 
@@ -580,6 +580,8 @@ Explore the complete architectural and evaluation documentation:
 * **[Release Artifact Manifest](docs/release/macos-artifact-manifest.md)** — File sizes, architectures, and SHA-256 checksums.
 * **[Camera Debugging Analysis](docs/debug/macos-camera-failure.md)** — Root cause analysis and resolution history.
 * **[CLI Reference Guide](docs/cli.md)** — Command syntax, exit codes, and JSON schemas.
+* **[Glance Parity Audit](docs/release/glance-parity-audit.md)** — Comprehensive comparison with jonnyoo/glance.
+* **[Third-Party Attribution: Glance](docs/third-party/glance-attribution.md)** — Attribution and architectural distinction notice.
 * **[Contributing Guidelines](CONTRIBUTING.md)** — Code of conduct, pull request process, and biometric data rules.
 * **[Security Policy](SECURITY.md)** — Responsible disclosure protocol and vulnerability handling.
 * **[Changelog](CHANGELOG.md)** — Historical release notes and version history.

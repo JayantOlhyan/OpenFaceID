@@ -41,7 +41,7 @@ export class ConfigStore {
       return res.config;
     } catch (err) {
       Logger.warn('storage', 'Config file unreadable or corrupt, using defaults', { error: String(err) });
-      return DEFAULT_CONFIG;
+      return structuredClone(DEFAULT_CONFIG);
     }
   }
 

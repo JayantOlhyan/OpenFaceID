@@ -45,8 +45,8 @@
     </div>
 
     <h1>
-      Privacy-First Facial Presence<br />
-      <span>For Your Mac.</span>
+      Your Mac knows when you're there.<br />
+      <span>Private. Local. Open Source.</span>
     </h1>
 
     <p class="hero-subtitle">
@@ -97,7 +97,7 @@
         </div>
         <div class="meta-item">
           <span class="meta-label">Package Size</span>
-          <span class="meta-value">17 MB (DMG) / 15 MB (ZIP)</span>
+          <span class="meta-value">37 MB (DMG) / 36 MB (ZIP)</span>
         </div>
         <div class="meta-item">
           <span class="meta-label">OS Requirements</span>
@@ -105,7 +105,7 @@
         </div>
         <div class="meta-item">
           <span class="meta-label">Release Date</span>
-          <span class="meta-value">September 13, 2026</span>
+          <span class="meta-value">September 14, 2026</span>
         </div>
         <div class="meta-item">
           <span class="meta-label">Vision Runtime</span>
@@ -115,7 +115,7 @@
 
       <div class="meta-label" style="margin-bottom: 8px;">SHA-256 Checksum (OpenFaceID-0.2.1-rc.1-arm64.dmg)</div>
       <div class="sha-box">
-        <code id="shaVal">b5874e5b87351c638b6dac1c59efab428630876cb3bc995699a6ccbde30dcfc7</code>
+        <code id="shaVal">c6e2a015e1ea571fcb3ef2fad6b45fd1efeb33db9ec15aa752258672f1efc554</code>
         <button class="sha-copy-btn" onclick="copySha()">Copy SHA</button>
       </div>
 
@@ -123,6 +123,60 @@
       <div class="security-notice">
         <strong>Notice on macOS Signing & Gatekeeper:</strong>
         This release is ad-hoc signed and compiled locally from open source. Apple Developer ID certificate notarization is currently deferred (RB-01). When launching for the first time, right-click (Control-click) <strong>OpenFaceID.app</strong> and select <strong>Open</strong>, or allow it under <em>System Settings &rarr; Privacy &amp; Security</em>.
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features-section" id="features">
+    <h2 class="section-title">Engineered for Privacy & Presence</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        </div>
+        <h3 class="feature-title">Dynamic Presence Awareness</h3>
+        <p class="feature-desc">Continuous optical monitoring tracks presence with 5 canonical states: Authorized, Absent, Multiple People, Unknown Person, and Privacy Paused with real-time beacons.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        </div>
+        <h3 class="feature-title">Zero-Touch Lock-on-Leave</h3>
+        <p class="feature-desc">Automatically secures your workstation via native macOS screen lock the moment you step away, with configurable departure timeouts from 5 to 60 seconds.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+        </div>
+        <h3 class="feature-title">Fail-Closed Biometrics</h3>
+        <p class="feature-desc">If multiple faces appear in the camera field, liveness fails, or the camera is obscured, authorization immediately drops to fail-closed state (PRESENCE_AMBIGUOUS).</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        </div>
+        <h3 class="feature-title">Zero Cloud Egress</h3>
+        <p class="feature-desc">100% on-device volatile RAM processing. Biometric vectors are encrypted with AES-256-GCM. Deleting profiles performs a multi-pass cryptographic shred.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+        </div>
+        <h3 class="feature-title">Native macOS Experience</h3>
+        <p class="feature-desc">Native Swift Cocoa launcher with menu bar supervision, Dark Mode HIG styling, floating Quick Glance HUD, and dedicated AVFoundation camera helper.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M7 15h0M2 9.5h20"></path></svg>
+        </div>
+        <h3 class="feature-title">No Keystroke / Password Capture</h3>
+        <p class="feature-desc">OpenFaceID operates strictly at the presence layer. We never capture, store, or simulate macOS user passwords or accessibility keystrokes.</p>
       </div>
     </div>
   </section>
