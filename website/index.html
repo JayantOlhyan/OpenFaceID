@@ -129,22 +129,91 @@
 
   <!-- Step by Step Installation -->
   <section class="steps-section" id="install">
+    <!-- Installation Reference Card matching GitHub README layout -->
+    <div class="install-container" style="max-width: 680px; margin: 0 auto 48px; background: #0d1117; border: 1px solid #30363d; border-radius: 12px; padding: 32px 36px; text-align: left; box-shadow: 0 16px 36px rgba(0,0,0,0.5);">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #21262d; padding-bottom: 14px; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+        <h2 style="font-size: 1.5rem; font-weight: 600; color: #f0f6fc; margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">Installation</h2>
+        <div class="os-tabs" style="display: flex; gap: 8px;">
+          <button class="os-tab active" onclick="switchOsTab('macos')" id="tab-macos" style="background: rgba(0, 145, 255, 0.15); border: 1px solid #0091ff; color: #58a6ff; padding: 6px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.85rem; transition: all 0.2s ease;">macOS</button>
+          <button class="os-tab" onclick="switchOsTab('windows')" id="tab-windows" style="background: #161b22; border: 1px solid #30363d; color: #8b949e; padding: 6px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.85rem; transition: all 0.2s ease;">Windows</button>
+          <button class="os-tab" onclick="switchOsTab('linux')" id="tab-linux" style="background: #161b22; border: 1px solid #30363d; color: #8b949e; padding: 6px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.85rem; transition: all 0.2s ease;">Linux</button>
+        </div>
+      </div>
+      
+      <!-- macOS Pane -->
+      <div id="pane-macos" class="os-pane">
+        <p style="font-weight: 600; color: #f0f6fc; margin: 16px 0 12px; font-size: 0.95rem;">Requirements:</p>
+        <ul style="margin: 0 0 24px 20px; padding: 0; color: #e6edf3; font-size: 0.95rem; line-height: 1.8;">
+          <li>macOS 15 Sequoia or later</li>
+          <li>Apple Silicon or Intel Mac</li>
+        </ul>
+
+        <div style="margin: 20px 0 20px;">
+          <a href="https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-arm64.dmg" style="display: inline-block; transition: transform 0.2s ease;">
+            <img src="assets/download-for-mac-button.png" width="190" alt="Download for Mac" style="display: block; border-radius: 16px;" />
+          </a>
+        </div>
+
+        <p style="color: #f0f6fc; font-size: 0.95rem; margin: 0; line-height: 1.6;">
+          Open the <code style="background: rgba(110, 118, 129, 0.4); padding: 3px 6px; border-radius: 6px; color: #e6edf3; font-size: 0.85rem; font-family: ui-monospace, SFMono-Regular, monospace;">.dmg</code> file and drag <strong>OpenFaceID</strong> to <code style="background: rgba(110, 118, 129, 0.4); padding: 3px 6px; border-radius: 6px; color: #e6edf3; font-size: 0.85rem; font-family: ui-monospace, SFMono-Regular, monospace;">/Applications</code> , then open it.
+        </p>
+      </div>
+
+      <!-- Windows Pane -->
+      <div id="pane-windows" class="os-pane" style="display: none;">
+        <p style="font-weight: 600; color: #f0f6fc; margin: 16px 0 12px; font-size: 0.95rem;">Requirements:</p>
+        <ul style="margin: 0 0 24px 20px; padding: 0; color: #e6edf3; font-size: 0.95rem; line-height: 1.8;">
+          <li>Windows 10 or Windows 11 (64-bit)</li>
+          <li>DirectShow or MediaFoundation compatible webcam</li>
+        </ul>
+
+        <div style="margin: 20px 0 20px;">
+          <a href="https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-windows-x64.zip" style="display: inline-block; transition: transform 0.2s ease;">
+            <img src="assets/download-for-windows-button.png" width="190" alt="Download for Windows" style="display: block; border-radius: 16px;" />
+          </a>
+        </div>
+
+        <p style="color: #f0f6fc; font-size: 0.95rem; margin: 0; line-height: 1.6;">
+          Open the <code style="background: rgba(110, 118, 129, 0.4); padding: 3px 6px; border-radius: 6px; color: #e6edf3; font-size: 0.85rem; font-family: ui-monospace, SFMono-Regular, monospace;">.zip</code> file, extract <strong>OpenFaceID</strong>, then run <code style="background: rgba(110, 118, 129, 0.4); padding: 3px 6px; border-radius: 6px; color: #e6edf3; font-size: 0.85rem; font-family: ui-monospace, SFMono-Regular, monospace;">OpenFaceID.cmd</code>.
+        </p>
+      </div>
+
+      <!-- Linux Pane -->
+      <div id="pane-linux" class="os-pane" style="display: none;">
+        <p style="font-weight: 600; color: #f0f6fc; margin: 16px 0 12px; font-size: 0.95rem;">Requirements:</p>
+        <ul style="margin: 0 0 24px 20px; padding: 0; color: #e6edf3; font-size: 0.95rem; line-height: 1.8;">
+          <li>Ubuntu 22.04+, Debian 12+, Fedora 38+, or Arch Linux</li>
+          <li>V4L2-compatible video capture device (<code style="color: #79c0ff;">/dev/video0</code>)</li>
+        </ul>
+
+        <div style="margin: 20px 0 20px;">
+          <a href="https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/openfaceid_0.2.1-rc.1_amd64.deb" style="display: inline-block; transition: transform 0.2s ease;">
+            <img src="assets/download-for-linux-button.png" width="190" alt="Download for Linux" style="display: block; border-radius: 16px;" />
+          </a>
+        </div>
+
+        <p style="color: #f0f6fc; font-size: 0.95rem; margin: 0; line-height: 1.6;">
+          Open the <code style="background: rgba(110, 118, 129, 0.4); padding: 3px 6px; border-radius: 6px; color: #e6edf3; font-size: 0.85rem; font-family: ui-monospace, SFMono-Regular, monospace;">.deb</code> file and install with <code style="background: rgba(110, 118, 129, 0.4); padding: 3px 6px; border-radius: 6px; color: #e6edf3; font-size: 0.85rem; font-family: ui-monospace, SFMono-Regular, monospace;">sudo dpkg -i</code> , then open it from your app launcher.
+        </p>
+      </div>
+    </div>
+
     <h2 class="section-title">Seamless Installation</h2>
     <div class="steps-grid">
       <div class="step-card">
         <div class="step-number">1</div>
-        <h3 class="step-title">Download DMG</h3>
-        <p class="step-text">Download the official <code>OpenFaceID-0.2.1-rc.1-arm64.dmg</code> release image.</p>
+        <h3 class="step-title">Download Package</h3>
+        <p class="step-text">Download the release image for your operating system (macOS DMG, Windows ZIP, Linux DEB).</p>
       </div>
       <div class="step-card">
         <div class="step-number">2</div>
-        <h3 class="step-title">Drag to Applications</h3>
-        <p class="step-text">Open the DMG and drag the <code>OpenFaceID.app</code> icon into your Applications folder.</p>
+        <h3 class="step-title">Install & Launch</h3>
+        <p class="step-text">Open the package and drag or install into system Applications or run the launcher command.</p>
       </div>
       <div class="step-card">
         <div class="step-number">3</div>
         <h3 class="step-title">Grant Camera Permission</h3>
-        <p class="step-text">On first launch, grant the macOS TCC camera permission when prompted. Hardware capture activates immediately.</p>
+        <p class="step-text">On first launch, grant hardware camera permission when prompted. Frame capture activates immediately.</p>
       </div>
       <div class="step-card">
         <div class="step-number">4</div>
@@ -169,6 +238,36 @@
       });
     }
 
+    function switchOsTab(os) {
+      const tabs = ['macos', 'windows', 'linux'];
+      tabs.forEach(t => {
+        const tabEl = document.getElementById('tab-' + t);
+        const paneEl = document.getElementById('pane-' + t);
+        if (!tabEl || !paneEl) return;
+        if (t === os) {
+          tabEl.style.background = 'rgba(0, 145, 255, 0.15)';
+          tabEl.style.borderColor = '#0091ff';
+          tabEl.style.color = '#58a6ff';
+          paneEl.style.display = 'block';
+        } else {
+          tabEl.style.background = '#161b22';
+          tabEl.style.borderColor = '#30363d';
+          tabEl.style.color = '#8b949e';
+          paneEl.style.display = 'none';
+        }
+      });
+    }
+
+    // Auto-detect OS on load
+    try {
+      const platform = (navigator.platform || navigator.userAgent || '').toLowerCase();
+      if (platform.includes('win')) {
+        switchOsTab('windows');
+      } else if (platform.includes('linux')) {
+        switchOsTab('linux');
+      } else {
+        switchOsTab('macos');
+      }
     // Auto-detect client architecture
     (function detectArch() {
       const isIntel = navigator.userAgent.indexOf('Intel') !== -1 && navigator.userAgent.indexOf('Mac') !== -1;
