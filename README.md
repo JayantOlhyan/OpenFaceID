@@ -210,29 +210,119 @@ Vision Pipeline & Desktop WebKit UI
 
 ## Installation
 
-### macOS (Apple Silicon arm64)
+Select your operating system:
 
-The primary installation path is the official macOS Disk Image:
+| [macOS](#macos) | [Windows](#windows) | [Linux](#linux) |
+| :--- | :--- | :--- |
+| <a href="#macos"><img src="assets/download-for-mac-button.png" width="165" alt="Download for Mac" /></a> | <a href="#windows"><img src="assets/download-for-windows-button.png" width="165" alt="Download for Windows" /></a> | <a href="#linux"><img src="assets/download-for-linux-button.png" width="165" alt="Download for Linux" /></a> |
 
-1. **Download the DMG**:
-   Download **[`OpenFaceID-0.2.1-rc.1-arm64.dmg`](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-arm64.dmg)** (20 MB) from GitHub Releases.
-2. **Mount & Install**:
-   Double-click the DMG and drag **OpenFaceID.app** into your **Applications** folder.
-3. **First Launch (Ad-Hoc Signing Notice)**:
-   Right-click (Control-click) **OpenFaceID.app** in `/Applications` and select **Open** (or grant permission in *System Settings &rarr; Privacy & Security*).
-4. **Grant Camera Permission**:
-   When prompted by macOS, click **OK** to allow camera access.
-5. **Enroll Your Face**:
-   Click **+ Enroll** and complete the guided 5-pose face enrollment (Center, Up, Down, Left, Right).
+---
 
-#### Checksum Verification
+### macOS
+
+Requirements:
+
+* macOS 15 Sequoia or later
+* Apple Silicon or Intel Mac
+
+<a href="https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-arm64.dmg">
+  <img src="assets/download-for-mac-button.png" width="190" alt="Download for Mac" />
+</a>
+
+Open the `.dmg` file and drag OpenFaceID to `/Applications` , then open it.
+
+<details>
+<summary><b>macOS Verification & First-Launch Security Guidance</b></summary>
+
+#### SHA-256 Checksum Verification
 ```bash
 shasum -a 256 OpenFaceID-0.2.1-rc.1-arm64.dmg
-# Expected: 82b00c177925e4e34944a9d04faea65363f1764e9c947252a15cee75935b3742
+# Expected: 4e3231a7f5acff3abd21bc2fff11bac94fb22a7c30ec7058fc52fde591c14b77
 ```
 
 > [!NOTE]
-> **Transparent Signing Posture (RB-01)**: Current macOS releases are ad-hoc signed locally. Apple Developer ID certificate notarization is currently deferred. The application is completely open source and can be compiled and signed locally at any time.
+> **Transparent Signing Posture (RB-01)**: Current macOS release candidate builds are ad-hoc signed locally while Apple Developer ID certification remains deferred. On first launch, right-click (Control-click) `OpenFaceID.app` in `/Applications` and select **Open**, or allow it under *System Settings &rarr; Privacy & Security*.
+
+</details>
+
+---
+
+### Windows
+
+Requirements:
+
+* Windows 10 or Windows 11 (64-bit)
+* DirectShow or MediaFoundation compatible webcam
+
+<a href="https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-windows-x64.zip">
+  <img src="assets/download-for-windows-button.png" width="190" alt="Download for Windows" />
+</a>
+
+Open the `.zip` file, extract **OpenFaceID** to your chosen directory, and run `OpenFaceID.cmd`.
+
+<details>
+<summary><b>Windows Verification & Service Setup</b></summary>
+
+#### SHA-256 Checksum Verification
+```powershell
+Get-FileHash -Algorithm SHA256 OpenFaceID-0.2.1-rc.1-windows-x64.zip
+# Expected: c0b2c40168c455ce59701e02ef0ba400ee11953af7f0d1de18f4bdb2210c6df6
+```
+
+#### Optional Autostart at Login
+Double-click `register-autostart.reg` inside the extracted folder to automatically launch OpenFaceID when logging in to Windows.
+
+> [!NOTE]
+> **Windows Security Invariants**: Key storage leverages Windows Credential Manager DPAPI (`CryptProtectData`) to isolate and protect the 256-bit encryption key on local hardware.
+
+</details>
+
+---
+
+### Linux
+
+Requirements:
+
+* Ubuntu 22.04+, Debian 12+, Fedora 38+, or Arch Linux
+* V4L2-compatible video capture device (`/dev/video0`)
+
+<a href="https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/openfaceid_0.2.1-rc.1_amd64.deb">
+  <img src="assets/download-for-linux-button.png" width="190" alt="Download for Linux" />
+</a>
+
+Open the `.deb` file and install with `sudo dpkg -i` , then open **OpenFaceID** from the application launcher.
+
+<details>
+<summary><b>Linux Verification, Tarball & Systemd User Service</b></summary>
+
+#### Debian / Ubuntu Installation (.deb)
+```bash
+# Verify checksum
+sha256sum openfaceid_0.2.1-rc.1_amd64.deb
+# Expected: 7da5b550f55bb9cfa491e48f8b1d389a1b5295ecc9138a4023d8f9226306c7c9
+
+# Install package
+sudo dpkg -i openfaceid_0.2.1-rc.1_amd64.deb
+openfaceid
+```
+
+#### Standalone Linux Tarball (.tar.gz)
+```bash
+tar -xzf openfaceid-0.2.1-rc.1-linux-x86_64.tar.gz
+cd linux/bin
+./openfaceid
+```
+
+#### Optional Systemd Background Service
+To enable continuous optical presence tracking on desktop login:
+```bash
+systemctl --user enable --now openfaceid
+```
+
+> [!NOTE]
+> **Linux Security Invariants**: Key management connects to desktop `libsecret` (GNOME Keyring / KWallet). Hardware frame ingestion uses native kernel Video4Linux2 (`v4l2`) buffers with zero-copy RGBA transformation.
+
+</details>
 
 ---
 
