@@ -97,9 +97,9 @@ export function getBuildMetadata(): BuildMetadata {
   let commit = process.env.GIT_COMMIT || '';
   if (!commit) {
     try {
-      commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', timeout: 1000 }).trim();
+      commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', timeout: 1000, stdio: ['pipe', 'pipe', 'ignore'] }).trim();
     } catch {
-      commit = 'e045bea'; // authoritative baseline git commit
+      commit = '2bbe16710c389ff378d1686207431599b502d352';
     }
   }
 
