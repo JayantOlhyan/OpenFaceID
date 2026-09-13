@@ -91,7 +91,8 @@ export class DesktopEngine {
     this.identityStore = new IdentityStore();
     this.activityLog = new ActivityLog();
     this.configStore = new ConfigStore();
-    this.cameraManager = new CameraManager();
+    this.cameraManager = new CameraManager({ targetFps: 60 });
+    this.cameraManager.setOnPreviewCallback((frame) => this.handlePreviewFrame(frame));
     this.notificationManager = NotificationManager.getInstance({ adapter: this.adapter });
 
     this.detector = new BlazeFaceDetector();
@@ -229,12 +230,10 @@ export class DesktopEngine {
       this.latestFrameHeight = frame.height;
       this.latestFrameTimestamp = Date.now();
 
-      // Encode downscaled volatile preview BMP for the live UI feed (~15 FPS throttle)
-      const now = Date.now();
-      if (now - this.lastBmpTime >= 60) {
-        this.lastBmpTime = now;
+      if (!this.latestFrameBmp) {
         this.latestFrameBmp = this.generateBmpSnapshot(frame.data, frame.width, frame.height);
       }
+      this.notifyFrameListeners();
 
       // Condition: No faces detected
       if (detections.length === 0) {
@@ -478,6 +477,46 @@ export class DesktopEngine {
 
       this.pendingPoseCaptureResolvers.push(resolveWrapper);
     });
+  }
+
+  private frameListeners: Array<() => void> = [];
+
+  public handlePreviewFrame(frame: CameraFrame): void {
+    if (this.privacyPaused || this.isShuttingDown) return;
+    this.latestFrameWidth = frame.width;
+    this.latestFrameHeight = frame.height;
+    this.latestFrameTimestamp = Date.now();
+    this.latestFrameBmp = this.generateBmpSnapshot(frame.data, frame.width, frame.height);
+    this.notifyFrameListeners();
+  }
+
+  public waitForNextFrame(lastTimestamp: number, timeoutMs: number = 1000): Promise<{ bmp: Buffer | null; timestamp: number }> {
+    if (this.latestFrameTimestamp > lastTimestamp && this.latestFrameBmp) {
+      return Promise.resolve({ bmp: this.latestFrameBmp, timestamp: this.latestFrameTimestamp });
+    }
+    return new Promise((resolve) => {
+      let timer: NodeJS.Timeout | null = null;
+      const listener = () => {
+        if (timer) clearTimeout(timer);
+        resolve({ bmp: this.latestFrameBmp, timestamp: this.latestFrameTimestamp });
+      };
+      this.frameListeners.push(listener);
+      timer = setTimeout(() => {
+        const idx = this.frameListeners.indexOf(listener);
+        if (idx !== -1) this.frameListeners.splice(idx, 1);
+        resolve({ bmp: this.latestFrameBmp, timestamp: this.latestFrameTimestamp });
+      }, timeoutMs);
+    });
+  }
+
+  private notifyFrameListeners(): void {
+    if (this.frameListeners.length > 0) {
+      const listeners = this.frameListeners;
+      this.frameListeners = [];
+      for (const fn of listeners) {
+        try { fn(); } catch {}
+      }
+    }
   }
 
   public getLatestFrameBmp(): Buffer | null {

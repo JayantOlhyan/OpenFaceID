@@ -257,18 +257,46 @@ const server = http.createServer(async (req, res) => {
   }
 
   // Real-time camera sensor snapshot (volatile RAM BMP, zero disk persistence)
-  if (url.pathname === '/api/v1/camera/snapshot' && method === 'GET') {
-    const bmp = engine.getLatestFrameBmp();
+  if (url.pathname === '/api/v1/camera/snapshot' && (method === 'GET' || method === 'HEAD')) {
+    const shouldWait = url.searchParams.get('wait') === '1';
+    const lastTs = parseInt(url.searchParams.get('last') || '0', 10);
+
+    let bmp = null;
+    let ts = 0;
+
+    if (shouldWait) {
+      const frameData = await engine.waitForNextFrame(lastTs, 1000);
+      bmp = frameData.bmp;
+      ts = frameData.timestamp;
+    } else {
+      bmp = engine.getLatestFrameBmp();
+      ts = engine.getLatestFrameInfo().timestamp;
+    }
+
     if (!bmp) {
       res.writeHead(503, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Camera frame not ready yet' }));
       return;
     }
+
+    const diag = engine.cameraManager.getDiagnostics();
+    const frameInfo = engine.getLatestFrameInfo();
+
     res.writeHead(200, {
       'Content-Type': 'image/bmp',
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
+      'Access-Control-Expose-Headers': 'X-OFID-Timestamp, X-OFID-FPS, X-OFID-Face-Count, X-OFID-Detections, X-OFID-Resolution',
+      'X-OFID-Timestamp': String(ts || frameInfo.timestamp || Date.now()),
+      'X-OFID-FPS': String((diag.fps || 0).toFixed(1)),
+      'X-OFID-Face-Count': String(frameInfo.detections ? frameInfo.detections.length : 0),
+      'X-OFID-Detections': JSON.stringify(frameInfo.detections || []),
+      'X-OFID-Resolution': `${frameInfo.width || 1280}x${frameInfo.height || 720}`,
     });
+    if (method === 'HEAD') {
+      res.end();
+      return;
+    }
     res.end(bmp);
     return;
   }

@@ -6,13 +6,13 @@ export class FrameSampler {
   private lastSampleTimeMs: number = 0;
   private frameIndex: number = 0;
 
-  constructor(targetFps: number = 15) {
-    this.targetFps = Math.max(0.5, Math.min(60, targetFps));
+  constructor(targetFps: number = 60) {
+    this.targetFps = Math.max(0.5, Math.min(120, targetFps));
     this.minIntervalMs = 1000 / this.targetFps;
   }
 
   public setTargetFps(fps: number): void {
-    this.targetFps = Math.max(0.5, Math.min(60, fps));
+    this.targetFps = Math.max(0.5, Math.min(120, fps));
     this.minIntervalMs = 1000 / this.targetFps;
   }
 

@@ -75,12 +75,18 @@ export class CameraManager {
     lastLatencyMs: 0,
   };
 
+  private onPreviewCallback: ((frame: CameraFrame) => void) | null = null;
+
   constructor(options: CameraOptions = {}) {
     this.options = options;
     this.selectedDeviceId = options.preferredDeviceId || 'default';
-    this.sampler = new FrameSampler(options.targetFps || 15);
+    this.sampler = new FrameSampler(options.targetFps || 60);
     if (options.preferredWidth) this.currentWidth = options.preferredWidth;
     if (options.preferredHeight) this.currentHeight = options.preferredHeight;
+  }
+
+  public setOnPreviewCallback(callback: ((frame: CameraFrame) => void) | null): void {
+    this.onPreviewCallback = callback;
   }
 
   public getState(): CameraState {
@@ -304,7 +310,7 @@ export class CameraManager {
     }
 
     const devId = this.selectedDeviceId || 'default';
-    const targetFps = this.sampler.getTargetFps() || 30;
+    const targetFps = this.sampler.getTargetFps() || 60;
 
     try {
       this.nativeProcess = spawn(
@@ -406,18 +412,6 @@ export class CameraManager {
         this.fpsWindowStart = now;
       }
 
-      // Backpressure Check: Drop frame if vision engine is still computing previous frame
-      if (this.isProcessingFrame) {
-        this.diagnostics.framesDropped++;
-        continue;
-      }
-
-      // Frame Rate Throttling
-      if (!this.sampler.shouldSample(now)) {
-        this.diagnostics.framesDropped++;
-        continue;
-      }
-
       // In-place BGRA to RGBA conversion
       const rawData = new Uint8ClampedArray(rawPayload.buffer, rawPayload.byteOffset, rawPayload.length);
       for (let i = 0; i < rawData.length; i += 4) {
@@ -465,6 +459,27 @@ export class CameraManager {
         frameIndex: this.frameCount,
         zeroize,
       };
+
+      // 1. Deliver real-time preview frame with zero latency (unblocked by vision inference)
+      if (this.onPreviewCallback) {
+        try {
+          this.onPreviewCallback(frame);
+        } catch (err) {
+          Logger.debug('camera', 'Preview callback error', { error: String(err) });
+        }
+      }
+
+      // 2. Vision Inference Backpressure Check: Skip inference if previous inference is still computing
+      if (this.isProcessingFrame) {
+        this.diagnostics.framesDropped++;
+        continue;
+      }
+
+      // Frame Rate Throttling for vision inference
+      if (!this.sampler.shouldSample(now)) {
+        this.diagnostics.framesDropped++;
+        continue;
+      }
 
       if (this.onFrameCallback) {
         const startProc = Date.now();
@@ -530,6 +545,12 @@ export class CameraManager {
             }
           },
         };
+
+        if (this.onPreviewCallback) {
+          try {
+            this.onPreviewCallback(frame);
+          } catch {}
+        }
 
         if (this.onFrameCallback) {
           this.isProcessingFrame = true;

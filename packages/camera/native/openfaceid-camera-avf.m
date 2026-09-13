@@ -36,8 +36,8 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
     if (!self.isRunning) return;
 
     NSTimeInterval now = [[NSDate date] timeIntervalSince1970];
-    if (self.targetFps > 0 && (now - self.lastFrameTime) < (1.0 / (double)self.targetFps * 0.85)) {
-        return; // Frame rate throttling
+    if (self.targetFps > 0 && (now - self.lastFrameTime) < (1.0 / (double)self.targetFps * 0.70)) {
+        return; // Frame rate throttling allowing clock jitter headroom
     }
     self.lastFrameTime = now;
 
@@ -141,12 +141,18 @@ static void printDevicesJson() {
     NSMutableArray *devList = [NSMutableArray array];
     for (NSUInteger i = 0; i < devices.count; i++) {
         AVCaptureDevice *d = devices[i];
-        
+        int devMaxFps = 30;
+        for (AVCaptureDeviceFormat *f in d.formats) {
+            for (AVFrameRateRange *r in f.videoSupportedFrameRateRanges) {
+                if ((int)r.maxFrameRate > devMaxFps) {
+                    devMaxFps = (int)r.maxFrameRate;
+                }
+            }
+        }
         NSMutableArray *resolutions = [NSMutableArray array];
-        // Standard expected formats
-        [resolutions addObject:@{@"width": @1920, @"height": @1080, @"maxFps": @30, @"pixelFormats": @[@"BGRA", @"NV12"]}];
-        [resolutions addObject:@{@"width": @1280, @"height": @720, @"maxFps": @30, @"pixelFormats": @[@"BGRA", @"NV12"]}];
-        [resolutions addObject:@{@"width": @640, @"height": @480, @"maxFps": @30, @"pixelFormats": @[@"BGRA", @"NV12"]}];
+        [resolutions addObject:@{@"width": @1920, @"height": @1080, @"maxFps": @(devMaxFps), @"pixelFormats": @[@"BGRA", @"NV12"]}];
+        [resolutions addObject:@{@"width": @1280, @"height": @720, @"maxFps": @(devMaxFps), @"pixelFormats": @[@"BGRA", @"NV12"]}];
+        [resolutions addObject:@{@"width": @640, @"height": @480, @"maxFps": @(devMaxFps), @"pixelFormats": @[@"BGRA", @"NV12"]}];
 
         [devList addObject:@{
             @"id": d.uniqueID,
@@ -264,8 +270,32 @@ static int startStreaming(NSString *targetDeviceId, int reqWidth, int reqHeight,
 
     CameraStreamer *streamer = [[CameraStreamer alloc] init];
     streamer.session = session;
-    streamer.targetFps = reqFps > 0 ? reqFps : 30;
     streamer.isRunning = YES;
+
+    int maxSupportedFps = 30;
+    for (AVFrameRateRange *range in selectedDevice.activeFormat.videoSupportedFrameRateRanges) {
+        if ((int)range.maxFrameRate > maxSupportedFps) {
+            maxSupportedFps = (int)range.maxFrameRate;
+        }
+    }
+    int desiredFps = reqFps > 0 ? reqFps : maxSupportedFps;
+    if (desiredFps > maxSupportedFps) {
+        desiredFps = maxSupportedFps;
+    }
+
+    // Configure hardware frame duration to lock target FPS without auto-exposure throttling
+    NSError *lockErr = nil;
+    if ([selectedDevice lockForConfiguration:&lockErr]) {
+        CMTime frameDuration = CMTimeMake(1, (int32_t)desiredFps);
+        selectedDevice.activeVideoMinFrameDuration = frameDuration;
+        selectedDevice.activeVideoMaxFrameDuration = frameDuration;
+        [selectedDevice unlockForConfiguration];
+        fprintf(stderr, "[openfaceid-camera-avf] Device locked to %d FPS (hardware max: %d FPS)\n", desiredFps, maxSupportedFps);
+    } else {
+        fprintf(stderr, "[openfaceid-camera-avf] Note: Could not lock device configuration: %s\n",
+                [[lockErr localizedDescription] UTF8String]);
+    }
+    streamer.targetFps = desiredFps;
 
     dispatch_queue_t queue = dispatch_queue_create("openfaceid.camera.stream", DISPATCH_QUEUE_SERIAL);
     [output setSampleBufferDelegate:streamer queue:queue];

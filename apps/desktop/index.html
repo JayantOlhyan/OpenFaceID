@@ -2045,26 +2045,20 @@
       }
     }
 
-    // Real-time camera feed & diagnostics loop
-    let cameraFeedTimer = null;
-    function startCameraFeedLoop() {
-      if (cameraFeedTimer) return;
+    // High-performance real-time camera feed & diagnostics loop
+    let isCameraStreaming = false;
+    let smoothedBox = { x: 0, y: 0, w: 0, h: 0, visible: false };
+
+    async function startCameraFeedLoop() {
+      if (isCameraStreaming) return;
+      isCameraStreaming = true;
+
       const canvas = document.getElementById('cameraFeedCanvas');
-      const ctx = canvas ? canvas.getContext('2d') : null;
-      const img = new Image();
-      let isFetching = false;
+      const ctx = canvas ? canvas.getContext('2d', { alpha: false }) : null;
+      let lastTimestamp = 0;
+      let consecutiveErrors = 0;
 
-      img.onload = () => {
-        if (ctx && canvas) {
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        }
-        isFetching = false;
-      };
-      img.onerror = () => {
-        isFetching = false;
-      };
-
-      cameraFeedTimer = setInterval(async () => {
+      while (isCameraStreaming) {
         const camTab = document.getElementById('tab-camera');
         const dashTab = document.getElementById('tab-dashboard');
         const enrollModal = document.getElementById('enrollmentModal');
@@ -2072,49 +2066,121 @@
                           (dashTab && dashTab.classList.contains('active')) ||
                           (enrollModal && enrollModal.style.display === 'flex');
 
-        if (!isVisible || isFetching) return;
+        if (!isVisible) {
+          await new Promise((r) => setTimeout(r, 200));
+          continue;
+        }
 
         try {
-          const diagRes = await fetch('/api/v1/camera/diagnostics');
-          if (diagRes.ok) {
-            const diag = await diagRes.json();
-            const fpsElem = document.getElementById('liveFpsText');
-            if (fpsElem) fpsElem.textContent = `${(diag.fps || 0).toFixed(1)} FPS`;
-
-            const camFpsText = document.getElementById('cameraFpsText');
-            if (camFpsText) camFpsText.textContent = `${(diag.fps || 0).toFixed(1)} FPS (Native AVFoundation)`;
-
-            const detMetric = document.getElementById('metricDetectionStatus');
-            const boxElem = document.getElementById('faceBoundingBox');
-            const badgeElem = document.getElementById('faceConfidenceBadge');
-
-            if (diag.faceCount === 1 && diag.faces && diag.faces.length > 0) {
-              const face = diag.faces[0];
-              const confPct = Math.round(face.confidence * 100);
-              if (detMetric) detMetric.textContent = `Face Detected (${confPct}%)`;
-              if (boxElem && canvas) {
-                boxElem.style.display = 'block';
-                const scaleX = canvas.clientWidth / (diag.resolution.width || 1280);
-                const scaleY = canvas.clientHeight / (diag.resolution.height || 720);
-                boxElem.style.left = `${Math.round(face.box.x * scaleX)}px`;
-                boxElem.style.top = `${Math.round(face.box.y * scaleY)}px`;
-                boxElem.style.width = `${Math.round(face.box.width * scaleX)}px`;
-                boxElem.style.height = `${Math.round(face.box.height * scaleY)}px`;
-                if (badgeElem) badgeElem.textContent = `FACE DETECTED (${confPct}%)`;
-              }
-            } else if (diag.faceCount > 1) {
-              if (detMetric) detMetric.textContent = `Multiple Faces (${diag.faceCount})`;
-              if (boxElem) boxElem.style.display = 'none';
-            } else {
-              if (detMetric) detMetric.textContent = 'No face';
-              if (boxElem) boxElem.style.display = 'none';
-            }
+          // Zero-latency long-poll push: server responds as soon as the camera hardware delivers a frame
+          const res = await fetch(`/api/v1/camera/snapshot?wait=1&last=${lastTimestamp}`);
+          if (!res.ok) {
+            consecutiveErrors++;
+            await new Promise((r) => setTimeout(r, Math.min(500, consecutiveErrors * 100)));
+            continue;
           }
-        } catch {}
+          consecutiveErrors = 0;
 
-        isFetching = true;
-        img.src = '/api/v1/camera/snapshot?t=' + Date.now();
-      }, 100);
+          // Read frame timestamp and metadata directly from response headers (exact frame synchronization)
+          const tsHeader = res.headers.get('X-OFID-Timestamp');
+          if (tsHeader) lastTimestamp = parseInt(tsHeader, 10);
+
+          const fpsVal = res.headers.get('X-OFID-FPS') || '30.0';
+          const faceCountVal = parseInt(res.headers.get('X-OFID-Face-Count') || '0', 10);
+          const detectionsRaw = res.headers.get('X-OFID-Detections');
+          const resRaw = res.headers.get('X-OFID-Resolution') || '1280x720';
+
+          const [srcWidth, srcHeight] = resRaw.split('x').map((n) => parseInt(n, 10) || 720);
+
+          // Update UI metrics in the same render frame
+          const fpsElem = document.getElementById('liveFpsText');
+          if (fpsElem) fpsElem.textContent = `${fpsVal} FPS`;
+
+          const camFpsText = document.getElementById('cameraFpsText');
+          if (camFpsText) camFpsText.textContent = `${fpsVal} FPS (Native AVFoundation)`;
+
+          const detMetric = document.getElementById('metricDetectionStatus');
+          const boxElem = document.getElementById('faceBoundingBox');
+          const badgeElem = document.getElementById('faceConfidenceBadge');
+
+          // Process detection bounding box with exponential smoothing (EMA)
+          let targetBox = null;
+          if (faceCountVal === 1 && detectionsRaw) {
+            try {
+              const detections = JSON.parse(detectionsRaw);
+              if (detections.length > 0) {
+                const face = detections[0];
+                const confPct = Math.round((face.confidence || 0.8) * 100);
+                if (detMetric) detMetric.textContent = `Face Detected (${confPct}%)`;
+                if (badgeElem) badgeElem.textContent = `FACE DETECTED (${confPct}%)`;
+
+                if (canvas && face.box) {
+                  const scaleX = canvas.clientWidth / (srcWidth || 1280);
+                  const scaleY = canvas.clientHeight / (srcHeight || 720);
+                  targetBox = {
+                    x: Math.round(face.box.x * scaleX),
+                    y: Math.round(face.box.y * scaleY),
+                    w: Math.round(face.box.width * scaleX),
+                    h: Math.round(face.box.height * scaleY),
+                  };
+                }
+              }
+            } catch {}
+          } else if (faceCountVal > 1) {
+            if (detMetric) detMetric.textContent = `Multiple Faces (${faceCountVal})`;
+          } else {
+            if (detMetric) detMetric.textContent = 'No face';
+          }
+
+          // Smooth and render bounding box
+          if (targetBox && boxElem) {
+            if (!smoothedBox.visible) {
+              smoothedBox = { ...targetBox, visible: true };
+            } else {
+              const alpha = 0.45; // Smooth interpolation factor
+              smoothedBox.x = Math.round(smoothedBox.x * (1 - alpha) + targetBox.x * alpha);
+              smoothedBox.y = Math.round(smoothedBox.y * (1 - alpha) + targetBox.y * alpha);
+              smoothedBox.w = Math.round(smoothedBox.w * (1 - alpha) + targetBox.w * alpha);
+              smoothedBox.h = Math.round(smoothedBox.h * (1 - alpha) + targetBox.h * alpha);
+            }
+            boxElem.style.display = 'block';
+            boxElem.style.left = `${smoothedBox.x}px`;
+            boxElem.style.top = `${smoothedBox.y}px`;
+            boxElem.style.width = `${smoothedBox.w}px`;
+            boxElem.style.height = `${smoothedBox.h}px`;
+          } else if (boxElem) {
+            smoothedBox.visible = false;
+            boxElem.style.display = 'none';
+          }
+
+          // Hardware-accelerated GPU image decoding
+          const blob = await res.blob();
+          if (window.createImageBitmap) {
+            const bitmap = await createImageBitmap(blob);
+            if (ctx && canvas) {
+              ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+            }
+            bitmap.close();
+          } else {
+            const img = new Image();
+            const blobUrl = URL.createObjectURL(blob);
+            await new Promise((resolve) => {
+              img.onload = () => {
+                if (ctx && canvas) ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                URL.revokeObjectURL(blobUrl);
+                resolve();
+              };
+              img.onerror = () => {
+                URL.revokeObjectURL(blobUrl);
+                resolve();
+              };
+              img.src = blobUrl;
+            });
+          }
+        } catch (err) {
+          await new Promise((r) => setTimeout(r, 100));
+        }
+      }
     }
 
     // App Initialization
