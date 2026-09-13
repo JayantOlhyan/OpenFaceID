@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="apps/desktop/packaging/macos/AppIcon-1024.png" width="128" height="128" alt="OpenFaceID App Icon" style="border-radius: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);" />
+<img src="assets/openfaceid-logo-full.png" width="320" alt="OpenFaceID — A more human desktop." style="border-radius: 22px; box-shadow: 0 14px 40px rgba(0,0,0,0.5); margin-bottom: 16px;" />
 
 # OpenFaceID
 
@@ -215,7 +215,7 @@ Vision Pipeline & Desktop WebKit UI
 The primary installation path is the official macOS Disk Image:
 
 1. **Download the DMG**:
-   Download **[`OpenFaceID-0.2.1-rc.1-arm64.dmg`](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-arm64.dmg)** (17 MB) from GitHub Releases.
+   Download **[`OpenFaceID-0.2.1-rc.1-arm64.dmg`](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-arm64.dmg)** (20 MB) from GitHub Releases.
 2. **Mount & Install**:
    Double-click the DMG and drag **OpenFaceID.app** into your **Applications** folder.
 3. **First Launch (Ad-Hoc Signing Notice)**:
@@ -228,7 +228,7 @@ The primary installation path is the official macOS Disk Image:
 #### Checksum Verification
 ```bash
 shasum -a 256 OpenFaceID-0.2.1-rc.1-arm64.dmg
-# Expected: bcf8f6ecd913b0a56f03b81c9a6eeefbf305bcbd3897ca39d7f9c03b1e3406f9
+# Expected: 82b00c177925e4e34944a9d04faea65363f1764e9c947252a15cee75935b3742
 ```
 
 > [!NOTE]
