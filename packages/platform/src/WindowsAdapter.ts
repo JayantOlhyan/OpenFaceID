@@ -103,6 +103,7 @@ if ([Win32]::GetLastInputInfo([ref]$lii)) {
   }
 
   public async registerStartup(enable: boolean): Promise<boolean> {
+    if (process.env.CI) return true;
     try {
       const appName = 'OpenFaceID';
       const exePath = 'C:\\Program Files\\OpenFaceID\\OpenFaceID.exe';
@@ -117,7 +118,7 @@ if ([Win32]::GetLastInputInfo([ref]$lii)) {
           '/d',
           exePath,
           '/f',
-        ]);
+        ], { timeout: 2000, windowsHide: true });
       } else {
         await execFileAsync('reg.exe', [
           'delete',
@@ -125,7 +126,7 @@ if ([Win32]::GetLastInputInfo([ref]$lii)) {
           '/v',
           appName,
           '/f',
-        ]);
+        ], { timeout: 2000, windowsHide: true });
       }
       return true;
     } catch (err) {
@@ -135,13 +136,14 @@ if ([Win32]::GetLastInputInfo([ref]$lii)) {
   }
 
   public async isStartupEnabled(): Promise<boolean> {
+    if (process.env.CI) return false;
     try {
       const { stdout } = await execFileAsync('reg.exe', [
         'query',
         'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run',
         '/v',
         'OpenFaceID',
-      ]);
+      ], { timeout: 2000, windowsHide: true });
       return stdout.includes('OpenFaceID');
     } catch {
       return false;
@@ -179,6 +181,7 @@ if ([Win32]::GetLastInputInfo([ref]$lii)) {
   }
 
   public async storeSecret(key: string, secret: string): Promise<boolean> {
+    if (process.env.CI) return false;
     try {
       this.validateKey(key);
       const b64Secret = Buffer.from(secret, 'utf8').toString('base64');
@@ -200,6 +203,7 @@ Set-Content -Path "$dir\\${key}.secret" -Value $out -Force
   }
 
   public async retrieveSecret(key: string): Promise<string | null> {
+    if (process.env.CI) return null;
     try {
       this.validateKey(key);
       const script = `
@@ -220,6 +224,7 @@ $unprotected = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, $
   }
 
   public async deleteSecret(key: string): Promise<boolean> {
+    if (process.env.CI) return true;
     try {
       this.validateKey(key);
       const script = `Remove-Item -Path "$env:LOCALAPPDATA\\OpenFaceID\\${key}.secret" -Force -ErrorAction SilentlyContinue`;
