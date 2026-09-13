@@ -1,19 +1,14 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import http from 'http';
-import https from 'https';
 import { getPlatformAdapter } from '../../platform/src/index.ts';
 import { Logger } from '../../core/src/index.ts';
 
-const execAsync = promisify(exec);
-
-export type ActionType = 'lock_screen' | 'notify' | 'webhook' | 'shell_command';
+export type ActionType = 'lock_screen' | 'notify' | 'webhook';
 
 export interface ActionPayload {
   title?: string;
   body?: string;
   webhookUrl?: string;
-  command?: string;
+  data?: Record<string, unknown>;
 }
 
 export class ActionDispatcher {
@@ -27,8 +22,8 @@ export class ActionDispatcher {
       }
 
       case 'notify': {
-        const title = payload.title || 'OpenFaceID Alert';
-        const body = payload.body || 'Event triggered';
+        const title = (payload.title || 'OpenFaceID Alert').slice(0, 100);
+        const body = (payload.body || 'Event triggered').slice(0, 300);
         await adapter.showNotification(title, body);
         return true;
       }
@@ -38,44 +33,56 @@ export class ActionDispatcher {
           Logger.warn('automation', 'Webhook URL not configured');
           return false;
         }
-        return await this.sendWebhook(payload.webhookUrl, payload);
-      }
-
-      case 'shell_command': {
-        if (!payload.command) {
-          Logger.warn('automation', 'No shell command provided');
-          return false;
-        }
-        try {
-          Logger.info('automation', `Executing shell command: ${payload.command}`);
-          await execAsync(payload.command);
-          return true;
-        } catch (err) {
-          Logger.error('automation', 'Shell command failed', { error: String(err) });
-          return false;
-        }
+        return await this.sendWebhook(payload.webhookUrl, payload.data || {});
       }
 
       default:
-        Logger.warn('automation', `Unknown action: ${action}`);
+        Logger.warn('automation', `Unknown or unsupported action: ${action}`);
         return false;
     }
   }
 
+  /**
+   * Dispatches event payload strictly to local loopback endpoints (127.0.0.1/localhost).
+   * External remote egress is strictly prohibited by OpenFaceID security policy.
+   */
   private static async sendWebhook(urlStr: string, data: Record<string, unknown>): Promise<boolean> {
     return new Promise((resolve) => {
       try {
         const parsed = new URL(urlStr);
-        const transport = parsed.protocol === 'https:' ? https : http;
-        const postData = JSON.stringify({ event: 'sightlock_event', timestamp: Date.now(), data });
 
-        const req = transport.request(
+        // Enforce strict local loopback binding to preserve Zero Remote Egress guarantee
+        const host = parsed.hostname.toLowerCase();
+        const isLoopback = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+
+        if (!isLoopback) {
+          Logger.error('automation', `SECURITY POLICY VIOLATION: Outbound webhook to remote host "${host}" blocked. OpenFaceID permits loopback destinations only.`);
+          resolve(false);
+          return;
+        }
+
+        // Scrub any sensitive keys from payload before transmission
+        const safeData: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(data)) {
+          if (!/embedding|vector|frame|token|key|password|secret/i.test(k)) {
+            safeData[k] = v;
+          }
+        }
+
+        const postData = JSON.stringify({
+          event: 'openfaceid_event',
+          timestamp: Date.now(),
+          data: safeData,
+        });
+
+        const req = http.request(
           parsed,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Content-Length': Buffer.byteLength(postData),
+              'User-Agent': 'OpenFaceID-Local-Automation/0.2.0',
             },
             timeout: 3000,
           },
@@ -85,7 +92,7 @@ export class ActionDispatcher {
         );
 
         req.on('error', (err) => {
-          Logger.warn('automation', 'Webhook request failed', { error: String(err) });
+          Logger.warn('automation', 'Loopback webhook request failed', { error: String(err) });
           resolve(false);
         });
 

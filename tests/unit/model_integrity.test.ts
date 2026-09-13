@@ -49,6 +49,11 @@ describe('ModelRegistry & Cryptographic Integrity (Phase 4)', () => {
     assert.equal(unknownRes.valid, false);
     assert.ok(unknownRes.error?.includes('MODEL_NOT_FOUND'));
 
+    // Check against real registered model with tampered/corrupted file
+    const corruptRes = await registry.verifyIntegrity('blazeface-detector', corruptFile);
+    assert.equal(corruptRes.valid, false);
+    assert.ok(corruptRes.error?.includes('MODEL_INTEGRITY_FAILURE'), 'Should fail with MODEL_INTEGRITY_FAILURE');
+
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 });

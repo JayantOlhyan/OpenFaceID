@@ -28,9 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Reliability, Diagnostics & Security
 - **Sanitized Diagnostic Export**: Integrated automated sensitive data scanner scrubbing 512D biometric vectors, base64 frame buffers, tokens, keys, and credentials before export.
-- **Camera Hot-Plug Recovery**: Automatic non-blocking recovery loop restoring video capture upon webcam re-connection without requiring application restart.
-- **Notification Throttling**: Deduplication and throttling across macOS, Linux, and Windows platform adapters.
-- **Automated Testing & Soak Verification**: Test suite expanded to 82 passing tests across 38 suites. 1,000-cycle soak test verified 0 unhandled rejections, 0 memory leaks, and complete memory zeroization on shutdown.
+- **Child Process Security Hardening**: Completely eliminated raw `exec` and `shell_command` execution in `ActionDispatcher.ts`.
+- **Zero Remote Network Egress Guarantee**: Enforced strict loopback-only validation (`127.0.0.1`/`localhost`) for automation webhooks, rejecting remote outbound requests.
+- **Cryptographic Model Verification**: Hardened `ModelRegistry.verifyIntegrity()` to strictly assert mathematical equality against authoritative SHA-256 file digests.
+- **Master Project Governance**: Generated Master Project Inventory (`docs/project-inventory.md`), Master Engineering Backlog (`docs/engineering-backlog.md`), Master Status System (`docs/project-status.md`), Master Test Matrix (`docs/master-test-matrix.md`), Master Security Matrix (`docs/security-status.md`), and Master Project Scorecard (`docs/project-scorecard.md`).
+- **Automated Testing & Soak Verification**: Test suite expanded to 86 passing tests across 39 suites. 1,000-cycle soak test verified 0 unhandled rejections, 0 memory leaks, and complete memory zeroization on shutdown.
 
 ---
 

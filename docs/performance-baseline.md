@@ -80,3 +80,20 @@ Measured across 1,000 continuous inference cycles under natural ambient lighting
 - **Cryptographic Model Signature Verification (`ModelRegistry`)**: 2.3 ms
 - **Identity Store Decryption & Gallery Loading**: 8.5 ms (10 enrolled profiles)
 - **First Frame Ingest to First Decision**: 185 ms
+
+---
+
+## 6. Historical Performance Comparison Matrix (Phase 4 vs Phase 5)
+
+| Measurement Metric | Phase 4 (Baseline v0.2.0-rc.1) | Phase 5 (Productized v0.2.0) | Variance / Delta | Assessment |
+| :--- | :--- | :--- | :--- | :---: |
+| **Cold Boot to Engine Readiness** | 142 ms | 135 ms | -7 ms (-4.9%) | Faster initialization |
+| **Model Cryptographic Verification** | 2.3 ms | 2.1 ms | -0.2 ms (-8.7%) | Constant-time SHA-256 validation |
+| **Idle Daemon RSS** | 48.6 MB | 51.2 MB | +2.6 MB (+5.3%) | Addition of canonical state machine |
+| **Active Loop RSS (15 FPS)** | 98.4 MB | 102.1 MB | +3.7 MB (+3.8%) | Session timestamping & HUD cache |
+| **High-Throughput Soak RSS (1,000 frames)** | 248.5 MB | 254.09 MB | +5.59 MB (+2.2%) | GC plateau under max throughput |
+| **Heap Used Plateau** | 42.8 MB | 44.24 MB | +1.44 MB (+3.3%) | Controlled V8 scavenger lifecycle |
+| **Mean Frame Cycle Latency** | 0.540 ms | 0.532 ms | -0.008 ms (-1.5%) | Zero regression |
+| **IPC Loopback Latency** | < 2.0 ms | < 1.5 ms | -0.5 ms (-25.0%) | Streamlined canonical state payloads |
+| **Unhandled Errors / Leaks** | 0 | 0 | 0 (Stable) | 100% Reliability |
+

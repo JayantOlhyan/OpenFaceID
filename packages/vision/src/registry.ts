@@ -26,37 +26,37 @@ export const REGISTERED_MODELS: Record<string, ModelMetadata> = {
     name: 'BlazeFace Multi-Scale Anchor Detector',
     version: '1.0.0',
     type: 'detector',
-    source: 'Google MediaPipe BlazeFace (TypeScript Receptive-Field Anchor Formulation)',
+    source: 'In-Tree TypeScript Analytical Formulation (BlazeFace 896-Anchor Geometry & Chrominance)',
     codeLicense: 'Apache-2.0',
     weightsLicense: 'Apache-2.0',
     expectedArchitecture: 'Multi-scale Single-Shot Detector (896 Anchors: 16x16 s8 + 8x8 s16)',
     expectedInput: '128x128x3 RGB normalized [0, 1]',
     expectedOutput: '896 bounding box candidates, 6 facial landmarks (eyes, ears, nose, mouth)',
-    sha256: 'c87fa9d0f419d85b143c41ef5837db206a4574972bc2a1308a0d2f0eb9c53782',
+    sha256: '162f8bdca866e62636fdf0de60105462c89ccd66f0eb2921b92df3e235bf36f4',
   },
   'arcface-embedder': {
     name: 'ArcFace Canonical 512D Feature Embedder',
     version: '1.0.0',
     type: 'embedder',
-    source: 'InsightFace ArcFace Additive Angular Margin Formulation',
+    source: 'In-Tree TypeScript Analytical Formulation (ArcFace 512D Spatial Receptive Gradient Projection)',
     codeLicense: 'Apache-2.0',
     weightsLicense: 'MIT',
     expectedArchitecture: 'Deep Hyperspherical Embedding (112x112 canonical aligned face -> 512D unit vector)',
     expectedInput: '112x112x3 RGB aligned and normalized',
     expectedOutput: 'Strictly L2-normalized 512-dimensional float vector (||v|| = 1.0)',
-    sha256: '92e4ab6198f1f7d5496d03cf4e082877a1da605f6bcfe12b84cfce5b66d4838f',
+    sha256: 'f669bd4a60cba1d6f043592fb39c9a6f506e820d75b3afb899ff6715b6af9824',
   },
   'liveness-pad-evaluator': {
     name: 'Modular 8-State Presentation Attack Detector',
     version: '1.0.0',
     type: 'liveness',
-    source: 'OpenFaceID Hybrid Passive/Active ISO/IEC 30107-3 PAD',
+    source: 'OpenFaceID Hybrid Passive/Active ISO/IEC 30107-3 PAD (Temporal EAR + Optical Micro-Motion)',
     codeLicense: 'Apache-2.0',
     weightsLicense: 'Apache-2.0',
     expectedArchitecture: 'Temporal EAR Blink Tracker + Spatial Micro-Motion Variance + Active Challenge FSM',
     expectedInput: 'Temporal sequence of facial landmarks, Laplacian sharpness, and bounding boxes',
     expectedOutput: 'LivenessResult (passed: boolean, state: LivenessState, score: 0.0-1.0)',
-    sha256: '74c2d46e10757a2e37e951be135dc8f5e1ad87970868f766e2c31e9c222ffc32',
+    sha256: 'f58f9a473935cf0c4ebd82614da19d07f8346b791f9300b4f331d832dde96198',
   },
 };
 
@@ -88,7 +88,7 @@ export class ModelRegistry {
   /**
    * Cryptographically verify model integrity.
    * If a physical file path is provided or if verifying in-tree implementation code,
-   * hashes the bytes using SHA-256 and asserts match with expected checksum.
+   * hashes the bytes using SHA-256 and asserts exact match with authoritative checksum.
    */
   public async verifyIntegrity(modelId: string, customFilePath?: string): Promise<{ valid: boolean; error?: string; checksum: string }> {
     const meta = REGISTERED_MODELS[modelId];
@@ -98,7 +98,10 @@ export class ModelRegistry {
 
     try {
       let dataToHash: Buffer;
-      if (customFilePath && fs.existsSync(customFilePath)) {
+      if (customFilePath) {
+        if (!fs.existsSync(customFilePath)) {
+          return { valid: false, error: `MODEL_FILE_NOT_FOUND: Path ${customFilePath} does not exist`, checksum: '' };
+        }
         dataToHash = fs.readFileSync(customFilePath);
       } else {
         // Verify source file directly in vision package
@@ -121,9 +124,8 @@ export class ModelRegistry {
 
       const computedHash = crypto.createHash('sha256').update(dataToHash).digest('hex');
 
-      // Check if we are verifying against the live file or if verifying known model checksum
-      // In development, the file might change, so we record the computed hash or verify against declared
-      const isValid = computedHash.length === 64;
+      // Enforce cryptographic equality against declared authoritative SHA-256 checksum
+      const isValid = computedHash === meta.sha256;
 
       if (!isValid) {
         Logger.error('vision', `MODEL_INTEGRITY_FAILURE: Checksum mismatch for model ${modelId}`, {
@@ -131,7 +133,7 @@ export class ModelRegistry {
           actual: computedHash,
         });
         this.verifiedModels.set(modelId, false);
-        return { valid: false, error: 'MODEL_INTEGRITY_FAILURE', checksum: computedHash };
+        return { valid: false, error: `MODEL_INTEGRITY_FAILURE: Expected ${meta.sha256}, got ${computedHash}`, checksum: computedHash };
       }
 
       this.verifiedModels.set(modelId, true);
