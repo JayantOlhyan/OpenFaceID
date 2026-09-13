@@ -60,6 +60,15 @@ export class DesktopEngine {
 
   // Active Enrollment Manager (if session in progress)
   private activeEnrollment: EnrollmentManager | null = null;
+  private pendingPoseCaptureResolvers: Array<(result: any) => void> = [];
+
+  // Live Camera Sensor Preview & Detection Metadata (Volatile RAM)
+  private latestFrameBmp: Buffer | null = null;
+  private latestDetections: any[] = [];
+  private latestFrameWidth: number = 1280;
+  private latestFrameHeight: number = 720;
+  private latestFrameTimestamp: number = 0;
+  private lastBmpTime: number = 0;
 
   // Authoritative State
   private startTime: number = Date.now();
@@ -152,6 +161,11 @@ export class DesktopEngine {
         this.cameraState = 'ACTIVE';
         this.canonicalFsm.setCameraState('CAMERA_READY');
         this.visionState = 'READY';
+
+        // Section 22: Begin real camera processing when permission is granted
+        if (permission === 'granted') {
+          await this.cameraManager.startCapture((frame) => this.processFrame(frame));
+        }
       }
 
       // 4. Start background power monitor (sleep/wake)
@@ -192,13 +206,39 @@ export class DesktopEngine {
     this.isProcessingFrame = true;
     this.visionState = 'PROCESSING';
 
+    // Reset frame-level FSMs to clean state for each incoming frame
+    if (this.recognitionFsm.getState() !== 'IDLE' && this.recognitionFsm.getState() !== 'SEARCHING') {
+      this.recognitionFsm.reset('SEARCHING');
+    }
+    if (this.securityFsm.getState() !== 'UNKNOWN') {
+      this.securityFsm.reset();
+    }
+
     try {
       // 1. Face Detection (BlazeFace 896 Anchors)
       const detections = await this.detector.detect(frame);
+      const faceCount = detections.length;
+
+      // Cache real detection results & preview frame in RAM for UI
+      this.latestDetections = detections.map((d) => ({
+        box: d.box,
+        confidence: d.confidence,
+        landmarks: d.landmarks,
+      }));
+      this.latestFrameWidth = frame.width;
+      this.latestFrameHeight = frame.height;
+      this.latestFrameTimestamp = Date.now();
+
+      // Encode downscaled volatile preview BMP for the live UI feed (~15 FPS throttle)
+      const now = Date.now();
+      if (now - this.lastBmpTime >= 60) {
+        this.lastBmpTime = now;
+        this.latestFrameBmp = this.generateBmpSnapshot(frame.data, frame.width, frame.height);
+      }
 
       // Condition: No faces detected
       if (detections.length === 0) {
-        this.recognitionFsm.transition('SEARCHING');
+        this.recognitionFsm.reset('SEARCHING');
         this.presenceTracker.onNoFaceDetected(Date.now());
         this.canonicalFsm.updateVisionState({
           faceCount: 0,
@@ -214,28 +254,52 @@ export class DesktopEngine {
         return;
       }
 
-      // Section 8: Hard Fail-Closed Multiple-Face Policy
-      if (detections.length >= 2) {
-        Logger.warn('vision', `Multiple faces detected (${detections.length}); fail-closed policy enforced`);
-        this.presenceTracker.onMultipleFacesDetected(detections.length);
-        this.recognitionFsm.transition('SEARCHING');
+      // Fail-closed privacy & security invariant: multiple faces => AMBIGUOUS
+      if (faceCount > 1) {
+        this.presenceTracker.onAmbiguousPresence();
+        this.activeIdentityId = null;
+        this.activeIdentityName = null;
+        this.lastConfidence = 0;
         this.canonicalFsm.updateVisionState({
-          faceCount: detections.length,
-          detectionState: 'MULTIPLE_FACES',
+          faceCount,
+          detectionState: 'PRESENCE_AMBIGUOUS',
           livenessState: 'LIVENESS_REQUIRED',
           identityState: 'IDENTITY_UNKNOWN',
         });
+        this.recognitionFsm.reset('SEARCHING');
         return;
       }
 
       // Exactly 1 face in field of view
       const primaryFace = detections[0];
 
+      // Handle pending interactive enrollment pose capture from authentic camera frame
+      if (this.pendingPoseCaptureResolvers.length > 0 && this.activeEnrollment) {
+        const resolver = this.pendingPoseCaptureResolvers.shift();
+        if (resolver) {
+          const frameClone: CameraFrame = {
+            data: new Uint8ClampedArray(frame.data),
+            width: frame.width,
+            height: frame.height,
+            pixelFormat: frame.pixelFormat,
+            timestamp: frame.timestamp,
+            frameIndex: frame.frameIndex,
+            zeroize: () => {},
+          };
+          this.activeEnrollment.capturePose(frameClone, primaryFace.landmarks)
+            .then(resolver)
+            .catch((e) => resolver({ success: false, error: String(e) }));
+        }
+      }
+
+      this.recognitionFsm.transition('FACE_DETECTED');
+      this.securityFsm.transition('FACE_DETECTED');
+
       // 2. Face Quality Check on primary detection
+      this.recognitionFsm.transition('QUALITY_CHECK');
       const qualityCheck = this.quality.evaluate(primaryFace.box, primaryFace.landmarks, frame.width, frame.height);
 
       if (!qualityCheck.isAcceptable) {
-        this.recognitionFsm.transition('QUALITY_CHECK');
         this.canonicalFsm.updateVisionState({
           faceCount: 1,
           detectionState: 'FACE_MATCHING',
@@ -244,9 +308,6 @@ export class DesktopEngine {
         });
         return;
       }
-
-      this.recognitionFsm.transition('FACE_DETECTED');
-      this.securityFsm.transition('FACE_DETECTED');
 
       // 3. Feature Embedding Extraction (Canonical 112x112 Aligned 512D)
       const embedding = await this.embedder.embed(frame, primaryFace.landmarks);
@@ -343,16 +404,20 @@ export class DesktopEngine {
     this.presenceTracker.reset();
     this.canonicalFsm.setPrivacyPaused(true);
 
+    this.cameraManager.stopCapture();
+
     this.activityLog.logEvent('PRIVACY_PAUSE_ACTIVATED', { timestamp: Date.now() });
     EventBus.getInstance().emit('PRIVACY_PAUSED' as any, { timestamp: Date.now() });
   }
 
-  public resumePrivacy(): void {
+  public async resumePrivacy(): Promise<void> {
     Logger.info('security', 'Resuming normal protection from Privacy Pause');
     this.privacyPaused = false;
     this.cameraState = 'ACTIVE';
     this.visionState = 'READY';
     this.canonicalFsm.setPrivacyPaused(false);
+
+    await this.cameraManager.startCapture((frame) => this.processFrame(frame));
 
     this.activityLog.logEvent('PRIVACY_PAUSE_DEACTIVATED', { timestamp: Date.now() });
     EventBus.getInstance().emit('PRIVACY_RESUMED' as any, { timestamp: Date.now() });
@@ -389,6 +454,86 @@ export class DesktopEngine {
 
   public cancelEnrollmentSession(): void {
     this.activeEnrollment = null;
+    this.pendingPoseCaptureResolvers = [];
+  }
+
+  public async captureEnrollmentPose(): Promise<{ success: boolean; error?: string; progress?: any }> {
+    if (!this.activeEnrollment) {
+      return { success: false, error: 'No active enrollment session' };
+    }
+
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        const idx = this.pendingPoseCaptureResolvers.indexOf(resolveWrapper);
+        if (idx >= 0) {
+          this.pendingPoseCaptureResolvers.splice(idx, 1);
+          resolve({ success: false, error: 'Capture timed out: Please ensure your face is clearly visible in front of the camera.' });
+        }
+      }, 5000);
+
+      const resolveWrapper = (result: any) => {
+        clearTimeout(timer);
+        resolve(result);
+      };
+
+      this.pendingPoseCaptureResolvers.push(resolveWrapper);
+    });
+  }
+
+  public getLatestFrameBmp(): Buffer | null {
+    return this.latestFrameBmp;
+  }
+
+  public getLatestFrameInfo() {
+    return {
+      width: this.latestFrameWidth,
+      height: this.latestFrameHeight,
+      timestamp: this.latestFrameTimestamp,
+      detections: this.latestDetections,
+    };
+  }
+
+  private generateBmpSnapshot(rgbaData: Uint8ClampedArray, srcW: number, srcH: number): Buffer {
+    // Generate a clean 480x270 or proportional preview BMP for low CPU usage
+    const targetW = 480;
+    const targetH = Math.round((targetW * srcH) / srcW);
+
+    const fileHeaderSize = 14;
+    const infoHeaderSize = 40;
+    const rowSize = Math.floor((24 * targetW + 31) / 32) * 4;
+    const pixelArraySize = rowSize * targetH;
+    const fileSize = fileHeaderSize + infoHeaderSize + pixelArraySize;
+
+    const buf = Buffer.alloc(fileSize);
+    buf.write('BM', 0);
+    buf.writeUInt32LE(fileSize, 2);
+    buf.writeUInt32LE(fileHeaderSize + infoHeaderSize, 10);
+    buf.writeUInt32LE(infoHeaderSize, 14);
+    buf.writeInt32LE(targetW, 18);
+    buf.writeInt32LE(-targetH, 22); // Top-down
+    buf.writeUInt16LE(1, 26);
+    buf.writeUInt16LE(24, 28);
+    buf.writeUInt32LE(0, 30);
+    buf.writeUInt32LE(pixelArraySize, 34);
+
+    const xRatio = srcW / targetW;
+    const yRatio = srcH / targetH;
+    let offset = 54;
+
+    for (let dy = 0; dy < targetH; dy++) {
+      const sy = Math.min(srcH - 1, Math.floor(dy * yRatio));
+      for (let dx = 0; dx < targetW; dx++) {
+        const sx = Math.min(srcW - 1, Math.floor(dx * xRatio));
+        const srcIdx = (sy * srcW + sx) * 4;
+        buf[offset] = rgbaData[srcIdx + 2];     // B
+        buf[offset + 1] = rgbaData[srcIdx + 1]; // G
+        buf[offset + 2] = rgbaData[srcIdx];     // R
+        offset += 3;
+      }
+      const pad = rowSize - targetW * 3;
+      for (let p = 0; p < pad; p++) buf[offset++] = 0;
+    }
+    return buf;
   }
 
   /**

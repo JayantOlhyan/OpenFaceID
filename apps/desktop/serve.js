@@ -233,7 +233,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 5. Camera Devices Endpoint (Public/Local)
+  // 5. Camera Devices & Diagnostics Endpoints (Public/Local)
   if (url.pathname === '/api/v1/camera/devices' && method === 'GET') {
     try {
       const devices = await engine.cameraManager.enumerateDevices();
@@ -244,6 +244,64 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: String(err) }));
     }
+    return;
+  }
+
+  // Real-time camera sensor snapshot (volatile RAM BMP, zero disk persistence)
+  if (url.pathname === '/api/v1/camera/snapshot' && method === 'GET') {
+    const bmp = engine.getLatestFrameBmp();
+    if (!bmp) {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Camera frame not ready yet' }));
+      return;
+    }
+    res.writeHead(200, {
+      'Content-Type': 'image/bmp',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+    });
+    res.end(bmp);
+    return;
+  }
+
+  // Camera diagnostics & frame counters (Section 7, Section 8)
+  if (url.pathname === '/api/v1/camera/diagnostics' && method === 'GET') {
+    const diag = engine.cameraManager.getDiagnostics();
+    const frameInfo = engine.getLatestFrameInfo();
+    const perm = await engine.cameraManager.checkPermission();
+    const device = engine.cameraManager.getSelectedDevice();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      status: diag.state,
+      device: device?.name || 'Default Camera',
+      deviceId: device?.deviceId || 'default',
+      permission: perm,
+      fps: diag.fps,
+      resolution: { width: frameInfo.width, height: frameInfo.height },
+      faces: frameInfo.detections,
+      faceCount: frameInfo.detections.length,
+      counters: {
+        framesReceived: diag.framesReceived,
+        framesProcessed: diag.framesProcessed,
+        framesDropped: diag.framesDropped,
+        invalidFrames: diag.invalidFrames,
+        cameraReconnects: diag.cameraReconnects,
+        latencyMs: diag.lastLatencyMs,
+      },
+      timestamp: frameInfo.timestamp,
+    }));
+    return;
+  }
+
+  // Open macOS System Settings for Camera Privacy (Section 4)
+  if (url.pathname === '/api/v1/camera/open-settings' && method === 'POST') {
+    if (process.platform === 'darwin') {
+      import('child_process').then(({ exec }) => {
+        exec('open "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera"');
+      });
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, opened: true }));
     return;
   }
 
@@ -365,6 +423,29 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 10b. Interactive Enrollment Session: Capture Pose from Real Camera
+  if (url.pathname === '/api/v1/enrollment/pose' && method === 'POST') {
+    if (!verifyAuth()) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized: Missing bearer token' }));
+      return;
+    }
+    try {
+      const result = await engine.captureEnrollmentPose();
+      if (result.success) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      } else {
+        res.writeHead(422, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      }
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
+    }
+    return;
+  }
+
   // 11. Interactive Enrollment Session: Confirm / Finish
   if (url.pathname === '/api/v1/enrollment/confirm' && method === 'POST') {
     if (!verifyAuth()) {
@@ -376,59 +457,22 @@ const server = http.createServer(async (req, res) => {
       const body = await readJsonBody();
       const activeEnrollment = engine.getActiveEnrollment();
 
-      // If user confirms replacement of existing identity or directly commits
       let identityToSave = null;
       if (activeEnrollment) {
         try {
           identityToSave = activeEnrollment.finishEnrollment();
-        } catch {
-          // If no poses were captured via active session, check if body provided name
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: `Cannot finalize enrollment: ${err}` }));
+          return;
         }
-      }
-
-      if (!identityToSave && body.name) {
-        // Synthesize multi-pose 512D unit hypersphere vectors for the identity
-        const poses = [];
-        const poseAngles = [0, -15, 15, -10, 10];
-        for (let p = 0; p < poseAngles.length; p++) {
-          const vec = new Float32Array(512);
-          let sumSq = 0;
-          for (let i = 0; i < 512; i++) {
-            const val = Math.sin((i + 1) * 0.137 + (p + 1) * 0.314 + body.name.length * 0.05);
-            vec[i] = val;
-            sumSq += val * val;
-          }
-          const norm = Math.sqrt(sumSq) || 1;
-          for (let i = 0; i < 512; i++) vec[i] /= norm;
-          poses.push(vec);
-        }
-
-        const avg = new Float32Array(512);
-        for (let i = 0; i < 512; i++) {
-          let s = 0;
-          for (let p = 0; p < poses.length; p++) s += poses[p][i];
-          avg[i] = s / poses.length;
-        }
-        let avgNorm = 0;
-        for (let i = 0; i < 512; i++) avgNorm += avg[i] * avg[i];
-        avgNorm = Math.sqrt(avgNorm) || 1;
-        for (let i = 0; i < 512; i++) avg[i] /= avgNorm;
-
-        identityToSave = {
-          id: 'usr_' + Date.now().toString(36),
-          name: body.name.trim(),
-          enabled: true,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          embeddings: poses,
-          averageEmbedding: avg,
-          recognitionStats: { matchCount: 0 },
-        };
       }
 
       if (!identityToSave) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'No active enrollment session or valid identity data provided' }));
+        res.end(JSON.stringify({
+          error: 'No active enrollment session. Real face poses must be captured from the camera before confirmation.'
+        }));
         return;
       }
 

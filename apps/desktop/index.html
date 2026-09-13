@@ -766,20 +766,25 @@
         <div class="card">
           <div class="card-header">
             <h2 class="card-title">Live Sensor Feed</h2>
-            <span class="status-badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">Local Preview</span>
+            <span class="status-badge authorized" id="cameraFeedBadge">Live AVFoundation</span>
           </div>
-          <div class="preview-box">
-            <div class="preview-overlay">
-              <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
-              LOCAL RAM ONLY
+          <div class="preview-box" style="position: relative; overflow: hidden; background: #0b0f19; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; min-height: 260px;">
+            <canvas id="cameraFeedCanvas" width="480" height="270" style="width: 100%; height: 100%; object-fit: contain;"></canvas>
+            <div id="cameraStatusOverlay" style="position: absolute; top: 12px; left: 12px; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;">
+              <span id="cameraStatusDot" style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+              <span id="cameraStatusText">VOLATILE RAM FEED</span>
             </div>
-            <div style="text-align: center; color: var(--text-muted); padding: 20px;">
-              <p style="font-size: 13px; margin-bottom: 6px;">Webcam Sensor Preview</p>
-              <p style="font-size: 11px;">Frames stay in volatile RAM for inference lifetime only.</p>
+            <div id="cameraFpsOverlay" style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-family: var(--font-mono); color: #cbd5e1;">
+              <span id="liveFpsText">0.0 FPS</span>
+            </div>
+            <div id="faceBoundingBox" style="position: absolute; display: none; border: 2px solid #10b981; border-radius: 4px; pointer-events: none; transition: all 0.05s ease-out; box-shadow: 0 0 12px rgba(16,185,129,0.4);">
+              <div id="faceConfidenceBadge" style="position: absolute; top: -22px; left: 0; background: #10b981; color: #000; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 2px; white-space: nowrap;">
+                FACE DETECTED
+              </div>
             </div>
           </div>
-          <p style="font-size: 12px; color: var(--text-secondary);">
-            OpenFaceID immediately zeroizes every video frame buffer in memory after facial inference.
+          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 8px;">
+            OpenFaceID streams video directly from macOS AVFoundation in volatile RAM and immediately zeroizes frames upon inference.
           </p>
         </div>
       </div>
@@ -1341,27 +1346,71 @@
         return;
       }
 
-      if (enrollmentStepIndex === 0) {
-        // Switch to pose guidance step
-        enrollmentStepIndex = 1;
-        document.getElementById('enrollmentNameStep').style.display = 'none';
-        document.getElementById('enrollmentPoseStep').style.display = 'block';
-        updateEnrollmentPoseDisplay(1);
-        document.getElementById('enrollmentActionBtn').textContent = 'Capture Pose';
-        return;
-      }
+      const actionBtn = document.getElementById('enrollmentActionBtn');
 
-      if (enrollmentStepIndex >= 1 && enrollmentStepIndex < POSES.length) {
-        enrollmentStepIndex++;
-        updateEnrollmentPoseDisplay(enrollmentStepIndex);
-        if (enrollmentStepIndex === POSES.length) {
-          document.getElementById('enrollmentActionBtn').textContent = 'Confirm & Encrypt';
+      if (enrollmentStepIndex === 0) {
+        actionBtn.disabled = true;
+        actionBtn.textContent = 'Initializing...';
+        try {
+          const res = await apiFetch('/api/v1/enrollment/start', {
+            method: 'POST',
+            body: JSON.stringify({ name }),
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            alert('Failed to start enrollment: ' + (err.error || 'Unknown error'));
+            actionBtn.disabled = false;
+            actionBtn.textContent = 'Start Guided Capture';
+            return;
+          }
+          enrollmentStepIndex = 1;
+          document.getElementById('enrollmentNameStep').style.display = 'none';
+          document.getElementById('enrollmentPoseStep').style.display = 'block';
+          updateEnrollmentPoseDisplay(1);
+          actionBtn.disabled = false;
+          actionBtn.textContent = 'Capture Pose';
+        } catch (e) {
+          alert('Error starting enrollment: ' + e);
+          actionBtn.disabled = false;
+          actionBtn.textContent = 'Start Guided Capture';
         }
         return;
       }
 
-      if (enrollmentStepIndex >= POSES.length) {
-        // Finalize enrollment
+      if (enrollmentStepIndex >= 1 && enrollmentStepIndex <= POSES.length) {
+        actionBtn.disabled = true;
+        actionBtn.textContent = 'Capturing Real Pose...';
+        try {
+          const res = await apiFetch('/api/v1/enrollment/pose', {
+            method: 'POST',
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            enrollmentStepIndex++;
+            if (enrollmentStepIndex <= POSES.length) {
+              updateEnrollmentPoseDisplay(enrollmentStepIndex);
+              actionBtn.textContent = 'Capture Pose';
+              actionBtn.disabled = false;
+            } else {
+              actionBtn.textContent = 'Confirm & Encrypt';
+              actionBtn.disabled = false;
+            }
+          } else {
+            alert(data.error || 'Could not capture pose. Ensure your face is centered in the camera frame.');
+            actionBtn.disabled = false;
+            actionBtn.textContent = 'Capture Pose';
+          }
+        } catch (err) {
+          alert('Capture error: ' + err);
+          actionBtn.disabled = false;
+          actionBtn.textContent = 'Capture Pose';
+        }
+        return;
+      }
+
+      if (enrollmentStepIndex > POSES.length) {
+        actionBtn.disabled = true;
+        actionBtn.textContent = 'Encrypting & Saving...';
         try {
           const res = await apiFetch('/api/v1/enrollment/confirm', {
             method: 'POST',
@@ -1371,13 +1420,15 @@
             closeEnrollmentModal();
             loadIdentities();
             pollAuthoritativeState();
-            alert(`Identity "${name}" successfully encrypted and enrolled!`);
+            alert(`Identity "${name}" successfully encrypted with AES-256-GCM and enrolled!`);
           } else {
             const errData = await res.json();
-            alert('Enrollment error: ' + (errData.error || 'Failed'));
+            alert('Enrollment confirmation error: ' + (errData.error || 'Failed'));
           }
         } catch (err) {
-          alert('Enrollment failed: ' + err);
+          alert('Enrollment confirmation failed: ' + err);
+        } finally {
+          actionBtn.disabled = false;
         }
       }
     }
@@ -1462,8 +1513,13 @@
       }
     }
 
-    function openSystemCameraSettings() {
-      alert('Open your operating system Settings -> Privacy & Security -> Camera to manage hardware permissions.');
+    async function openSystemCameraSettings() {
+      try {
+        await fetch('/api/v1/camera/open-settings', { method: 'POST' });
+      } catch (err) {
+        console.error('Error opening system camera settings:', err);
+        alert('To grant camera access, open System Settings > Privacy & Security > Camera.');
+      }
     }
 
     // Settings (Section 21)
@@ -1627,11 +1683,84 @@
       }
     }
 
+    // Real-time camera feed & diagnostics loop
+    let cameraFeedTimer = null;
+    function startCameraFeedLoop() {
+      if (cameraFeedTimer) return;
+      const canvas = document.getElementById('cameraFeedCanvas');
+      const ctx = canvas ? canvas.getContext('2d') : null;
+      const img = new Image();
+      let isFetching = false;
+
+      img.onload = () => {
+        if (ctx && canvas) {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        }
+        isFetching = false;
+      };
+      img.onerror = () => {
+        isFetching = false;
+      };
+
+      cameraFeedTimer = setInterval(async () => {
+        const camTab = document.getElementById('tab-camera');
+        const dashTab = document.getElementById('tab-dashboard');
+        const enrollModal = document.getElementById('enrollmentModal');
+        const isVisible = (camTab && camTab.classList.contains('active')) ||
+                          (dashTab && dashTab.classList.contains('active')) ||
+                          (enrollModal && enrollModal.style.display === 'flex');
+
+        if (!isVisible || isFetching) return;
+
+        try {
+          const diagRes = await fetch('/api/v1/camera/diagnostics');
+          if (diagRes.ok) {
+            const diag = await diagRes.json();
+            const fpsElem = document.getElementById('liveFpsText');
+            if (fpsElem) fpsElem.textContent = `${(diag.fps || 0).toFixed(1)} FPS`;
+
+            const camFpsText = document.getElementById('cameraFpsText');
+            if (camFpsText) camFpsText.textContent = `${(diag.fps || 0).toFixed(1)} FPS (Native AVFoundation)`;
+
+            const detMetric = document.getElementById('metricDetectionStatus');
+            const boxElem = document.getElementById('faceBoundingBox');
+            const badgeElem = document.getElementById('faceConfidenceBadge');
+
+            if (diag.faceCount === 1 && diag.faces && diag.faces.length > 0) {
+              const face = diag.faces[0];
+              const confPct = Math.round(face.confidence * 100);
+              if (detMetric) detMetric.textContent = `Face Detected (${confPct}%)`;
+              if (boxElem && canvas) {
+                boxElem.style.display = 'block';
+                const scaleX = canvas.clientWidth / (diag.resolution.width || 1280);
+                const scaleY = canvas.clientHeight / (diag.resolution.height || 720);
+                boxElem.style.left = `${Math.round(face.box.x * scaleX)}px`;
+                boxElem.style.top = `${Math.round(face.box.y * scaleY)}px`;
+                boxElem.style.width = `${Math.round(face.box.width * scaleX)}px`;
+                boxElem.style.height = `${Math.round(face.box.height * scaleY)}px`;
+                if (badgeElem) badgeElem.textContent = `FACE DETECTED (${confPct}%)`;
+              }
+            } else if (diag.faceCount > 1) {
+              if (detMetric) detMetric.textContent = `Multiple Faces (${diag.faceCount})`;
+              if (boxElem) boxElem.style.display = 'none';
+            } else {
+              if (detMetric) detMetric.textContent = 'No face';
+              if (boxElem) boxElem.style.display = 'none';
+            }
+          }
+        } catch {}
+
+        isFetching = true;
+        img.src = '/api/v1/camera/snapshot?t=' + Date.now();
+      }, 100);
+    }
+
     // App Initialization
     window.addEventListener('DOMContentLoaded', () => {
       pollAuthoritativeState();
       statePollInterval = setInterval(pollAuthoritativeState, 1000);
       checkFirstRunOnboarding();
+      startCameraFeedLoop();
     });
   </script>
 </body>
