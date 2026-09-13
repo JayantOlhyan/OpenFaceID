@@ -1,6 +1,6 @@
 # Recognition Threshold Sweep & Calibration Analysis
 
-**Evaluation Date**: 2026-09-13T10:50:37.700Z  
+**Evaluation Date**: 2026-09-13T12:30:08.545Z  
 **Calibration Standard**: ISO/IEC 19795-1 Biometric Performance Testing  
 **Metric Type**: Cosine Similarity $s \in [-1.0, 1.0]$ evaluated as $s \ge t$  
 

@@ -22,6 +22,7 @@
   - Camera Hot-Plug & Reconnect: **VERIFIED** (Zero stale authorization bug fixed)
   - Sleep / Wake Immunity: **VERIFIED** (Session reset on system wake)
   - Daemon IPC & Token Auth: **VERIFIED** (Loopback 127.0.0.1:41793)
+  - Notifications: **VERIFIED** (Semantic, deduplicated, severity-aware, rate-limited via NotificationManager)
   - Filesystem Permissions: **VERIFIED** (`0700` dirs, `0600` files)
   - Long-Run Soak (1 Hour): **VERIFIED** (Stable memory, zero leaks)
   - Packaging: **PARTIALLY VERIFIED** (Self-contained `.app` script functional, but lacks Apple Developer ID notarization)
@@ -41,6 +42,7 @@
   - Sleep / Modern Standby (S0ix): **HARDWARE UNVERIFIED**
   - IPC (Named Pipes / Localhost): **HARDWARE UNVERIFIED**
   - Tray & Notification Area: **HARDWARE UNVERIFIED**
+  - Notifications: **CODE IMPLEMENTED — HARDWARE UNVERIFIED** (WinRT/PowerShell toast bridge implemented)
   - Installer (Inno Setup / MSI): **HARDWARE UNVERIFIED**
   - Code Signing (SmartScreen): **HARDWARE UNVERIFIED**
 
@@ -61,6 +63,7 @@
   - Biometric Recognition: **HARDWARE UNVERIFIED**
   - Liveness & Anti-Spoofing: **HARDWARE UNVERIFIED**
   - Systemd User Service: **HARDWARE UNVERIFIED**
+  - Notifications: **CODE IMPLEMENTED — HARDWARE UNVERIFIED** (D-Bus `notify-send` bridge implemented)
   - Packaging (`.deb` / `.tar.gz`): **CODE IMPLEMENTED — HARDWARE UNVERIFIED**
   - Desktop Tray (libappindicator / statusnotifier): **HARDWARE UNVERIFIED**
 
@@ -71,7 +74,9 @@
 | Category | macOS (Apple Silicon M4) | Windows 11 | Linux (Ubuntu 24.04) |
 | :--- | :--- | :--- | :--- |
 | **Physical Hardware Tests Run** | **6 Suites (28 Tests)** | **0 Tests** | **0 Tests** |
-| **Automated Regression Tests** | **137 Tests (PASS)** | **137 Tests (PASS)** | **137 Tests (PASS)** |
+| **Automated Regression Tests** | **147 Tests (PASS)** | **147 Tests (PASS)** | **147 Tests (PASS)** |
 | **Physical Camera Verified** | **FaceTime HD (AVFoundation)** | **None (Unverified)** | **None (Unverified)** |
 | **Biometric Authorization Verified** | **YES (Strict Fail-Closed)** | **NO (Hardware Unverified)** | **NO (Hardware Unverified)** |
+| **Desktop Notifications Verified** | **YES (Native macOS Center)** | **NO (Hardware Unverified)** | **NO (Hardware Unverified)** |
 | **Status for Release** | **PRODUCTION READY (v0.2.0-rc.1)** | **EXPERIMENTAL / PREVIEW** | **EXPERIMENTAL / PREVIEW** |
+

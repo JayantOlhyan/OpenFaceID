@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-13T10:58:02.048Z",
+  "timestamp": "2026-09-13T12:30:09.545Z",
   "host": {
     "platform": "darwin",
     "arch": "arm64",
@@ -8,7 +8,7 @@
     "cpuModel": "Apple M4",
     "cpuCores": 10,
     "totalRamGb": 16,
-    "freeRamGb": 0.5,
+    "freeRamGb": 0.3,
     "nodeVersion": "v25.2.1"
   },
   "camera": {

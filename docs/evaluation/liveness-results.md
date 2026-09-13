@@ -1,6 +1,6 @@
 # Presentation Attack Detection (PAD) & Liveness Results
 
-**Evaluation Date**: 2026-09-13T10:50:37.980Z  
+**Evaluation Date**: 2026-09-13T12:30:08.860Z  
 **Standard**: ISO/IEC 30107-3 Presentation Attack Detection  
 **Modes**: Passive Micro-Motion (`light`) & Active Challenge-Response (`strong`)  
 

@@ -1,30 +1,30 @@
 {
-  "timestamp": "2026-09-13T10:59:15.529Z",
+  "timestamp": "2026-09-13T12:30:20.966Z",
   "embeddingLatency": {
-    "meanMs": 0.317,
-    "p50Ms": 0.24,
-    "p95Ms": 0.453
+    "meanMs": 0.429,
+    "p50Ms": 0.279,
+    "p95Ms": 1.066
   },
   "galleryScaling": [
     {
       "size": 1,
-      "meanMs": 0.0218,
-      "p95Ms": 0.088
+      "meanMs": 0.026,
+      "p95Ms": 0.0841
     },
     {
       "size": 5,
-      "meanMs": 0.014,
-      "p95Ms": 0.0165
+      "meanMs": 0.0141,
+      "p95Ms": 0.0177
     },
     {
       "size": 10,
-      "meanMs": 0.025,
-      "p95Ms": 0.0261
+      "meanMs": 0.0254,
+      "p95Ms": 0.0267
     },
     {
       "size": 25,
-      "meanMs": 0.0635,
-      "p95Ms": 0.0724
+      "meanMs": 0.0637,
+      "p95Ms": 0.0727
     }
   ]
 }
