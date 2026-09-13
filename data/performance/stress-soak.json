@@ -2,7 +2,7 @@
   "benchmarkMetadata": {
     "benchmarkId": "PERF-SOAK-001",
     "provenance": "IPC Stress, Failure Injection & 1,500-Cycle Checkpointed Soak Test",
-    "timestamp": "2026-09-13T12:55:08.362Z",
+    "timestamp": "2026-09-13T14:49:42.536Z",
     "commit": "3d665ef",
     "host": {
       "platform": "darwin",
@@ -13,7 +13,7 @@
   "ipcConcurrency": [
     {
       "concurrency": 10,
-      "totalDurationMs": 4.44,
+      "totalDurationMs": 4.61,
       "successCount": 0,
       "medianMs": 0,
       "p95Ms": 0,
@@ -21,7 +21,7 @@
     },
     {
       "concurrency": 50,
-      "totalDurationMs": 3.19,
+      "totalDurationMs": 3.64,
       "successCount": 0,
       "medianMs": 0,
       "p95Ms": 0,
@@ -29,7 +29,7 @@
     },
     {
       "concurrency": 100,
-      "totalDurationMs": 5.74,
+      "totalDurationMs": 6.07,
       "successCount": 0,
       "medianMs": 0,
       "p95Ms": 0,
@@ -42,7 +42,7 @@
       "totalSubmitted": 100,
       "dispatched": 1,
       "suppressed": 99,
-      "durationMs": 0.31,
+      "durationMs": 0.27,
       "avgLatencyMs": 0.003
     },
     {
@@ -58,7 +58,7 @@
       "totalSubmitted": 100,
       "dispatched": 1,
       "suppressed": 99,
-      "durationMs": 0.08,
+      "durationMs": 0.07,
       "avgLatencyMs": 0.001
     }
   ],
@@ -67,103 +67,103 @@
       "scenario": "Camera Hot-Plug Disconnect & Reconnect",
       "resultingPresenceState": "PRESENCE_UNAUTHORIZED",
       "safeStateMaintained": true,
-      "memoryDeltaKb": 1849.8
+      "memoryDeltaKb": 1763.8
     },
     {
       "scenario": "Privacy Mode Pause & Resume",
       "resultingPresenceState": "PRESENCE_UNAUTHORIZED",
       "safeStateMaintained": true,
-      "memoryDeltaKb": 1311.9
+      "memoryDeltaKb": 1308.5
     },
     {
       "scenario": "Sleep / Wake Zero-Trust Session Reset",
       "resultingPresenceState": "PRESENCE_UNAUTHORIZED",
       "safeStateMaintained": true,
-      "memoryDeltaKb": -2928.4
+      "memoryDeltaKb": -2930
     },
     {
       "scenario": "Multi-Face Intrusion Fail-Closed Transition",
       "resultingPresenceState": "PRESENCE_AMBIGUOUS",
       "safeStateMaintained": true,
-      "memoryDeltaKb": 1294.4
+      "memoryDeltaKb": 1291.1
     }
   ],
   "soakAudit": {
     "cycles": 1500,
-    "durationSec": 0.65,
-    "avgCycleMs": 0.435,
+    "durationSec": 0.7,
+    "avgCycleMs": 0.465,
     "checkpoints": [
       {
         "cycle": 0,
-        "rssMb": 103.47,
-        "heapUsedMb": 14.18,
+        "rssMb": 100.88,
+        "heapUsedMb": 14.17,
         "heapTotalMb": 21.86,
-        "externalMb": 10.47,
+        "externalMb": 10.46,
         "deltaRssMb": 0,
         "deltaHeapMb": 0
       },
       {
         "cycle": 100,
-        "rssMb": 124,
-        "heapUsedMb": 18.18,
+        "rssMb": 127.11,
+        "heapUsedMb": 20.42,
         "heapTotalMb": 32.11,
-        "externalMb": 16.24,
-        "deltaRssMb": 20.53,
-        "deltaHeapMb": 4
+        "externalMb": 18.95,
+        "deltaRssMb": 26.23,
+        "deltaHeapMb": 6.25
       },
       {
         "cycle": 250,
-        "rssMb": 187.38,
-        "heapUsedMb": 17.47,
-        "heapTotalMb": 48.3,
-        "externalMb": 19.94,
-        "deltaRssMb": 83.91,
-        "deltaHeapMb": 3.29
+        "rssMb": 261.34,
+        "heapUsedMb": 49.09,
+        "heapTotalMb": 98.3,
+        "externalMb": 67.53,
+        "deltaRssMb": 160.47,
+        "deltaHeapMb": 34.93
       },
       {
         "cycle": 500,
-        "rssMb": 187.42,
-        "heapUsedMb": 14.08,
-        "heapTotalMb": 48.55,
-        "externalMb": 33.54,
-        "deltaRssMb": 83.95,
-        "deltaHeapMb": -0.1
+        "rssMb": 266.75,
+        "heapUsedMb": 43.16,
+        "heapTotalMb": 98.55,
+        "externalMb": 59.37,
+        "deltaRssMb": 165.88,
+        "deltaHeapMb": 28.99
       },
       {
         "cycle": 750,
-        "rssMb": 193.23,
-        "heapUsedMb": 23.55,
-        "heapTotalMb": 48.55,
-        "externalMb": 28.1,
-        "deltaRssMb": 89.77,
-        "deltaHeapMb": 9.37
+        "rssMb": 266.95,
+        "heapUsedMb": 39.03,
+        "heapTotalMb": 98.55,
+        "externalMb": 53.94,
+        "deltaRssMb": 166.08,
+        "deltaHeapMb": 24.86
       },
       {
         "cycle": 1000,
-        "rssMb": 193.23,
-        "heapUsedMb": 19.56,
-        "heapTotalMb": 48.55,
-        "externalMb": 22.66,
-        "deltaRssMb": 89.77,
-        "deltaHeapMb": 5.38
+        "rssMb": 266.95,
+        "heapUsedMb": 35.05,
+        "heapTotalMb": 98.55,
+        "externalMb": 48.5,
+        "deltaRssMb": 166.08,
+        "deltaHeapMb": 20.88
       },
       {
         "cycle": 1250,
-        "rssMb": 193.23,
-        "heapUsedMb": 15.63,
-        "heapTotalMb": 48.55,
-        "externalMb": 17.22,
-        "deltaRssMb": 89.77,
-        "deltaHeapMb": 1.45
+        "rssMb": 266.95,
+        "heapUsedMb": 31.57,
+        "heapTotalMb": 98.55,
+        "externalMb": 83.85,
+        "deltaRssMb": 166.08,
+        "deltaHeapMb": 17.4
       },
       {
         "cycle": 1500,
-        "rssMb": 193.23,
-        "heapUsedMb": 25.57,
-        "heapTotalMb": 48.55,
-        "externalMb": 30.82,
-        "deltaRssMb": 89.77,
-        "deltaHeapMb": 11.39
+        "rssMb": 266.95,
+        "heapUsedMb": 57.2,
+        "heapTotalMb": 98.55,
+        "externalMb": 78.41,
+        "deltaRssMb": 166.08,
+        "deltaHeapMb": 43.04
       }
     ],
     "midToFinalDeltaRssMb": 0,

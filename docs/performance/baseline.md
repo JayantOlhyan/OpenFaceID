@@ -14,19 +14,19 @@
 
 | In-Tree Stage (Microbenchmark) | Median (ms) | P95 (ms) | P99 (ms) | Min (ms) | Max (ms) | Budget Status |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Frame Ingest & Buffer Normalization** | 0.148 | 0.154 | 0.159 | 0.146 | 0.188 | **PASS** |
-| **BlazeFace Detection (896 Anchors)** | 0.164 | 0.198 | 0.211 | 0.162 | 0.216 | **PASS** |
-| **Face Quality Analysis** | 0.050 | 0.052 | 0.058 | 0.049 | 0.063 | **PASS** |
-| **ArcFace 512D Embedding** | 0.212 | 0.231 | 0.266 | 0.204 | 0.275 | **PASS** |
-| **Liveness Anti-Spoofing** | 0.002 | 0.002 | 0.007 | 0.001 | 0.010 | **PASS** |
-| **Identity Cosine Matching (1 ID)** | 0.000 | 0.002 | 0.003 | 0.000 | 0.015 | **PASS** |
-| **Presence State FSM Update** | 0.001 | 0.002 | 0.004 | 0.000 | 0.070 | **PASS** |
-| **Analytical Pipeline Total** | **0.579** | **0.624** | **0.693** | **0.569** | **0.703** | **PASS** |
+| **Frame Ingest & Buffer Normalization** | 0.149 | 0.159 | 0.166 | 0.135 | 0.189 | **PASS** |
+| **BlazeFace Detection (896 Anchors)** | 0.165 | 0.201 | 0.218 | 0.149 | 0.238 | **PASS** |
+| **Face Quality Analysis** | 0.050 | 0.056 | 0.063 | 0.045 | 0.066 | **PASS** |
+| **ArcFace 512D Embedding** | 0.205 | 0.244 | 0.291 | 0.181 | 0.295 | **PASS** |
+| **Liveness Anti-Spoofing** | 0.002 | 0.003 | 0.004 | 0.001 | 0.010 | **PASS** |
+| **Identity Cosine Matching (1 ID)** | 0.000 | 0.002 | 0.004 | 0.000 | 0.017 | **PASS** |
+| **Presence State FSM Update** | 0.001 | 0.002 | 0.006 | 0.000 | 0.068 | **PASS** |
+| **Analytical Pipeline Total** | **0.578** | **0.637** | **0.700** | **0.527** | **0.747** | **PASS** |
 
 ---
 
 ## 2. Hardware Runtime Baseline (MAC-01)
-- **Cold Boot Daemon Ready:** 264.45 ms (Median) / 377.93 ms (P95)
+- **Cold Boot Daemon Ready:** 329.56 ms (Median) / 357.97 ms (P95)
 - **Camera Initialization (AVFoundation):** ~268 ms
 - **Idle Process CPU:** 0.6%
 - **Active Presence Monitoring CPU:** 0.9%

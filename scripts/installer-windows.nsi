@@ -1,8 +1,8 @@
 ; OpenFaceID Windows NSIS Installer Script
-; Produces OpenFaceID-Setup-0.2.0-rc.1.exe
+; Produces OpenFaceID-Setup-0.2.1-rc.1.exe
 
 !define PRODUCT_NAME "OpenFaceID"
-!define PRODUCT_VERSION "0.2.0-rc.1"
+!define PRODUCT_VERSION "0.2.1-rc.1"
 !define PRODUCT_PUBLISHER "Jayant Olhyan / OpenFaceID Community"
 !define PRODUCT_WEB_SITE "https://github.com/JayantOlhyan/OpenFaceID"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\OpenFaceID.exe"

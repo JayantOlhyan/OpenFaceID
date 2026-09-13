@@ -18,7 +18,7 @@ This document establishes the authoritative provenance of every performance, res
 - **Hardware / Host:** `MAC-01` (Apple MacBook Air M4, 16 GB RAM, macOS Darwin 25.6.0 arm64)
 - **Node Version:** v25.2.1
 - **Commit:** `3d665ef`
-- **Measured Result:** Median 264.45 ms, P95 377.93 ms
+- **Measured Result:** Median 329.56 ms, P95 357.97 ms
 
 ---
 
@@ -34,7 +34,7 @@ This document establishes the authoritative provenance of every performance, res
 - **Hardware / Host:** `MAC-01` (Apple MacBook Air M4, 16 GB RAM, macOS Darwin 25.6.0 arm64)
 - **Node Version:** v25.2.1
 - **Commit:** `3d665ef`
-- **Measured Result:** Median 0.579 ms, P95 0.624 ms
+- **Measured Result:** Median 0.578 ms, P95 0.637 ms
 
 ---
 

@@ -36,7 +36,7 @@ echo "APPL????" > "$APP_DIR/Contents/PkgInfo"
 echo "✓ Created $APP_DIR"
 
 # 4. Package macOS zip archive
-VERSION="0.2.0-rc.1"
+VERSION="0.2.1-rc.1"
 ZIP_PATH="$DIR/dist/OpenFaceID-${VERSION}-macos.zip"
 rm -f "$ZIP_PATH"
 (cd "$DIR/dist" && zip -r -q "OpenFaceID-${VERSION}-macos.zip" "OpenFaceID.app")

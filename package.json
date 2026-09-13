@@ -1,6 +1,6 @@
 {
   "name": "openfaceid-monorepo",
-  "version": "0.2.0-rc.1",
+  "version": "0.2.1-rc.1",
   "private": true,
   "description": "Open-Source Cross-Platform Face Recognition & Presence System",
   "workspaces": [

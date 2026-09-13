@@ -45,11 +45,11 @@ export interface ProductBranding {
 
 export const BRANDING: ProductBranding = {
   name: 'OpenFaceID',
-  version: '0.2.0-rc.1',
+  version: '0.2.1-rc.1',
   codeName: 'SightLock',
   displayName: 'OpenFaceID',
   tagline: 'Face recognition for every desktop.',
-  alternateTagline: 'Open-source Face ID for every desktop.',
+  alternateTagline: 'Local webcam presence detection and biometric verification for desktop systems.',
   shortDescription: 'Open-source, privacy-first, cross-platform face recognition and presence system.',
   fullDescription:
     'SightLock (OpenFaceID) brings a seamless, privacy-preserving face recognition and presence detection workflow to ordinary desktop computers using available 2D webcams, keeping all biometric data local and encrypted.',

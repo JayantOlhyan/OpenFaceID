@@ -1,6 +1,6 @@
 # Biometric Recognition Evaluation Results
 
-**Evaluation Date**: 2026-09-13T12:30:08.023Z  
+**Evaluation Date**: 2026-09-13T14:49:29.963Z  
 **Architecture Reality**: In-tree pure TypeScript analytical formulation  
 **Status**: `INDICATIVE / SMALL-SAMPLE EVALUATION`  
 
@@ -20,9 +20,9 @@ The OpenFaceID recognition engine (comprising `ArcFaceEmbedder` and `FaceRecogni
 
 | Preset | Threshold | Genuine Count | Impostor Count | True Accepts | False Rejects | True Rejects | False Accepts | TAR (%) | FRR (%) | FAR (%) | Latency P95 (ms) |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| **Balanced** | `0.70` | 100 | 100 | 45 | 55 | 100 | 0 | **45%** | 55% | **0%** | `0.057 ms` |
-| **Strict** | `0.80` | 100 | 100 | 24 | 76 | 100 | 0 | **24%** | 76% | **0%** | `0.013 ms` |
-| **Very Strict** | `0.88` | 100 | 100 | 19 | 81 | 100 | 0 | **19%** | 81% | **0%** | `0.013 ms` |
+| **Balanced** | `0.70` | 100 | 100 | 45 | 55 | 100 | 0 | **45%** | 55% | **0%** | `0.061 ms` |
+| **Strict** | `0.80` | 100 | 100 | 24 | 76 | 100 | 0 | **24%** | 76% | **0%** | `0.014 ms` |
+| **Very Strict** | `0.88` | 100 | 100 | 19 | 81 | 100 | 0 | **19%** | 81% | **0%** | `0.016 ms` |
 
 ---
 

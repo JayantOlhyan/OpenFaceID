@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.1-rc.1] - 2026-09-13
 
+### Phase 9: Open-Source Ecosystem, Developer Experience & Contributor Readiness
+
+#### Added
+- **Machine-Readable CLI Output**: Implemented pure `--json` output across all CLI commands (`status`, `doctor`, `security check`, `privacy check`, `camera`, `identity`, `presence`, `vision benchmark`, `config`). Automatically suppresses debug logging to stderr/stdout in JSON mode.
+- **Standardized CLI Exit Codes**: Enforced stable numeric exit codes (0 = Success, 1 = General Failure, 2 = Invalid Arguments, 3 = Camera Unavailable, 4 = Auth Unavailable, 5 = Security Failure, 6 = Privacy Restriction, 7 = Daemon Unavailable).
+- **Developer Diagnostics**: Added `--dev` flag to `openfaceid doctor` to verify Node runtime, dev tooling, and build environment.
+- **Runnable API Examples (`examples/`)**: Added 8 verified, executable developer examples (`core-state.ts`, `camera-access.ts`, `recognition.ts`, `liveness.ts`, `presence.ts`, `ipc-client.ts`, `cli-integration.ts`, `automation.ts`) with synthetic non-biometric fixtures in `examples/demo/fixtures.ts`.
+- **Architectural Boundary Enforcement**: Created automated static test `tests/unit/architecture_boundaries.test.ts` enforcing strict layer direction (`apps -> api -> daemon -> core -> domain -> security/platform`), prohibiting `packages/` from importing `apps/`, and verifying zero runtime npm dependencies.
+- **API Stability & Contract Invariants**: Created `docs/api-stability.md` establishing 5 stability tiers (`Stable`, `Experimental`, `Internal`, `Deprecated`, `Removed`) and `tests/unit/api_contracts.test.ts` verifying contract immutability.
+- **Comprehensive Documentation**: Added `docs/development-architecture.md`, `docs/security-architecture.md`, `docs/privacy-architecture.md`, `docs/models.md`, `docs/configuration.md`, `docs/errors.md`, `docs/ipc.md`, `docs/hardware-testing.md`, and `docs/release-checklist.md`.
+- **Contributor Governance & Health**: Added `CONTRIBUTING.md` overhaul with strict biometric test-data policy, `.github/ISSUE_TEMPLATE/` (bug, feature, hardware, security), `.github/pull_request_template.md`, `GOVERNANCE.md`, `CODE_OF_CONDUCT.md`, and `ROADMAP.md`.
+
+#### Changed
+- **Decoupled Notification Architecture**: Refactored `NotificationManager` in `packages/core` to utilize pluggable `NotificationSink` interface, eliminating circular dependency with `packages/platform`.
+- **Defensible Product Positioning**: Overhauled `README.md` to remove unsupported marketing claims ("Apple Face ID replacement", "production ready", "100% spoof-proof") and established honest platform verification status table (macOS Verified, Windows/Linux Hardware Unverified).
+- **Canonical Version Unification**: Synchronized version string `0.2.1-rc.1` across `package.json`, `packages/branding/src/index.ts`, `apps/desktop/index.html`, and packaging scripts.
+- **Guarded CLI Execution**: Added entrypoint checks to `apps/cli/bin/openfaceid.ts` preventing unintended script execution when imported as a library in test suites.
+
+#### Security
+- Corrected local IPC daemon port references to `41793` and token file to `~/.openfaceid/openfaceid.token` across all documentation.
+- Created `docs/testing/biometric-data-policy.md` strictly prohibiting real facial photographs or personal biometric vectors in git.
+
+---
+
+### Phase 8: Performance Engineering, Resource Efficiency & Reliability Validation
+
+#### Added
+- **Resource & Performance Regression Suite**: Automated microbenchmarks and stress soak suites under `tests/performance/`.
+- **Soak Plateau Verification**: 1500 continuous evaluation cycles demonstrating stable RSS plateau under 267 MB with zero memory leaks.
+- **Evidence Audit & Correction**: Completed empirical audit reconciliations across all performance benchmarks.
+
+---
+
 ### Phase 7: Cross-Platform Hardware Validation, Production Runtime Verification & Phase 6 Baseline Reconciliation
 
 #### Phase 6 Baseline Reconciliation (Gate 0)

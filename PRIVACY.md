@@ -58,9 +58,9 @@ In Phase 3, OpenFaceID introduces an authoritative, single-click **Privacy Pause
 ---
 
 ## 7. Ephemeral Local IPC Token Isolation
-The local daemon (`DesktopEngine`) listens on `127.0.0.1:4173`:
+The local daemon (`DesktopEngine`) listens on `127.0.0.1:41793`:
 - Mutating endpoints (enrollment, identity deletion, camera selection, privacy pause) require an ephemeral **256-bit cryptographically secure Bearer token** generated at daemon launch.
-- The token is stored locally in `~/.openfaceid/token` with user-only permissions (`0600`) and unlinked upon daemon shutdown.
+- The token is stored locally in `~/.openfaceid/openfaceid.token` with user-only permissions (`0600`) and unlinked upon daemon shutdown.
 - Cross-origin browser scripts or untrusted localhost processes cannot trigger biometric operations without presenting this bearer token via constant-time verification (`crypto.timingSafeEqual`).
 
 ---

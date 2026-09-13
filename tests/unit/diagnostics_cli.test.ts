@@ -57,7 +57,7 @@ describe('Diagnostics & Health Verification (Phase 4)', () => {
 
     const meta = getBuildMetadata();
     assert.equal(meta.version, BRANDING.version);
-    assert.equal(meta.version, '0.2.0-rc.1');
+    assert.equal(meta.version, '0.2.1-rc.1');
     assert.ok(meta.nodeVersion.startsWith('v'));
   });
 
@@ -76,6 +76,6 @@ describe('Diagnostics & Health Verification (Phase 4)', () => {
     assert.ok(!jsonStr.includes('masterSecret'));
     assert.ok(!jsonStr.includes('keyringSecret'));
     assert.ok(jsonStr.includes('OpenFaceID'));
-    assert.ok(jsonStr.includes('0.2.0-rc.1'));
+    assert.ok(jsonStr.includes(BRANDING.version));
   });
 });

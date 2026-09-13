@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { DesktopEngine } from '../../apps/desktop/src/daemon.ts';
 import { DesktopTrayManager } from '../../apps/desktop/src/tray.ts';
 import { QuickGlanceHud } from '../../apps/desktop/src/hud.ts';
+import { BRANDING } from '../../packages/branding/src/index.ts';
 
 describe('DesktopEngine Lifecycle & Authoritative State', () => {
   it('initializes engine and exposes authoritative single-source-of-truth state', async () => {
@@ -10,7 +11,7 @@ describe('DesktopEngine Lifecycle & Authoritative State', () => {
     await engine.initialize();
 
     const state = await engine.getAuthoritativeState();
-    assert.equal(state.version, '0.2.0-rc.1');
+    assert.equal(state.version, BRANDING.version);
     assert.equal(state.codename, 'SightLock');
     assert.ok(state.platform.os === 'macos' || state.platform.os === 'windows' || state.platform.os === 'linux');
     assert.equal(state.security.cloudEgress, false);

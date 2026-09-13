@@ -5,12 +5,12 @@
 
 | Checkpoint | RSS (MB) | Heap Used (MB) | Heap Total (MB) | External (MB) | ΔRSS (MB) |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Cycle 0** | 103.44 | 10.94 | 20.22 | 14.88 | 0 |
-| **Cycle 10** | 103.8 | 12.36 | 20.22 | 10.98 | 0.36 |
-| **Cycle 25** | 103.84 | 12.48 | 20.47 | 10.98 | 0.4 |
-| **Cycle 50** | 103.91 | 13.85 | 20.47 | 12.34 | 0.47 |
+| **Cycle 0** | 106.28 | 11.11 | 20.22 | 14.88 | 0 |
+| **Cycle 10** | 106.59 | 14.1 | 20.22 | 12.34 | 0.31 |
+| **Cycle 25** | 106.61 | 13.28 | 20.22 | 10.98 | 0.33 |
+| **Cycle 50** | 106.89 | 12.99 | 20.22 | 10.98 | 0.61 |
 
-- **Classification:** **PROBABLE RUNTIME CACHE** (Net ΔRSS after 50 complete cycles: **0.47 MB**).
+- **Classification:** **PROBABLE RUNTIME CACHE** (Net ΔRSS after 50 complete cycles: **0.61 MB**).
 
 ---
 
@@ -18,13 +18,13 @@
 
 | Checkpoint | RSS (MB) | Heap Used (MB) | Heap Total (MB) | External (MB) | ΔRSS (MB) | ΔHeap (MB) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Cycle 0** | 103.47 | 14.18 | 21.86 | 10.47 | 0 | 0 |
-| **Cycle 100** | 124 | 18.18 | 32.11 | 16.24 | 20.53 | 4 |
-| **Cycle 250** | 187.38 | 17.47 | 48.3 | 19.94 | 83.91 | 3.29 |
-| **Cycle 500** | 187.42 | 14.08 | 48.55 | 33.54 | 83.95 | -0.1 |
-| **Cycle 750** | 193.23 | 23.55 | 48.55 | 28.1 | 89.77 | 9.37 |
-| **Cycle 1000** | 193.23 | 19.56 | 48.55 | 22.66 | 89.77 | 5.38 |
-| **Cycle 1250** | 193.23 | 15.63 | 48.55 | 17.22 | 89.77 | 1.45 |
-| **Cycle 1500** | 193.23 | 25.57 | 48.55 | 30.82 | 89.77 | 11.39 |
+| **Cycle 0** | 100.88 | 14.17 | 21.86 | 10.46 | 0 | 0 |
+| **Cycle 100** | 127.11 | 20.42 | 32.11 | 18.95 | 26.23 | 6.25 |
+| **Cycle 250** | 261.34 | 49.09 | 98.3 | 67.53 | 160.47 | 34.93 |
+| **Cycle 500** | 266.75 | 43.16 | 98.55 | 59.37 | 165.88 | 28.99 |
+| **Cycle 750** | 266.95 | 39.03 | 98.55 | 53.94 | 166.08 | 24.86 |
+| **Cycle 1000** | 266.95 | 35.05 | 98.55 | 48.5 | 166.08 | 20.88 |
+| **Cycle 1250** | 266.95 | 31.57 | 98.55 | 83.85 | 166.08 | 17.4 |
+| **Cycle 1500** | 266.95 | 57.2 | 98.55 | 78.41 | 166.08 | 43.04 |
 
 - **Memory Plateau Analysis:** Initial cycles allocate ArrayBuffers causing RSS to grow to ~280 MB by cycle 250. From cycle 250 to cycle 1250, RSS remains flat at 280.88 MB while Heap Used decreases from 55.63 MB to 40.93 MB, confirming a V8 GC allocation plateau rather than an unbounded linear leak.

@@ -1,97 +1,61 @@
-# OpenFaceID — Release Engineering Checklist
+# OpenFaceID Release Engineering Checklist
 
-This checklist must be executed and approved by a maintainer before cutting any official release of OpenFaceID (SightLock).
+## 1. Overview
 
----
-
-## Phase 1: Pre-Release Quality & Security Gates
-
-- [ ] **Clean Working Tree**: Ensure `git status` shows zero uncommitted modifications or untracked development artifacts.
-- [ ] **Zero Vulnerability Dependency Audit**:
-  ```bash
-  npm audit --audit-level=low
-  ```
-  *Requirement: Exactly 0 vulnerabilities reported.*
-- [ ] **Automated Test Suite**:
-  ```bash
-  npm test
-  ```
-  *Requirement: All 71 tests pass across 36 suites with 0 failures, 0 timeouts, 0 skips.*
-- [ ] **CLI Security Gate Audit**:
-  ```bash
-  npm run cli security check
-  ```
-  *Requirement: All 6 security gates (Loopback, Telemetry, Keyring, AES-GCM Tamper, Model Integrity, Timing Defense) report PASS.*
-- [ ] **CLI Privacy Architecture Audit**:
-  ```bash
-  npm run cli privacy check
-  ```
-  *Requirement: All 4 privacy gates (No egress, RAM zeroization, 0 disk frame persistence, Privacy Pause) report PASS.*
-- [ ] **CLI Environment Doctor**:
-  ```bash
-  npm run cli doctor
-  ```
-  *Requirement: 7/7 system health checks report PASS.*
-- [ ] **Model Integrity Signatures**:
-  *Requirement: ModelRegistry signatures in `packages/vision/src/registry.ts` match actual SHA-256 hashes of model source code.*
+This checklist must be executed and signed off by the maintainer before tagging or publishing any release candidate or production release of OpenFaceID.
 
 ---
 
-## Phase 2: Version Standardization Check
+## 2. Pre-Release Verification Gates
 
-Verify that the target release version (e.g. `0.2.0-rc.1`) is uniform across:
-- [ ] Root `package.json` (`"version": "0.2.0-rc.1"`)
-- [ ] `packages/branding/src/index.ts` (`BRANDING.version = '0.2.0-rc.1'`)
-- [ ] Packaging scripts (`scripts/package-macos.sh`, `scripts/package-linux.sh`, `scripts/package-deb.sh`, `scripts/installer-windows.nsi`)
-- [ ] `CHANGELOG.md` entry exists for the target version.
+### Gate 1: Automated Test Suites
+- [ ] `npm test` passes with 0 failures across all unit, evaluation, and performance suites.
+- [ ] `node --experimental-strip-types --test tests/unit/architecture_boundaries.test.ts` passes (0 illegal imports).
+- [ ] `node --experimental-strip-types --test tests/unit/api_contracts.test.ts` passes (all contracts intact).
+- [ ] `node --experimental-strip-types --test tests/unit/examples.test.ts` passes (all 8 developer examples run successfully).
+
+### Gate 2: Security & Privacy Invariants
+- [ ] `openfaceid security check` passes all 6 security gates.
+- [ ] `openfaceid privacy check` passes all 4 privacy gates.
+- [ ] `openfaceid doctor --dev` reports clean environment without warnings.
+- [ ] Git tree audited for accidental biometric data:
+  ```bash
+  git status
+  git diff --stat
+  ```
+- [ ] Verified that **ZERO photographic face images, crops, embeddings, or keys** exist in git history.
+
+### Gate 3: Dependency & Supply Chain Audit
+- [ ] Verified `package.json` contains **zero runtime dependencies** (`dependencies: {}`).
+- [ ] `npm audit` reports 0 vulnerabilities in development tooling.
+- [ ] Lockfile consistency verified (`package-lock.json`).
+- [ ] License audit: `LICENSE` (Apache-2.0) present and headers verified.
+
+### Gate 4: Packaging & Artifacts
+- [ ] Version string in `package.json`, `packages/branding/src/index.ts`, and `apps/desktop/index.html` match target release tag.
+- [ ] Run release packaging script:
+  ```bash
+  npm run package:release
+  ```
+- [ ] Verify SHA-256 checksums generated for all distributable binaries (`.dmg`, `.zip`, `.deb`, `.exe`).
+- [ ] Document signature status explicitly: if macOS build is unsigned, state **UNSIGNED / NOT NOTARIZED**.
+
+### Gate 5: Documentation & Changelog
+- [ ] `CHANGELOG.md` updated with release notes under target version.
+- [ ] Release notes file created under `docs/releases/vX.Y.Z.md`.
+- [ ] Platform verification table in `README.md` reflects actual current hardware evidence.
+- [ ] Roadmap updated to reflect completed milestones and next priorities.
 
 ---
 
-## Phase 3: Artifact Generation & Packaging
+## 3. Git Tagging & Release Publication
 
-Run the multi-platform packaging pipeline:
+Once all gates pass:
+
 ```bash
-# 1. Clean previous dist/ artifacts
-rm -rf dist/*
+# Tag the release commit
+git tag -a v0.2.1-rc.1 -m "Release v0.2.1-rc.1: Open-Source Ecosystem & Contributor Readiness"
 
-# 2. Package macOS bundle & zip
-./scripts/package-macos.sh
-
-# 3. Package Linux desktop tarball & debian structure
-./scripts/package-linux.sh
-./scripts/package-deb.sh
-
-# 4. Generate Windows scripts
-./scripts/package-windows.bat # (or verify scripts/installer-windows.nsi)
-
-# 5. Generate Release Manifest and Cryptographic Checksums
-npm run package:release
+# Push tag to GitHub
+git push origin v0.2.1-rc.1
 ```
-
----
-
-## Phase 4: Artifact Integrity Verification
-
-- [ ] Inspect `dist/release-manifest.json`:
-  - Contains accurate `version`, `buildMetadata`, and `platforms`.
-  - Artifact list includes size, format, and platform.
-- [ ] Verify `dist/SHA256SUMS`:
-  ```bash
-  (cd dist && shasum -a 256 -c SHA256SUMS)
-  ```
-  *Requirement: Every packaged artifact verifies `OK`.*
-
----
-
-## Phase 5: Tagging & Release Publication
-
-- [ ] Create annotated Git tag:
-  ```bash
-  git tag -a v0.2.0-rc.1 -m "Release v0.2.0-rc.1: Production hardening, security audit, and release engineering"
-  git push origin v0.2.0-rc.1
-  ```
-- [ ] Draft GitHub Release:
-  - Title: `OpenFaceID v0.2.0-rc.1 — Production Hardening & Release Engineering`
-  - Paste release notes from `CHANGELOG.md`.
-  - Attach all files from `dist/` (`.zip`, `.tar.gz`, `.deb`, `release-manifest.json`, `SHA256SUMS`).
-- [ ] Publish Release.

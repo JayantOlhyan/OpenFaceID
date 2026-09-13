@@ -41,7 +41,7 @@ LAUNCHER
 chmod +x "$LINUX_DIR/bin/openfaceid"
 
 # 3. Create tarball
-VERSION="0.2.0-rc.1"
+VERSION="0.2.1-rc.1"
 TAR_PATH="$DIR/dist/openfaceid-${VERSION}-linux-x86_64.tar.gz"
 (cd "$DIR/dist" && tar -czf "$TAR_PATH" "linux")
 echo "✓ Created $TAR_PATH"

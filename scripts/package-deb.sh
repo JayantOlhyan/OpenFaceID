@@ -2,7 +2,7 @@
 set -e
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="0.2.0-rc.1"
+VERSION="0.2.1-rc.1"
 ARCH="amd64"
 DEB_ROOT="$DIR/dist/deb_build/openfaceid_${VERSION}_${ARCH}"
 

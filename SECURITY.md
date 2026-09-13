@@ -2,61 +2,64 @@
 
 ## 1. Supported Versions
 
-| Version | Supported | Notes |
+| Version | Status | Notes |
 | :--- | :--- | :--- |
-| **v0.2.x** | :white_check_mark: | Active Release (Phase 5 Productization) |
-| **v0.1.x** | :white_check_mark: | Maintenance |
+| **v0.2.x** | :white_check_mark: Supported | Active Release Line (`0.2.1-rc.1`) |
+| **v0.1.x** | :warning: Maintenance | Critical security fixes only |
 
 ---
 
 ## 2. Security Boundaries & Explicit Non-Claims
 
 > [!CAUTION]
-> **OpenFaceID relies on standard 2D webcams.**
-> 2D optical sensors cannot provide the same hardware security guarantees as Apple Face ID (TrueDepth structured-light infrared projector) or Windows Hello (active IR illumination with TPM attestation).
-
-### Fundamental Rules of OpenFaceID:
-1. **Recognition != Authentication**: OpenFaceID performs **visual recognition** and **presence detection**. It does **not** bypass operating system kernel cryptographic authentication.
-2. **No Plaintext Passwords**: OpenFaceID **never** prompts for, stores, or automates typing of user login passwords.
-3. **No Keystroke Injection**: OpenFaceID will never inject synthetic keystrokes to simulate lock screen unlocking.
-4. **Anti-Spoofing Disclaimer**: OpenFaceID implements Presentation Attack Detection (PAD) including blink detection, micro-motion analysis, and active challenge-response. However, no software-based 2D anti-spoofing mechanism is 100% spoof-proof against determined physical adversaries with high-resolution video or silicone masks.
-5. **Fail-Closed Multiple-Face Defense**: If 2 or more faces are detected in view (`face_count >= 2`), OpenFaceID immediately transitions to `PRESENCE_AMBIGUOUS` and revokes presence authorization. It never authorizes presence merely because one face in a group matched.
+> **Explicit Security Non-Claims**
+> * **Standard 2D Webcams**: OpenFaceID operates with standard 2D RGB optical webcams. It does NOT have hardware depth sensing, structured-light infrared projectors, or hardware attestation.
+> * **Recognition != Authentication**: OpenFaceID performs visual recognition and continuous presence monitoring at the desktop user session layer. It does **NOT** replace OS kernel authentication, passwords, or hardware security keys.
+> * **No Password Handling**: OpenFaceID never prompts for, stores, or automates user OS login passwords.
+> * **Anti-Spoofing Disclaimer**: Presentation Attack Detection (PAD) raises the barrier against casual photo/video attacks, but software-based 2D anti-spoofing is not certified against determined physical adversaries using high-resolution replays or silicone prosthetics.
 
 ---
 
 ## 3. Threat Mitigations in OpenFaceID
 
-- **Cryptographic Model Integrity**: All vision models (`blazeface-detector`, `arcface-embedder`, `liveness-pad-evaluator`) are verified using SHA-256 digests at boot. Corrupted or tampered weights trigger `MODEL_INTEGRITY_FAILURE` and halt execution.
-- **Presentation Attacks**: Mitigated via modular liveness checks (`Light` passive blink/motion variance, `Strong` active head rotation challenges).
-- **Credential & Database Theft**: Biometric embeddings on disk are encrypted using **AES-256-GCM** with keys sealed inside OS keystores (Keychain, DPAPI, Secret Service) or a machine-bound PBKDF2 key.
-- **Memory Inspection**: In-memory camera frame buffers and cryptographic keys are zeroized immediately following inference using `MemorySanitizer.zeroizeBuffer()`.
-- **Local API Abuse & Cross-Origin CSRF**: Local REST/SSE server binds strictly to `127.0.0.1:4173`. Mutating and sensitive routes require an ephemeral 256-bit Bearer token validated via constant-time comparison (`crypto.timingSafeEqual`) to prevent timing side-channel attacks.
-- **Biometric Vector Secrecy**: Vector representations are never exposed over public HTTP responses or log outputs; API responses return only Boolean status, confidence scores, and identity IDs.
-- **Log & Diagnostic Leakage**: Automated scanning scrubs biometric vectors, raw image arrays, tokens, and secrets from all diagnostic exports.
+* **Fail-Closed Multiple-Face Rule**: If 2 or more faces are visible simultaneously, presence drops immediately to `PRESENCE_UNAUTHORIZED`.
+* **Encrypted Identity Storage**: Facial vectors on disk are encrypted using **AES-256-GCM** (PBKDF2-HMAC-SHA256, 100,000 iterations). Files are restricted to mode `0600`.
+* **OS Keystore Integration**: Master keys are stored in native operating system keychains (macOS Keychain, Windows DPAPI, Linux Secret Service).
+* **Volatile-Only Camera Buffers**: Camera frames exist solely in volatile RAM during inference (<15ms) and are immediately wiped with `MemorySanitizer.zeroizeBuffer()`.
+* **Authenticated Loopback IPC**: The local REST/SSE server binds strictly to `127.0.0.1:41793`. Mutating and data-access endpoints require an ephemeral 256-bit Bearer token validated in constant time via `crypto.timingSafeEqual`.
+* **Child Process Hardening**: Automation commands execute with `shell: false` and strict array parameters. External webhook URLs are blocked (loopback only).
 
 ---
 
-## 4. Desktop IPC Route Security Classifications
+## 4. Reporting a Security Vulnerability
 
-| Tier | Endpoints | Authentication | Threat Mitigated |
-| :--- | :--- | :--- | :--- |
-| **Public** | `GET /api/v1/health`, `GET /api/v1/branding` | None (Localhost loopback only) | Basic health monitoring without state disclosure |
-| **Protected** | `GET /api/v1/state`, `GET /api/v1/hud`, `POST /api/v1/privacy/*`, `POST /api/v1/camera/select` | Ephemeral Bearer Token | Unauthorized action triggering by untrusted local scripts |
-| **Sensitive** | `POST /api/v1/enrollment/*`, `DELETE /api/v1/identities/*`, `GET /api/v1/diagnostics/*` | Ephemeral Bearer Token | Biometric gallery tampering, identity replacement, log exfiltration |
+If you discover a security vulnerability, side-channel leak, or liveness bypass in OpenFaceID:
 
----
+> [!IMPORTANT]
+> **DO NOT OPEN A PUBLIC GITHUB ISSUE TO REPORT SECURITY VULNERABILITIES.**
 
-## 5. Reporting a Vulnerability
+### How to Report Privately
 
-If you discover a security vulnerability in OpenFaceID, please do **NOT** open a public GitHub issue.
+1. **GitHub Security Advisory (Preferred)**:
+   Navigate to [JayantOlhyan/OpenFaceID Security Advisories](https://github.com/JayantOlhyan/OpenFaceID/security/advisories) and click **"Report a vulnerability"**.
+2. **Email Disclosure**:
+   Email the project maintainer directly at: `jayantolhyan@gmail.com` with subject line `[SECURITY] OpenFaceID Vulnerability Report`.
 
-Please report vulnerabilities privately via:
-- **GitHub Private Vulnerability Reporting**: [OpenFaceID Security Advisories](https://github.com/JayantOlhyan/OpenFaceID/security/advisories)
-- **Email**: `security@openfaceid.org` (or directly to maintainer Jayant Olhyan)
+### What to Include in Your Report
 
-Please include:
-1. Type of issue (e.g., presentation attack bypass, cryptographic flaw, memory leakage).
-2. Step-by-step instructions to reproduce the vulnerability.
-3. Proof-of-concept code or test media (if safe to transmit).
+* Description of the vulnerability and its potential impact.
+* Component(s) affected (e.g., `packages/security`, `packages/api`, `packages/vision`).
+* Proof of concept or step-by-step reproduction instructions.
+* Hardware, operating system, and camera model used during discovery.
+* Any proposed mitigations or patches.
 
-We commit to acknowledging reports within 48 hours and providing regular updates on mitigation progress.
+### What NOT to Publicly Disclose
+
+* Do not publish full exploit scripts, zero-day bypasses, or proof-of-concept videos before a coordinated disclosure fix is released.
+* Do not commit real photographic face datasets or raw biometric vectors to public issues or PRs.
+
+### Response Timeline
+
+* **Initial Response**: Within 48 hours of receipt.
+* **Triage & Reproduction**: Within 7 calendar days.
+* **Fix & Coordinated Release**: Fix deployed in the next patch or minor release candidate, with public credit attributed to the reporter (unless anonymity is requested).

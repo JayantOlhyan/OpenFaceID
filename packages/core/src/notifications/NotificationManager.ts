@@ -10,7 +10,6 @@
  */
 
 import { BRANDING } from '../../../branding/src/index.ts';
-import { getPlatformAdapter, type PlatformAdapter } from '../../../platform/src/index.ts';
 import { Logger } from '../logger/logger.ts';
 import { EventBus, type EventType, type SystemEvent } from '../events/bus.ts';
 import type {
@@ -21,15 +20,27 @@ import type {
 } from './types.ts';
 import { NotificationPolicy } from './NotificationPolicy.ts';
 
+/**
+ * Pluggable notification delivery sink (implemented by PlatformAdapter or custom sinks).
+ */
+export interface NotificationSink {
+  showNotification(title: string, body: string): Promise<void>;
+}
+
 export interface NotificationManagerOptions {
-  adapter?: PlatformAdapter;
+  adapter?: NotificationSink;
   enabled?: boolean;
 }
 
 export class NotificationManager {
   private static instance: NotificationManager | null = null;
+  private static defaultSink: NotificationSink = {
+    showNotification: async (title: string, body: string): Promise<void> => {
+      Logger.debug('notification', `Default sink received notification: ${title} - ${body}`);
+    },
+  };
 
-  private adapter: PlatformAdapter;
+  private adapter: NotificationSink;
   private enabled: boolean = true;
   private unsubscribeList: Array<() => void> = [];
 
@@ -57,14 +68,20 @@ export class NotificationManager {
   private static readonly GLOBAL_BURST_WINDOW_MS = 60_000; // per 60 seconds
 
   private constructor(options: NotificationManagerOptions = {}) {
-    this.adapter = options.adapter || getPlatformAdapter();
+    this.adapter = options.adapter || NotificationManager.defaultSink;
     this.enabled = options.enabled ?? true;
     this.attachEventListeners();
+  }
+
+  public static setDefaultSink(sink: NotificationSink): void {
+    NotificationManager.defaultSink = sink;
   }
 
   public static getInstance(options?: NotificationManagerOptions): NotificationManager {
     if (!NotificationManager.instance) {
       NotificationManager.instance = new NotificationManager(options);
+    } else if (options?.adapter) {
+      NotificationManager.instance.adapter = options.adapter;
     }
     return NotificationManager.instance;
   }

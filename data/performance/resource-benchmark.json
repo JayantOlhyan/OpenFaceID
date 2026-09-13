@@ -2,7 +2,7 @@
   "benchmarkMetadata": {
     "benchmarkId": "PERF-RES-001",
     "provenance": "Runtime Resource, Lifecycle Stress & Buffer Zeroization Benchmark",
-    "timestamp": "2026-09-13T12:55:06.532Z",
+    "timestamp": "2026-09-13T14:49:40.665Z",
     "commit": "3d665ef",
     "host": {
       "platform": "darwin",
@@ -13,64 +13,64 @@
   "stateProfiles": [
     {
       "state": "1. Idle (Process Running)",
-      "rssMb": 94.75,
-      "heapUsedMb": 10.42,
-      "heapTotalMb": 16.47,
-      "externalMb": 9.72,
-      "cpuUsagePercent": 8.4
+      "rssMb": 94.84,
+      "heapUsedMb": 10.98,
+      "heapTotalMb": 16.72,
+      "externalMb": 9.65,
+      "cpuUsagePercent": 0.6
     },
     {
       "state": "2. Daemon Active (Camera Inactive)",
-      "rssMb": 94.81,
-      "heapUsedMb": 10.47,
-      "heapTotalMb": 16.47,
-      "externalMb": 9.62,
+      "rssMb": 94.91,
+      "heapUsedMb": 11.03,
+      "heapTotalMb": 16.72,
+      "externalMb": 9.65,
       "cpuUsagePercent": 0.6
     },
     {
       "state": "3. Camera Active (No Face)",
-      "rssMb": 94.81,
-      "heapUsedMb": 10.48,
-      "heapTotalMb": 16.47,
-      "externalMb": 9.62,
+      "rssMb": 94.91,
+      "heapUsedMb": 11.03,
+      "heapTotalMb": 16.72,
+      "externalMb": 9.65,
       "cpuUsagePercent": 0.3
     },
     {
       "state": "4. Face Visible",
-      "rssMb": 94.81,
-      "heapUsedMb": 10.49,
-      "heapTotalMb": 16.47,
-      "externalMb": 9.62,
-      "cpuUsagePercent": 1
+      "rssMb": 94.91,
+      "heapUsedMb": 11.04,
+      "heapTotalMb": 16.72,
+      "externalMb": 9.65,
+      "cpuUsagePercent": 0.7
     },
     {
       "state": "5. Continuous Recognition",
-      "rssMb": 103.31,
-      "heapUsedMb": 11.43,
+      "rssMb": 106.19,
+      "heapUsedMb": 11.36,
       "heapTotalMb": 20.22,
       "externalMb": 14.88,
-      "cpuUsagePercent": 63.5
+      "cpuUsagePercent": 64.6
     },
     {
       "state": "6. Liveness Evaluation",
-      "rssMb": 103.33,
-      "heapUsedMb": 10.83,
+      "rssMb": 106.19,
+      "heapUsedMb": 11.36,
       "heapTotalMb": 20.22,
       "externalMb": 14.88,
-      "cpuUsagePercent": 0.2
+      "cpuUsagePercent": 0.4
     },
     {
       "state": "7. Multiple Faces (Fail-Closed)",
-      "rssMb": 103.34,
-      "heapUsedMb": 10.85,
+      "rssMb": 106.2,
+      "heapUsedMb": 11.03,
       "heapTotalMb": 20.22,
       "externalMb": 14.88,
       "cpuUsagePercent": 0.3
     },
     {
       "state": "8. Privacy Pause Active",
-      "rssMb": 103.38,
-      "heapUsedMb": 10.86,
+      "rssMb": 106.22,
+      "heapUsedMb": 11.03,
       "heapTotalMb": 20.22,
       "externalMb": 14.88,
       "cpuUsagePercent": 0.2
@@ -80,73 +80,73 @@
     "checkpoints": [
       {
         "cycle": 0,
-        "rssMb": 103.44,
-        "heapUsedMb": 10.94,
+        "rssMb": 106.28,
+        "heapUsedMb": 11.11,
         "heapTotalMb": 20.22,
         "externalMb": 14.88
       },
       {
         "cycle": 10,
-        "rssMb": 103.8,
-        "heapUsedMb": 12.36,
+        "rssMb": 106.59,
+        "heapUsedMb": 14.1,
+        "heapTotalMb": 20.22,
+        "externalMb": 12.34
+      },
+      {
+        "cycle": 25,
+        "rssMb": 106.61,
+        "heapUsedMb": 13.28,
         "heapTotalMb": 20.22,
         "externalMb": 10.98
       },
       {
-        "cycle": 25,
-        "rssMb": 103.84,
-        "heapUsedMb": 12.48,
-        "heapTotalMb": 20.47,
-        "externalMb": 10.98
-      },
-      {
         "cycle": 50,
-        "rssMb": 103.91,
-        "heapUsedMb": 13.85,
-        "heapTotalMb": 20.47,
-        "externalMb": 12.34
+        "rssMb": 106.89,
+        "heapUsedMb": 12.99,
+        "heapTotalMb": 20.22,
+        "externalMb": 10.98
       }
     ],
     "totalCycles": 50,
-    "baseRssMb": 103.44,
-    "finalRssMb": 103.91,
-    "deltaRssMb": 0.47,
+    "baseRssMb": 106.28,
+    "finalRssMb": 106.89,
+    "deltaRssMb": 0.61,
     "classification": "PROBABLE RUNTIME CACHE"
   },
   "transientVectorAccumulation": [
     {
       "iterations": 100,
-      "durationMs": 34.2,
-      "avgLatencyMs": 0.342,
-      "heapGrowthMb": -0.24,
+      "durationMs": 33.6,
+      "avgLatencyMs": 0.336,
+      "heapGrowthMb": -1.01,
       "leakDetected": false
     },
     {
       "iterations": 500,
-      "durationMs": 105.2,
-      "avgLatencyMs": 0.21,
-      "heapGrowthMb": 0.32,
+      "durationMs": 106.7,
+      "avgLatencyMs": 0.213,
+      "heapGrowthMb": 0.47,
       "leakDetected": false
     },
     {
       "iterations": 1000,
-      "durationMs": 242.5,
-      "avgLatencyMs": 0.242,
-      "heapGrowthMb": -2.36,
+      "durationMs": 203,
+      "avgLatencyMs": 0.203,
+      "heapGrowthMb": -0.84,
       "leakDetected": false
     },
     {
       "iterations": 2500,
-      "durationMs": 490.7,
-      "avgLatencyMs": 0.196,
-      "heapGrowthMb": 0.45,
+      "durationMs": 533.5,
+      "avgLatencyMs": 0.213,
+      "heapGrowthMb": 0.47,
       "leakDetected": false
     },
     {
       "iterations": 5000,
-      "durationMs": 973,
-      "avgLatencyMs": 0.195,
-      "heapGrowthMb": -4.25,
+      "durationMs": 989.8,
+      "avgLatencyMs": 0.198,
+      "heapGrowthMb": -4.22,
       "leakDetected": false
     }
   ],
@@ -155,22 +155,22 @@
       "resolution": "1080p FHD (1920x1080)",
       "uncompressedBytes": 8294400,
       "sizeMb": 7.91,
-      "medianMs": 0.063,
-      "p95Ms": 0.069
+      "medianMs": 0.07,
+      "p95Ms": 0.079
     },
     {
       "resolution": "720p HD (1280x720)",
       "uncompressedBytes": 3686400,
       "sizeMb": 3.52,
       "medianMs": 0.026,
-      "p95Ms": 0.034
+      "p95Ms": 0.033
     },
     {
       "resolution": "480p SD (640x480)",
       "uncompressedBytes": 1228800,
       "sizeMb": 1.17,
-      "medianMs": 0.009,
-      "p95Ms": 0.009
+      "medianMs": 0.008,
+      "p95Ms": 0.01
     }
   ]
 }
