@@ -13,6 +13,9 @@ echo " OpenFaceID macOS DMG & Clean Installation Validation"
 echo " Target: $DMG_PATH"
 echo "============================================================"
 
+# Clean any lingering daemon on port 41793 before starting
+lsof -ti :41793 | xargs kill -9 2>/dev/null || true
+
 # 1. Verify DMG Exists and Size Sanity
 if [ ! -f "$DMG_PATH" ]; then
   echo "FAIL: DMG file does not exist at $DMG_PATH"
@@ -68,6 +71,8 @@ echo "✓ Applications symlink verified -> /Applications"
 echo ""
 echo "--- Step 3: Bundle Integrity & Binary Audit ---"
 APP="$MOUNT_POINT/OpenFaceID.app"
+
+"$DIR/scripts/validation/validate-macos-bundle.sh" "$APP"
 
 # Info.plist checks
 PLIST="$APP/Contents/Info.plist"
@@ -188,6 +193,23 @@ if [ "$DAEMON_READY" = true ]; then
   echo "  Capabilities:"
   cat "$TEST_DIR/capabilities.json"
   echo ""
+
+  # Probe Desktop UI Root (GET /) - CRITICAL: Verify NO ENOENT
+  echo "Probing desktop UI frontend serving (index.html)..."
+  UI_RESP=$(curl -s -i "http://127.0.0.1:41793/")
+  if echo "$UI_RESP" | grep -q "Error loading desktop UI"; then
+    echo "FAIL: Error or ENOENT encountered loading desktop UI!"
+    echo "$UI_RESP"
+    kill -9 "$APP_PID" 2>/dev/null || true
+    exit 1
+  fi
+
+  if ! echo "$UI_RESP" | grep -q "window.__OFID_TOKEN__"; then
+    echo "FAIL: Desktop UI response missing session token injection!"
+    kill -9 "$APP_PID" 2>/dev/null || true
+    exit 1
+  fi
+  echo "✓ Desktop UI (index.html) loaded successfully with token injection (0 ENOENT)!"
 else
   echo "FAIL: Local daemon failed to answer on port 41793!"
   echo "Launch log:"
@@ -198,8 +220,9 @@ fi
 
 # Terminate test process cleanly
 kill "$APP_PID" 2>/dev/null || true
-sleep 1
+sleep 0.5
 kill -9 "$APP_PID" 2>/dev/null || true
+lsof -ti :41793 | xargs kill -9 2>/dev/null || true
 rm -rf "$TEST_DIR"
 
 echo ""

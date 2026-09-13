@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import os from 'os';
 import { fileURLToPath } from 'url';
 import { BRANDING, getBuildMetadata } from '../../packages/branding/src/index.ts';
-import { Logger, DEFAULT_CONFIG } from '../../packages/core/src/index.ts';
+import { Logger, DEFAULT_CONFIG, resolveDesktopUiHtml, resolveDesktopAsset, getBundleResourcePath } from '../../packages/core/src/index.ts';
 import { CryptoManager, KeyringManager, MemorySanitizer } from '../../packages/security/src/index.ts';
 import { ModelRegistry, ArcFaceEmbedder, ENROLLMENT_POSES } from '../../packages/vision/src/index.ts';
 import { DesktopEngine } from './src/daemon.ts';
@@ -17,6 +17,15 @@ const __dirname = path.dirname(__filename);
 
 const PORT = BRANDING.identifiers.localApiPort || 41793;
 const HOST = '127.0.0.1'; // BIND STRICTLY TO LOCALHOST
+
+// In standalone packaged mode, exit cleanly if parent launcher process pipe terminates
+if (process.env.OFID_DESKTOP_STANDALONE === 'true') {
+  process.stdin.resume();
+  process.stdin.on('end', () => {
+    Logger.info('daemon', 'Parent launcher process terminated (stdin closed). Exiting daemon.');
+    process.exit(0);
+  });
+}
 
 // Initialize authoritative Desktop Engine & Subsystems
 const engine = DesktopEngine.getInstance();
@@ -902,7 +911,7 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/favicon.ico' || url.pathname.endsWith('.png')) {
     const relPath = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
     const safePath = path.normalize(relPath).replace(/^(\.\.[\/\\])+/, '');
-    const assetPath = path.join(__dirname, safePath);
+    const assetPath = resolveDesktopAsset(safePath) || path.join(__dirname, safePath);
     if (fs.existsSync(assetPath)) {
       const mime = safePath.endsWith('.ico') ? 'image/x-icon' : 'image/png';
       res.writeHead(200, { 'Content-Type': mime });
@@ -912,8 +921,8 @@ const server = http.createServer(async (req, res) => {
   }
 
   // 22. Static Desktop UI Serving (index.html with token injection)
-  let filePath = path.join(__dirname, 'index.html');
   try {
+    const filePath = resolveDesktopUiHtml();
     let content = fs.readFileSync(filePath, 'utf8');
     // Inject session token securely into local frontend window context
     const tokenScript = `<script>window.__OFID_TOKEN__ = "${API_TOKEN}";</script>`;
@@ -922,6 +931,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(content);
   } catch (err) {
+    Logger.error('daemon', `Error loading desktop UI: ${err}`);
     res.writeHead(500, { 'Content-Type': 'text/plain' });
     res.end('Error loading desktop UI: ' + String(err));
   }

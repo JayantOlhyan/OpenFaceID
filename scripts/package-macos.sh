@@ -15,10 +15,12 @@ echo " Version: $VERSION"
 echo " Architecture: $ARCH"
 echo "============================================================"
 
-# Ensure app is built first
-if [ ! -d "$APP_DIR" ]; then
-  echo "OpenFaceID.app not found. Running build first..."
+# Ensure app bundle is valid, otherwise build fresh
+if [ ! -d "$APP_DIR" ] || ! "$DIR/scripts/validation/validate-macos-bundle.sh" "$APP_DIR" >/dev/null 2>&1; then
+  echo "OpenFaceID.app missing or invalid. Building bundle fresh..."
   "$DIR/scripts/build-macos.sh"
+else
+  echo "✓ Existing OpenFaceID.app bundle validated successfully."
 fi
 
 # 1. Package ZIP

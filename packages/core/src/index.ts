@@ -10,4 +10,5 @@ export * from './logger/logger.ts';
 export * from './session/session.ts';
 export * from './errors.ts';
 export * from './notifications/index.ts';
+export * from './resources.ts';
 export { BRANDING, getBuildMetadata, type BuildMetadata } from '../../branding/src/index.ts';

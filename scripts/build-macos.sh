@@ -88,6 +88,12 @@ cp "$DIR/package.json" "$APP_PAYLOAD_DIR/"
 if [ -f "$DIR/tsconfig.json" ]; then
   cp "$DIR/tsconfig.json" "$APP_PAYLOAD_DIR/"
 fi
+
+# Verify canonical frontend existence immediately
+if [ ! -f "$APP_PAYLOAD_DIR/apps/desktop/index.html" ]; then
+  echo "Error: Canonical index.html not found in $APP_PAYLOAD_DIR/apps/desktop/index.html!"
+  exit 1
+fi
 echo "  ✓ Bundled application payload (apps/desktop, packages, configurations)"
 
 # 7. Ad-Hoc Code Signing (Nested binaries first, then outer bundle)
@@ -99,7 +105,11 @@ codesign --force --deep --sign - "$APP_DIR"
 echo "  ✓ Verifying bundle signature:"
 codesign --verify --deep --strict --verbose=2 "$APP_DIR"
 
+# 8. Run Full Bundle Validation Suite
+echo ""
+"$DIR/scripts/validation/validate-macos-bundle.sh" "$APP_DIR"
+
 echo "============================================================"
-echo " Build Succeeded!"
+echo " Build Succeeded & Validated!"
 echo " Application: $APP_DIR"
 echo "============================================================"

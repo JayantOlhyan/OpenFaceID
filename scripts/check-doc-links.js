@@ -9,7 +9,7 @@ function getMarkdownFiles(dir) {
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (entry.name !== 'node_modules' && entry.name !== '.git' && entry.name !== 'dist') {
+      if (entry.name !== 'node_modules' && entry.name !== '.git' && entry.name !== 'dist' && entry.name !== '.cache') {
         files = files.concat(getMarkdownFiles(fullPath));
       }
     } else if (entry.name.endsWith('.md')) {

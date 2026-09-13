@@ -25,7 +25,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         let appDir = resourcesUrl.appendingPathComponent("app")
         let serveScript = appDir.appendingPathComponent("apps/desktop/serve.js").path
+        let indexHtml = appDir.appendingPathComponent("apps/desktop/index.html").path
         let cameraBin = resourcesUrl.appendingPathComponent("bin/openfaceid-camera-avf").path
+
+        if !FileManager.default.fileExists(atPath: indexHtml) {
+            NSLog("[OpenFaceID] Warning: index.html not found at %@", indexHtml)
+        }
 
         // 3. Launch Bundled Background Daemon Process
         if FileManager.default.fileExists(atPath: serveScript) {
@@ -37,9 +42,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             var env = ProcessInfo.processInfo.environment
             env["NODE_ENV"] = "production"
             env["OFID_DESKTOP_STANDALONE"] = "true"
+            env["OFID_RESOURCES_DIR"] = resourcesUrl.path
+            env["OFID_APP_DIR"] = appDir.path
             env["OFID_CAMERA_BIN"] = cameraBin
-            env["PATH"] = "\(resourcesUrl.appendingPathComponent("bin").path):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+            env["PATH"] = "\(resourcesUrl.appendingPathComponent("bin").path):/usr/bin:/bin:/usr/sbin:/sbin"
             process.environment = env
+
+            let stdinPipe = Pipe()
+            process.standardInput = stdinPipe
 
             do {
                 try process.run()
