@@ -8,6 +8,9 @@
     "apps/*"
   ],
   "type": "module",
+  "engines": {
+    "node": ">=22.6.0"
+  },
   "scripts": {
     "build": "echo 'TypeScript checked'",
     "test": "node --experimental-strip-types --test tests/unit/*.test.ts tests/evaluation/*.test.ts",
