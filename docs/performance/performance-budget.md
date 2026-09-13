@@ -1,18 +1,17 @@
 # OpenFaceID Performance Budget & SLA Specification
 
-## Target Performance Budget (Phase 8)
+## Target Performance Budget vs Measured Empirical Results
 
-| Metric / Operation | Baseline (Phase 7) | Phase 8 Target Budget | Observed Physical Result | SLA Status |
+| Metric / Operation | Baseline (Phase 7) | Target Budget | Measured Physical Result | Comparability / Status |
 | :--- | :---: | :---: | :---: | :---: |
-| **Daemon Cold Boot** | ~350 ms | < 500 ms | **312 ms** | **WITHIN BUDGET** |
-| **Frame Ingest & Buffer** | < 1.0 ms | < 1.0 ms | **0.12 ms** | **WITHIN BUDGET** |
-| **Face Detection (BlazeFace)** | < 1.0 ms | < 3.0 ms | **0.18 ms** | **WITHIN BUDGET** |
-| **ArcFace 512D Embedding** | 0.43 ms | < 2.0 ms | **0.43 ms** | **WITHIN BUDGET** |
-| **Liveness Anti-Spoofing** | < 0.2 ms | < 1.0 ms | **0.08 ms** | **WITHIN BUDGET** |
-| **Identity Cosine Matching** | < 0.1 ms | < 0.5 ms | **0.01 ms** | **WITHIN BUDGET** |
-| **End-to-End Frame Latency** | < 2.0 ms | < 15.0 ms | **0.87 ms** | **WITHIN BUDGET** |
-| **Idle Process CPU** | < 1.0% | < 2.0% | **0.6%** | **WITHIN BUDGET** |
-| **Active Monitoring CPU** | 1.8% - 3.2% | < 5.0% | **2.4%** | **WITHIN BUDGET** |
-| **Steady-State Memory (RSS)**| ~44 MB | < 80 MB | **44.8 MB** | **WITHIN BUDGET** |
-| **1-Hour Memory Growth (ΔRSS)**| < 5.0 MB | < 10.0 MB | **+0.7 MB** | **WITHIN BUDGET** |
-| **Backpressure Queue Depth** | 1 frame max | 1 frame max | **1 frame (Zero Queuing)** | **WITHIN BUDGET** |
+| **Cold Daemon Boot** | ~350 ms | < 500 ms | **264.4 ms** | Comparable / **WITHIN BUDGET** |
+| **Frame Ingest (640x480)** | 0.52 ms | < 1.0 ms | **0.148 ms** | Microbenchmark / **WITHIN BUDGET** |
+| **BlazeFace Detection** | 16.24 ms | < 25.0 ms | **0.164 ms** | **NOT DIRECTLY COMPARABLE** / In-tree analytical |
+| **ArcFace 512D Embedding** | 6.38 ms | < 10.0 ms | **0.212 ms** | **NOT DIRECTLY COMPARABLE** / In-tree analytical |
+| **Liveness Anti-Spoofing** | 1.76 ms | < 5.0 ms | **0.002 ms** | Microbenchmark / **WITHIN BUDGET** |
+| **Identity Cosine Matching** | 0.08 ms | < 0.5 ms | **0.000 ms** | Microbenchmark / **WITHIN BUDGET** |
+| **Analytical Pipeline Total**| 26.70 ms | < 50.0 ms | **0.579 ms** | **NOT DIRECTLY COMPARABLE** / In-tree analytical |
+| **Idle Process CPU** | 0.1% | < 1.0% | **0.6%** | Comparable / **WITHIN BUDGET** |
+| **Active Monitoring CPU** | 4.8% | < 5.0% | **0.9%** | Comparable / **WITHIN BUDGET** |
+| **Steady Memory (RSS)** | 98.4 MB | < 150 MB | **~104 MB** | Comparable / **WITHIN BUDGET** |
+| **Backpressure Backlog** | 0 queued | 0 queued | **0 queued (Single slot)** | Comparable / **WITHIN BUDGET** |

@@ -1,31 +1,30 @@
 # OpenFaceID Latency Profile & Pipeline Breakdown
 
-## Component Latency Breakdown (Phase 8 Empirical Results)
+## 1. In-Tree Analytical Micro-Stage Breakdown
 
 ```text
-[Raw Camera Capture] ──(0.12 ms)──> [Frame Buffer Ingest]
-                                            │
-                                            ▼
-                                  [BlazeFace Detection] (0.18 ms)
-                                            │
-                                            ▼
-                                  [Face Quality Analysis] (0.05 ms)
-                                            │
-                                            ▼
-                                  [ArcFace 512D Vector] (0.43 ms)
-                                            │
-                                            ▼
-                                  [Liveness Anti-Spoof] (0.08 ms)
-                                            │
-                                            ▼
-                                  [Identity Cosine Search] (0.01 ms)
-                                            │
-                                            ▼
-                                  [Authoritative Presence FSM] (0.01 ms)
-                                            │
-                                            ▼
-                       Total Pipeline Latency: ~0.87 ms Median (< 1.71 ms P95)
+[Synthetic Frame Ingest] ──(0.159 ms)──> [BlazeFace 896 Anchors] (0.174 ms)
+                                                    │
+                                                    ▼
+                                          [Quality Check] (0.052 ms)
+                                                    │
+                                                    ▼
+                                          [ArcFace 512D] (0.238 ms)
+                                                    │
+                                                    ▼
+                                          [Liveness Anti-Spoof] (0.002 ms)
+                                                    │
+                                                    ▼
+                                          [Linear Cosine Match] (0.001 ms)
+                                                    │
+                                                    ▼
+                                          [Canonical FSM] (0.001 ms)
+                                                    │
+                                                    ▼
+                             Total Analytical Microbenchmark: ~0.628 ms Median
 ```
 
-- **Dominant Component:** Feature extraction (`ArcFaceEmbedder`) represents ~50% of the active computation budget (0.43 ms median).
-- **Processing Headroom:** At 0.87 ms per frame, the engine can theoretically evaluate over **1,100 frames per second**, leaving >90% single-core headroom under nominal 15–30 FPS operation.
+## 2. Critical Comparability Clarification (Section 3 & 8)
+- **Phase 7 Reported Baseline (16.24 ms detection, 6.38 ms embedding):** Came from historical runs under different hardware, lighting, or browser-based WebRTC capture pipelines.
+- **Phase 8 In-Tree Analytical Latency (0.174 ms detection, 0.238 ms embedding):** Measures pure Node.js in-tree TypeScript analytical mathematical execution on synthetic memory buffers.
+- **Conclusion:** These workloads are **NOT DIRECTLY COMPARABLE**. The numerical decrease reflects differing benchmark boundaries, not a 90x algorithmic optimization.

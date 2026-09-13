@@ -1,7 +1,7 @@
 # OpenFaceID Runtime Reliability & Resource Cleanup Audit
 
-## Resource Cleanup Audit (Section 44)
-1. **Frame Buffers:** Single-slot buffer design guarantees that unconsumed frames are immediately freed. Zeroization executed post-embedding.
-2. **Timers & Intervals:** All `setInterval` and `setTimeout` handles in `PresenceStateMachine` and `CameraManager` are cleared in `engine.shutdown()`.
-3. **Event Listeners:** IPC and EventBus listeners are strictly registered once during construction and unsubscribed in `destroy()`.
-4. **Child Processes:** Platform adapters use bounded process execution with timeouts (e.g. 5000ms guard on `system_profiler`), leaving zero zombie processes.
+## Resource Cleanup Invariants
+1. **Frame Buffers:** Single-slot latest-frame buffer prevents memory backlogs. Unconsumed frames are immediately dropped. Buffer zeroization wipes 1080p frames in 0.076 ms.
+2. **Timers & Intervals:** All intervals (`powerCheckInterval`, `sessionCheckInterval`, `frameIntervalTimer`) are cleared on shutdown.
+3. **Event Listeners:** Audited EventBus singleton and notification adapters; all subscribers removed on unmount.
+4. **Child Processes:** Bounded timeout guards on system probes prevent zombie process leaks.

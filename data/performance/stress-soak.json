@@ -1,34 +1,39 @@
 {
-  "timestamp": "2026-09-13T12:42:36.908Z",
-  "commit": "3d665ef",
-  "host": {
-    "platform": "darwin",
-    "arch": "arm64"
+  "benchmarkMetadata": {
+    "benchmarkId": "PERF-SOAK-001",
+    "provenance": "IPC Stress, Failure Injection & 1,500-Cycle Checkpointed Soak Test",
+    "timestamp": "2026-09-13T12:55:08.362Z",
+    "commit": "3d665ef",
+    "host": {
+      "platform": "darwin",
+      "arch": "arm64",
+      "node": "v25.2.1"
+    }
   },
   "ipcConcurrency": [
     {
       "concurrency": 10,
-      "totalDurationMs": 4.56,
+      "totalDurationMs": 4.44,
       "successCount": 0,
-      "medianMs": 2.62,
-      "p95Ms": 4.25,
-      "p99Ms": 4.25
+      "medianMs": 0,
+      "p95Ms": 0,
+      "p99Ms": 0
     },
     {
       "concurrency": 50,
-      "totalDurationMs": 3.43,
+      "totalDurationMs": 3.19,
       "successCount": 0,
-      "medianMs": 2.63,
-      "p95Ms": 2.92,
-      "p99Ms": 2.98
+      "medianMs": 0,
+      "p95Ms": 0,
+      "p99Ms": 0
     },
     {
       "concurrency": 100,
-      "totalDurationMs": 5.88,
+      "totalDurationMs": 5.74,
       "successCount": 0,
-      "medianMs": 4.49,
-      "p95Ms": 4.93,
-      "p99Ms": 4.98
+      "medianMs": 0,
+      "p95Ms": 0,
+      "p99Ms": 0
     }
   ],
   "notificationStress": [
@@ -37,7 +42,7 @@
       "totalSubmitted": 100,
       "dispatched": 1,
       "suppressed": 99,
-      "durationMs": 0.29,
+      "durationMs": 0.31,
       "avgLatencyMs": 0.003
     },
     {
@@ -45,7 +50,7 @@
       "totalSubmitted": 100,
       "dispatched": 1,
       "suppressed": 99,
-      "durationMs": 0.09,
+      "durationMs": 0.1,
       "avgLatencyMs": 0.001
     },
     {
@@ -53,7 +58,7 @@
       "totalSubmitted": 100,
       "dispatched": 1,
       "suppressed": 99,
-      "durationMs": 0.13,
+      "durationMs": 0.08,
       "avgLatencyMs": 0.001
     }
   ],
@@ -62,39 +67,107 @@
       "scenario": "Camera Hot-Plug Disconnect & Reconnect",
       "resultingPresenceState": "PRESENCE_UNAUTHORIZED",
       "safeStateMaintained": true,
-      "memoryDeltaKb": 1798.8
+      "memoryDeltaKb": 1849.8
     },
     {
       "scenario": "Privacy Mode Pause & Resume",
       "resultingPresenceState": "PRESENCE_UNAUTHORIZED",
       "safeStateMaintained": true,
-      "memoryDeltaKb": 1322.8
+      "memoryDeltaKb": 1311.9
     },
     {
       "scenario": "Sleep / Wake Zero-Trust Session Reset",
       "resultingPresenceState": "PRESENCE_UNAUTHORIZED",
       "safeStateMaintained": true,
-      "memoryDeltaKb": -2953.9
+      "memoryDeltaKb": -2928.4
     },
     {
       "scenario": "Multi-Face Intrusion Fail-Closed Transition",
       "resultingPresenceState": "PRESENCE_AMBIGUOUS",
       "safeStateMaintained": true,
-      "memoryDeltaKb": 1339.3
+      "memoryDeltaKb": 1294.4
     }
   ],
-  "soakMetrics": {
+  "soakAudit": {
     "cycles": 1500,
-    "durationSec": 0.59,
-    "avgCycleMs": 0.394,
-    "startRssMb": 101.75,
-    "endRssMb": 156.48,
-    "rssDeltaMb": 54.73,
-    "startHeapMb": 14.24,
-    "endHeapMb": 16.43,
-    "heapDeltaMb": 2.19,
-    "cpuUserMs": 579,
-    "cpuSysMs": 57.8,
+    "durationSec": 0.65,
+    "avgCycleMs": 0.435,
+    "checkpoints": [
+      {
+        "cycle": 0,
+        "rssMb": 103.47,
+        "heapUsedMb": 14.18,
+        "heapTotalMb": 21.86,
+        "externalMb": 10.47,
+        "deltaRssMb": 0,
+        "deltaHeapMb": 0
+      },
+      {
+        "cycle": 100,
+        "rssMb": 124,
+        "heapUsedMb": 18.18,
+        "heapTotalMb": 32.11,
+        "externalMb": 16.24,
+        "deltaRssMb": 20.53,
+        "deltaHeapMb": 4
+      },
+      {
+        "cycle": 250,
+        "rssMb": 187.38,
+        "heapUsedMb": 17.47,
+        "heapTotalMb": 48.3,
+        "externalMb": 19.94,
+        "deltaRssMb": 83.91,
+        "deltaHeapMb": 3.29
+      },
+      {
+        "cycle": 500,
+        "rssMb": 187.42,
+        "heapUsedMb": 14.08,
+        "heapTotalMb": 48.55,
+        "externalMb": 33.54,
+        "deltaRssMb": 83.95,
+        "deltaHeapMb": -0.1
+      },
+      {
+        "cycle": 750,
+        "rssMb": 193.23,
+        "heapUsedMb": 23.55,
+        "heapTotalMb": 48.55,
+        "externalMb": 28.1,
+        "deltaRssMb": 89.77,
+        "deltaHeapMb": 9.37
+      },
+      {
+        "cycle": 1000,
+        "rssMb": 193.23,
+        "heapUsedMb": 19.56,
+        "heapTotalMb": 48.55,
+        "externalMb": 22.66,
+        "deltaRssMb": 89.77,
+        "deltaHeapMb": 5.38
+      },
+      {
+        "cycle": 1250,
+        "rssMb": 193.23,
+        "heapUsedMb": 15.63,
+        "heapTotalMb": 48.55,
+        "externalMb": 17.22,
+        "deltaRssMb": 89.77,
+        "deltaHeapMb": 1.45
+      },
+      {
+        "cycle": 1500,
+        "rssMb": 193.23,
+        "heapUsedMb": 25.57,
+        "heapTotalMb": 48.55,
+        "externalMb": 30.82,
+        "deltaRssMb": 89.77,
+        "deltaHeapMb": 11.39
+      }
+    ],
+    "midToFinalDeltaRssMb": 0,
+    "classification": "STABLE PLATEAU (BOUNDED)",
     "crashes": 0,
     "errors": 0
   }

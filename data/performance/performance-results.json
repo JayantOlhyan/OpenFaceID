@@ -3,232 +3,363 @@
   "os": "Darwin 25.6.0",
   "architecture": "arm64",
   "machineId": "MAC-01",
-  "hardware": "Apple MacBook Air (M4, 16 GB RAM)",
+  "hardware": "Apple MacBook Air (M4, 16 GB Unified Memory)",
   "commit": "3d665ef",
-  "timestamp": "2026-09-13T12:42:36.966Z",
+  "timestamp": "2026-09-13T12:55:08.417Z",
   "camera": "FaceTime HD Camera (AVFoundation)",
   "pipeline": {
-    "timestamp": "2026-09-13T12:42:32.377Z",
-    "commit": "3d665ef",
-    "host": {
-      "platform": "darwin",
-      "arch": "arm64"
-    },
-    "pipelineLatencies": {
-      "startupLatencyMs": {
-        "median": 346.409625,
-        "p95": 401.3423750000002
-      },
-      "frameIngestMs": {
-        "median": 0.6159170000000813,
-        "p95": 1.6335839999997006,
-        "p99": 6.455999999999676,
-        "min": 0.6006250000000364,
-        "max": 6.455999999999676
-      },
-      "detectionMs": {
-        "median": 0.17529199999989942,
-        "p95": 0.6132920000000013,
-        "p99": 3.8760000000002037,
-        "min": 0.166374999999789,
-        "max": 3.8760000000002037
-      },
-      "qualityAnalysisMs": {
-        "median": 0.054166999999779364,
-        "p95": 0.13629200000013952,
-        "p99": 0.6156670000000304,
-        "min": 0.05104200000005221,
-        "max": 0.6156670000000304
-      },
-      "embeddingMs": {
-        "median": 0.20804199999975026,
-        "p95": 0.38333300000022064,
-        "p99": 3.5676659999999174,
-        "min": 0.20412500000020373,
-        "max": 3.5676659999999174
-      },
-      "livenessMs": {
-        "median": 0.0017909999996845727,
-        "p95": 0.0224169999996775,
-        "p99": 0.20125000000007276,
-        "min": 0.0014159999996081751,
-        "max": 0.20125000000007276
-      },
-      "matchingMs": {
-        "median": 0.0019580000002861198,
-        "p95": 0.01116699999965931,
-        "p99": 0.035957999999936874,
-        "min": 0.0018749999999272404,
-        "max": 0.035957999999936874
-      },
-      "presenceDecisionMs": {
-        "median": 0.0005410000003394089,
-        "p95": 0.005124999999679858,
-        "p99": 0.03429200000027777,
-        "min": 0.000416000000313943,
-        "max": 0.03429200000027777
-      },
-      "endToEndLatencyMs": {
-        "median": 1.0635400000001027,
-        "p95": 2.6300410000008014,
-        "p99": 14.786833000000115,
-        "min": 1.0313750000000255,
-        "max": 14.786833000000115
+    "benchmarkMetadata": {
+      "benchmarkId": "PERF-PIPE-001",
+      "provenance": "In-Tree Analytical Microbenchmark & Simulated Overload Test",
+      "inputDimensions": "640x480 RGBA synthetic buffer",
+      "warmupCycles": 50,
+      "measuredCycles": 250,
+      "timestamp": "2026-09-13T12:55:03.332Z",
+      "commit": "3d665ef",
+      "host": {
+        "platform": "darwin",
+        "arch": "arm64",
+        "node": "v25.2.1"
       }
     },
-    "frameRates": [
+    "analyticalPipelineLatencies": {
+      "startupLatencyMs": {
+        "min": 251.2940000000001,
+        "median": 264.446084,
+        "p95": 377.9285,
+        "max": 377.9285
+      },
+      "frameIngestMs": {
+        "min": 0.14570800000001327,
+        "median": 0.1479580000000169,
+        "p95": 0.1542500000000473,
+        "p99": 0.1587499999998272,
+        "max": 0.188083000000006
+      },
+      "detectionMs": {
+        "min": 0.16191600000001927,
+        "median": 0.16395799999986593,
+        "p95": 0.19791699999996126,
+        "p99": 0.21137499999986176,
+        "max": 0.21633300000007694
+      },
+      "qualityAnalysisMs": {
+        "min": 0.048584000000118976,
+        "median": 0.04958299999998417,
+        "p95": 0.05204100000014478,
+        "p99": 0.057999999999992724,
+        "max": 0.06279199999994489
+      },
+      "embeddingMs": {
+        "min": 0.20425000000000182,
+        "median": 0.21220799999991868,
+        "p95": 0.2313329999999496,
+        "p99": 0.2660000000000764,
+        "max": 0.2747910000000502
+      },
+      "livenessMs": {
+        "min": 0.0014169999999467109,
+        "median": 0.0015829999999823485,
+        "p95": 0.0021669999998721323,
+        "p99": 0.007000000000061846,
+        "max": 0.009749999999939973
+      },
+      "matchingMs": {
+        "min": 0.00041599999985919567,
+        "median": 0.0004590000000916916,
+        "p95": 0.002124999999978172,
+        "p99": 0.0029999999999290594,
+        "max": 0.015374999999949068
+      },
+      "presenceDecisionMs": {
+        "min": 0.00045799999998052954,
+        "median": 0.0005000000001018634,
+        "p95": 0.0015000000000782165,
+        "p99": 0.004042000000026746,
+        "max": 0.07008300000006784
+      },
+      "analyticalPipelineLatencyMs": {
+        "min": 0.5694160000002739,
+        "median": 0.5789999999999509,
+        "p95": 0.6240419999996902,
+        "p99": 0.6927079999998114,
+        "max": 0.703125
+      }
+    },
+    "nominalThroughput": [
       {
         "requestedFps": 15,
-        "actualPushedFps": 14.7,
-        "processedFps": 14.7,
-        "droppedFps": 0
+        "actualPushedFps": 14.5,
+        "processedFps": 14.5,
+        "droppedFps": 0,
+        "bufferCapacity": 1,
+        "queuedBacklog": 0
       },
       {
         "requestedFps": 30,
-        "actualPushedFps": 27.6,
-        "processedFps": 27.6,
-        "droppedFps": 0
+        "actualPushedFps": 28.7,
+        "processedFps": 28.7,
+        "droppedFps": 0,
+        "bufferCapacity": 1,
+        "queuedBacklog": 0
       },
       {
         "requestedFps": 60,
-        "actualPushedFps": 52.4,
-        "processedFps": 52.4,
-        "droppedFps": 0
+        "actualPushedFps": 57.6,
+        "processedFps": 57.6,
+        "droppedFps": 0,
+        "bufferCapacity": 1,
+        "queuedBacklog": 0
+      }
+    ],
+    "overloadBackpressure": [
+      {
+        "requestedFps": 30,
+        "actualPushedFps": 26.2,
+        "processedFps": 14,
+        "droppedFps": 12.2,
+        "dropRatePercent": 46.7,
+        "bufferCapacity": 1,
+        "queuedBacklog": 0,
+        "avgFrameAgeMs": 35.5,
+        "staleFramesPrevented": true
+      },
+      {
+        "requestedFps": 60,
+        "actualPushedFps": 53.5,
+        "processedFps": 17.8,
+        "droppedFps": 35.6,
+        "dropRatePercent": 66.7,
+        "bufferCapacity": 1,
+        "queuedBacklog": 0,
+        "avgFrameAgeMs": 35.5,
+        "staleFramesPrevented": true
+      },
+      {
+        "requestedFps": 120,
+        "actualPushedFps": 100.8,
+        "processedFps": 23.4,
+        "droppedFps": 77.4,
+        "dropRatePercent": 76.8,
+        "bufferCapacity": 1,
+        "queuedBacklog": 0,
+        "avgFrameAgeMs": 36.2,
+        "staleFramesPrevented": true
       }
     ]
   },
   "resource": {
-    "timestamp": "2026-09-13T12:42:35.104Z",
-    "commit": "3d665ef",
-    "host": {
-      "platform": "darwin",
-      "arch": "arm64"
+    "benchmarkMetadata": {
+      "benchmarkId": "PERF-RES-001",
+      "provenance": "Runtime Resource, Lifecycle Stress & Buffer Zeroization Benchmark",
+      "timestamp": "2026-09-13T12:55:06.532Z",
+      "commit": "3d665ef",
+      "host": {
+        "platform": "darwin",
+        "arch": "arm64",
+        "node": "v25.2.1"
+      }
     },
     "stateProfiles": [
       {
         "state": "1. Idle (Process Running)",
-        "rssMb": 97.8,
+        "rssMb": 94.75,
         "heapUsedMb": 10.42,
-        "cpuUsagePercent": 13.4
+        "heapTotalMb": 16.47,
+        "externalMb": 9.72,
+        "cpuUsagePercent": 8.4
       },
       {
         "state": "2. Daemon Active (Camera Inactive)",
-        "rssMb": 97.83,
-        "heapUsedMb": 10.46,
+        "rssMb": 94.81,
+        "heapUsedMb": 10.47,
+        "heapTotalMb": 16.47,
+        "externalMb": 9.62,
         "cpuUsagePercent": 0.6
       },
       {
         "state": "3. Camera Active (No Face)",
-        "rssMb": 97.83,
-        "heapUsedMb": 10.47,
-        "cpuUsagePercent": 0.2
-      },
-      {
-        "state": "4. Face Visible",
-        "rssMb": 97.84,
+        "rssMb": 94.81,
         "heapUsedMb": 10.48,
+        "heapTotalMb": 16.47,
+        "externalMb": 9.62,
         "cpuUsagePercent": 0.3
       },
       {
+        "state": "4. Face Visible",
+        "rssMb": 94.81,
+        "heapUsedMb": 10.49,
+        "heapTotalMb": 16.47,
+        "externalMb": 9.62,
+        "cpuUsagePercent": 1
+      },
+      {
         "state": "5. Continuous Recognition",
-        "rssMb": 105.09,
-        "heapUsedMb": 12.16,
-        "cpuUsagePercent": 41.7
+        "rssMb": 103.31,
+        "heapUsedMb": 11.43,
+        "heapTotalMb": 20.22,
+        "externalMb": 14.88,
+        "cpuUsagePercent": 63.5
       },
       {
         "state": "6. Liveness Evaluation",
-        "rssMb": 105.11,
-        "heapUsedMb": 12.03,
+        "rssMb": 103.33,
+        "heapUsedMb": 10.83,
+        "heapTotalMb": 20.22,
+        "externalMb": 14.88,
         "cpuUsagePercent": 0.2
       },
       {
         "state": "7. Multiple Faces (Fail-Closed)",
-        "rssMb": 103.16,
-        "heapUsedMb": 11.84,
+        "rssMb": 103.34,
+        "heapUsedMb": 10.85,
+        "heapTotalMb": 20.22,
+        "externalMb": 14.88,
         "cpuUsagePercent": 0.3
       },
       {
         "state": "8. Privacy Pause Active",
-        "rssMb": 95.92,
-        "heapUsedMb": 11.85,
+        "rssMb": 103.38,
+        "heapUsedMb": 10.86,
+        "heapTotalMb": 20.22,
+        "externalMb": 14.88,
         "cpuUsagePercent": 0.2
       }
     ],
-    "embeddingMemoryScaling": [
+    "lifecycleStressAudit": {
+      "checkpoints": [
+        {
+          "cycle": 0,
+          "rssMb": 103.44,
+          "heapUsedMb": 10.94,
+          "heapTotalMb": 20.22,
+          "externalMb": 14.88
+        },
+        {
+          "cycle": 10,
+          "rssMb": 103.8,
+          "heapUsedMb": 12.36,
+          "heapTotalMb": 20.22,
+          "externalMb": 10.98
+        },
+        {
+          "cycle": 25,
+          "rssMb": 103.84,
+          "heapUsedMb": 12.48,
+          "heapTotalMb": 20.47,
+          "externalMb": 10.98
+        },
+        {
+          "cycle": 50,
+          "rssMb": 103.91,
+          "heapUsedMb": 13.85,
+          "heapTotalMb": 20.47,
+          "externalMb": 12.34
+        }
+      ],
+      "totalCycles": 50,
+      "baseRssMb": 103.44,
+      "finalRssMb": 103.91,
+      "deltaRssMb": 0.47,
+      "classification": "PROBABLE RUNTIME CACHE"
+    },
+    "transientVectorAccumulation": [
       {
         "iterations": 100,
-        "durationMs": 28.9,
-        "avgLatencyMs": 0.289,
-        "heapGrowthMb": -0.27,
+        "durationMs": 34.2,
+        "avgLatencyMs": 0.342,
+        "heapGrowthMb": -0.24,
+        "leakDetected": false
+      },
+      {
+        "iterations": 500,
+        "durationMs": 105.2,
+        "avgLatencyMs": 0.21,
+        "heapGrowthMb": 0.32,
         "leakDetected": false
       },
       {
         "iterations": 1000,
-        "durationMs": 206.3,
-        "avgLatencyMs": 0.206,
-        "heapGrowthMb": -0.23,
+        "durationMs": 242.5,
+        "avgLatencyMs": 0.242,
+        "heapGrowthMb": -2.36,
+        "leakDetected": false
+      },
+      {
+        "iterations": 2500,
+        "durationMs": 490.7,
+        "avgLatencyMs": 0.196,
+        "heapGrowthMb": 0.45,
         "leakDetected": false
       },
       {
         "iterations": 5000,
-        "durationMs": 983,
-        "avgLatencyMs": 0.197,
-        "heapGrowthMb": 0.23,
+        "durationMs": 973,
+        "avgLatencyMs": 0.195,
+        "heapGrowthMb": -4.25,
         "leakDetected": false
       }
     ],
     "zeroizationThroughput": [
       {
         "resolution": "1080p FHD (1920x1080)",
+        "uncompressedBytes": 8294400,
         "sizeMb": 7.91,
-        "medianMs": 0.07,
-        "p95Ms": 0.08
+        "medianMs": 0.063,
+        "p95Ms": 0.069
       },
       {
         "resolution": "720p HD (1280x720)",
+        "uncompressedBytes": 3686400,
         "sizeMb": 3.52,
-        "medianMs": 0.03,
-        "p95Ms": 0.03
+        "medianMs": 0.026,
+        "p95Ms": 0.034
       },
       {
         "resolution": "480p SD (640x480)",
+        "uncompressedBytes": 1228800,
         "sizeMb": 1.17,
-        "medianMs": 0.01,
-        "p95Ms": 0.01
+        "medianMs": 0.009,
+        "p95Ms": 0.009
       }
     ]
   },
   "soak": {
-    "timestamp": "2026-09-13T12:42:36.908Z",
-    "commit": "3d665ef",
-    "host": {
-      "platform": "darwin",
-      "arch": "arm64"
+    "benchmarkMetadata": {
+      "benchmarkId": "PERF-SOAK-001",
+      "provenance": "IPC Stress, Failure Injection & 1,500-Cycle Checkpointed Soak Test",
+      "timestamp": "2026-09-13T12:55:08.362Z",
+      "commit": "3d665ef",
+      "host": {
+        "platform": "darwin",
+        "arch": "arm64",
+        "node": "v25.2.1"
+      }
     },
     "ipcConcurrency": [
       {
         "concurrency": 10,
-        "totalDurationMs": 4.56,
+        "totalDurationMs": 4.44,
         "successCount": 0,
-        "medianMs": 2.62,
-        "p95Ms": 4.25,
-        "p99Ms": 4.25
+        "medianMs": 0,
+        "p95Ms": 0,
+        "p99Ms": 0
       },
       {
         "concurrency": 50,
-        "totalDurationMs": 3.43,
+        "totalDurationMs": 3.19,
         "successCount": 0,
-        "medianMs": 2.63,
-        "p95Ms": 2.92,
-        "p99Ms": 2.98
+        "medianMs": 0,
+        "p95Ms": 0,
+        "p99Ms": 0
       },
       {
         "concurrency": 100,
-        "totalDurationMs": 5.88,
+        "totalDurationMs": 5.74,
         "successCount": 0,
-        "medianMs": 4.49,
-        "p95Ms": 4.93,
-        "p99Ms": 4.98
+        "medianMs": 0,
+        "p95Ms": 0,
+        "p99Ms": 0
       }
     ],
     "notificationStress": [
@@ -237,7 +368,7 @@
         "totalSubmitted": 100,
         "dispatched": 1,
         "suppressed": 99,
-        "durationMs": 0.29,
+        "durationMs": 0.31,
         "avgLatencyMs": 0.003
       },
       {
@@ -245,7 +376,7 @@
         "totalSubmitted": 100,
         "dispatched": 1,
         "suppressed": 99,
-        "durationMs": 0.09,
+        "durationMs": 0.1,
         "avgLatencyMs": 0.001
       },
       {
@@ -253,7 +384,7 @@
         "totalSubmitted": 100,
         "dispatched": 1,
         "suppressed": 99,
-        "durationMs": 0.13,
+        "durationMs": 0.08,
         "avgLatencyMs": 0.001
       }
     ],
@@ -262,39 +393,107 @@
         "scenario": "Camera Hot-Plug Disconnect & Reconnect",
         "resultingPresenceState": "PRESENCE_UNAUTHORIZED",
         "safeStateMaintained": true,
-        "memoryDeltaKb": 1798.8
+        "memoryDeltaKb": 1849.8
       },
       {
         "scenario": "Privacy Mode Pause & Resume",
         "resultingPresenceState": "PRESENCE_UNAUTHORIZED",
         "safeStateMaintained": true,
-        "memoryDeltaKb": 1322.8
+        "memoryDeltaKb": 1311.9
       },
       {
         "scenario": "Sleep / Wake Zero-Trust Session Reset",
         "resultingPresenceState": "PRESENCE_UNAUTHORIZED",
         "safeStateMaintained": true,
-        "memoryDeltaKb": -2953.9
+        "memoryDeltaKb": -2928.4
       },
       {
         "scenario": "Multi-Face Intrusion Fail-Closed Transition",
         "resultingPresenceState": "PRESENCE_AMBIGUOUS",
         "safeStateMaintained": true,
-        "memoryDeltaKb": 1339.3
+        "memoryDeltaKb": 1294.4
       }
     ],
-    "soakMetrics": {
+    "soakAudit": {
       "cycles": 1500,
-      "durationSec": 0.59,
-      "avgCycleMs": 0.394,
-      "startRssMb": 101.75,
-      "endRssMb": 156.48,
-      "rssDeltaMb": 54.73,
-      "startHeapMb": 14.24,
-      "endHeapMb": 16.43,
-      "heapDeltaMb": 2.19,
-      "cpuUserMs": 579,
-      "cpuSysMs": 57.8,
+      "durationSec": 0.65,
+      "avgCycleMs": 0.435,
+      "checkpoints": [
+        {
+          "cycle": 0,
+          "rssMb": 103.47,
+          "heapUsedMb": 14.18,
+          "heapTotalMb": 21.86,
+          "externalMb": 10.47,
+          "deltaRssMb": 0,
+          "deltaHeapMb": 0
+        },
+        {
+          "cycle": 100,
+          "rssMb": 124,
+          "heapUsedMb": 18.18,
+          "heapTotalMb": 32.11,
+          "externalMb": 16.24,
+          "deltaRssMb": 20.53,
+          "deltaHeapMb": 4
+        },
+        {
+          "cycle": 250,
+          "rssMb": 187.38,
+          "heapUsedMb": 17.47,
+          "heapTotalMb": 48.3,
+          "externalMb": 19.94,
+          "deltaRssMb": 83.91,
+          "deltaHeapMb": 3.29
+        },
+        {
+          "cycle": 500,
+          "rssMb": 187.42,
+          "heapUsedMb": 14.08,
+          "heapTotalMb": 48.55,
+          "externalMb": 33.54,
+          "deltaRssMb": 83.95,
+          "deltaHeapMb": -0.1
+        },
+        {
+          "cycle": 750,
+          "rssMb": 193.23,
+          "heapUsedMb": 23.55,
+          "heapTotalMb": 48.55,
+          "externalMb": 28.1,
+          "deltaRssMb": 89.77,
+          "deltaHeapMb": 9.37
+        },
+        {
+          "cycle": 1000,
+          "rssMb": 193.23,
+          "heapUsedMb": 19.56,
+          "heapTotalMb": 48.55,
+          "externalMb": 22.66,
+          "deltaRssMb": 89.77,
+          "deltaHeapMb": 5.38
+        },
+        {
+          "cycle": 1250,
+          "rssMb": 193.23,
+          "heapUsedMb": 15.63,
+          "heapTotalMb": 48.55,
+          "externalMb": 17.22,
+          "deltaRssMb": 89.77,
+          "deltaHeapMb": 1.45
+        },
+        {
+          "cycle": 1500,
+          "rssMb": 193.23,
+          "heapUsedMb": 25.57,
+          "heapTotalMb": 48.55,
+          "externalMb": 30.82,
+          "deltaRssMb": 89.77,
+          "deltaHeapMb": 11.39
+        }
+      ],
+      "midToFinalDeltaRssMb": 0,
+      "classification": "STABLE PLATEAU (BOUNDED)",
       "crashes": 0,
       "errors": 0
     }

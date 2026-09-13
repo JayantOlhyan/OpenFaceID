@@ -1,69 +1,84 @@
+import http from 'http';
 import { performance } from 'perf_hooks';
 import fs from 'fs';
 import path from 'path';
-import http from 'http';
 import { fileURLToPath } from 'url';
 import { DesktopEngine } from '../../apps/desktop/src/daemon.ts';
-import { EventBus } from '../../packages/core/src/index.ts';
-import { NotificationManager, NotificationPolicy } from '../../packages/core/src/notifications/index.ts';
+import { NotificationManager, NotificationPolicy, EventBus } from '../../packages/core/src/index.ts';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const OUT_DIR = path.resolve(__dirname, '../../data/performance');
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
 async function runStressSoakBenchmark() {
   console.log('========================================================================');
-  console.log('OPENFACEID — PHASE 8 STRESS, SOAK & LEAK AUDIT BENCHMARK');
+  console.log('OPENFACEID — PHASE 8 IPC STRESS, FAILURE INJECTION & SOAK AUDIT');
   console.log('========================================================================');
 
   const engine = new DesktopEngine({ leaveTimeoutSec: 15, gracePeriodSec: 3 });
   await engine.initialize();
-  const token = engine.token;
 
-  // 1. IPC Concurrency Stress Test (10, 50, 100 concurrent requests)
-  console.log('1. Benchmarking Localhost IPC Throughput & Concurrency (10, 50, 100)...');
+  // Read ephemeral token
+  const tokenPath = path.join(process.env.HOME || '/tmp', '.openfaceid', 'token');
+  let token = '';
+  if (fs.existsSync(tokenPath)) {
+    token = fs.readFileSync(tokenPath, 'utf8').trim();
+  }
+
+  // 1. IPC Concurrency Stress
+  console.log('1. Benchmarking Localhost IPC Concurrency & Latency (10, 50, 100 concurrent requests)...');
   const concurrencyLevels = [10, 50, 100];
   const ipcResults = [];
 
-  function makeIpcRequest() {
-    return new Promise(resolve => {
-      const t0 = performance.now();
-      const req = http.request(
-        {
-          hostname: '127.0.0.1',
-          port: 41793,
-          path: '/api/v1/status',
-          method: 'GET',
-          headers: { Authorization: `Bearer ${token}` },
-        },
-        res => {
-          res.on('data', () => {});
-          res.on('end', () => {
-            resolve({ statusCode: res.statusCode || 0, latencyMs: performance.now() - t0 });
-          });
-        }
-      );
-      req.on('error', () => resolve({ statusCode: 500, latencyMs: performance.now() - t0 }));
-      req.end();
-    });
-  }
-
   for (const concurrency of concurrencyLevels) {
+    const times = [];
     const t0 = performance.now();
-    const promises = Array.from({ length: concurrency }, () => makeIpcRequest());
-    const responses = await Promise.all(promises);
-    const totalMs = performance.now() - t0;
 
-    const latencies = responses.map(r => r.latencyMs).sort((a, b) => a - b);
-    const successCount = responses.filter(r => r.statusCode === 200).length;
+    const reqPromises = Array.from({ length: concurrency }).map(() => {
+      return new Promise((resolve) => {
+        const reqStart = performance.now();
+        const req = http.request(
+          {
+            hostname: '127.0.0.1',
+            port: 41793,
+            path: '/api/v1/status',
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            timeout: 2000,
+          },
+          (res) => {
+            let data = '';
+            res.on('data', (chunk) => (data += chunk));
+            res.on('end', () => {
+              const reqEnd = performance.now();
+              times.push(reqEnd - reqStart);
+              resolve({ statusCode: res.statusCode, ok: res.statusCode === 200 });
+            });
+          }
+        );
+        req.on('error', (err) => resolve({ error: err.message, ok: false }));
+        req.end();
+      });
+    });
+
+    const results = await Promise.all(reqPromises);
+    const t1 = performance.now();
+
+    times.sort((a, b) => a - b);
+    const median = times[Math.floor(times.length * 0.5)] || 0;
+    const p95 = times[Math.floor(times.length * 0.95)] || 0;
+    const p99 = times[Math.floor(times.length * 0.99)] || 0;
 
     ipcResults.push({
       concurrency,
-      totalDurationMs: +totalMs.toFixed(2),
-      successCount,
-      medianMs: +latencies[Math.floor(latencies.length * 0.5)].toFixed(2),
-      p95Ms: +latencies[Math.floor(latencies.length * 0.95)].toFixed(2),
-      p99Ms: +latencies[Math.floor(latencies.length * 0.99)].toFixed(2),
+      totalDurationMs: +(t1 - t0).toFixed(2),
+      successCount: results.filter((r) => r.ok).length,
+      medianMs: +median.toFixed(2),
+      p95Ms: +p95.toFixed(2),
+      p99Ms: +p99.toFixed(2),
     });
   }
 
@@ -169,8 +184,11 @@ async function runStressSoakBenchmark() {
     console.log(`| ${fs.scenario.padEnd(42)} | ${fs.resultingPresenceState.padEnd(25)} | ${fs.safeStateMaintained ? 'FAIL-CLOSED (OK)' : 'COMPROMISED!'} | ${fs.memoryDeltaKb.toString().padStart(11)} KB |`);
   }
 
-  // 4. Continuous Soak Test (1,500 Full Pipeline Frames)
-  console.log('\n4. Running 1,500-Cycle Extended Stability & Memory Soak...');
+  // 4. Checkpointed 1,500-Cycle Extended Soak Audit
+  console.log('\n4. Running Checkpointed 1,500-Cycle Soak Audit (Checkpoints: 0, 100, 250, 500, 750, 1000, 1250, 1500)...');
+  const CHECKPOINTS = [0, 100, 250, 500, 750, 1000, 1250, 1500];
+  const checkpointRecords = [];
+
   const memStart = process.memoryUsage();
   const cpuStart = process.cpuUsage();
   const tSoakStart = performance.now();
@@ -179,57 +197,96 @@ async function runStressSoakBenchmark() {
   const w = 640;
   const h = 480;
 
-  for (let i = 0; i < SOAK_CYCLES; i++) {
+  function sampleCheckpoint(cycle) {
+    const mem = process.memoryUsage();
+    checkpointRecords.push({
+      cycle,
+      rssMb: +(mem.rss / (1024 * 1024)).toFixed(2),
+      heapUsedMb: +(mem.heapUsed / (1024 * 1024)).toFixed(2),
+      heapTotalMb: +(mem.heapTotal / (1024 * 1024)).toFixed(2),
+      externalMb: +(mem.external / (1024 * 1024)).toFixed(2),
+      deltaRssMb: +((mem.rss - memStart.rss) / (1024 * 1024)).toFixed(2),
+      deltaHeapMb: +((mem.heapUsed - memStart.heapUsed) / (1024 * 1024)).toFixed(2),
+    });
+  }
+
+  sampleCheckpoint(0);
+
+  for (let i = 1; i <= SOAK_CYCLES; i++) {
     const buf = new Uint8ClampedArray(w * h * 4).fill(120);
     const frame = { data: buf, width: w, height: h, pixelFormat: 'RGBA', timestamp: Date.now(), frameIndex: i, zeroize: () => buf.fill(0) };
     await engine.processFrame(frame);
 
-    // Periodic state transitions
+    // Periodic camera state affirmation
     if (i % 300 === 0) {
       engine.canonicalFsm.setCameraState('CAMERA_READY');
     }
+
+    // Allow event loop tick every 50 frames to emulate real-world cadence
+    if (i % 50 === 0) {
+      await new Promise((r) => setImmediate(r));
+    }
+
+    if (CHECKPOINTS.includes(i)) {
+      sampleCheckpoint(i);
+    }
   }
+
+  // Allow idle event loop drain
+  await new Promise((r) => setTimeout(r, 100));
 
   const tSoakEnd = performance.now();
   const memEnd = process.memoryUsage();
   const cpuDiff = process.cpuUsage(cpuStart);
 
-  const rssDeltaMb = +((memEnd.rss - memStart.rss) / (1024 * 1024)).toFixed(2);
-  const heapDeltaMb = +((memEnd.heapUsed - memStart.heapUsed) / (1024 * 1024)).toFixed(2);
   const totalElapsedSec = +((tSoakEnd - tSoakStart) / 1000).toFixed(2);
-  const avgCycleMs = +( (tSoakEnd - tSoakStart) / SOAK_CYCLES ).toFixed(3);
+  const avgCycleMs = +((tSoakEnd - tSoakStart) / SOAK_CYCLES).toFixed(3);
 
-  console.log('\n=== Soak Test Summary ===');
+  console.log('| Soak Checkpoint | RSS (MB) | Heap Used | Heap Total | External (MB) | ΔRSS (MB) | ΔHeap (MB) |');
+  console.log('|-----------------|----------|-----------|------------|---------------|-----------|------------|');
+  for (const cp of checkpointRecords) {
+    console.log(`| Cycle ${cp.cycle.toString().padEnd(9)} | ${cp.rssMb.toString().padStart(8)} | ${cp.heapUsedMb.toString().padStart(9)} | ${cp.heapTotalMb.toString().padStart(10)} | ${cp.externalMb.toString().padStart(13)} | ${cp.deltaRssMb.toString().padStart(9)} | ${cp.deltaHeapMb.toString().padStart(10)} |`);
+  }
+
+  const finalCp = checkpointRecords[checkpointRecords.length - 1];
+  const midCp = checkpointRecords[Math.floor(checkpointRecords.length / 2)];
+  const midToFinalDelta = finalCp.rssMb - midCp.rssMb;
+  let soakClassification = 'STABLE PLATEAU';
+  if (midToFinalDelta > 30) soakClassification = 'POSSIBLE LEAK';
+  else if (midToFinalDelta > 10) soakClassification = 'GROWING (INVESTIGATE)';
+  else soakClassification = 'STABLE PLATEAU (BOUNDED)';
+
+  console.log(`\n=== Soak Test Summary ===`);
   console.log(`Evaluated Cycles:   ${SOAK_CYCLES}`);
   console.log(`Elapsed Time:       ${totalElapsedSec} s`);
   console.log(`Average Cycle Time: ${avgCycleMs} ms`);
-  console.log(`Initial RSS:        ${(memStart.rss / (1024 * 1024)).toFixed(2)} MB`);
-  console.log(`Final RSS:          ${(memEnd.rss / (1024 * 1024)).toFixed(2)} MB (ΔRSS: ${rssDeltaMb} MB)`);
-  console.log(`Initial Heap:       ${(memStart.heapUsed / (1024 * 1024)).toFixed(2)} MB`);
-  console.log(`Final Heap:         ${(memEnd.heapUsed / (1024 * 1024)).toFixed(2)} MB (ΔHeap: ${heapDeltaMb} MB)`);
+  console.log(`Initial RSS:        ${checkpointRecords[0].rssMb} MB`);
+  console.log(`Final RSS:          ${finalCp.rssMb} MB (ΔRSS: ${finalCp.deltaRssMb} MB)`);
+  console.log(`Initial Heap:       ${checkpointRecords[0].heapUsedMb} MB`);
+  console.log(`Final Heap:         ${finalCp.heapUsedMb} MB (ΔHeap: ${finalCp.deltaHeapMb} MB)`);
+  console.log(`Mid-to-Final ΔRSS:  ${midToFinalDelta.toFixed(2)} MB (${soakClassification})`);
   console.log(`CPU User / System:  ${(cpuDiff.user / 1000).toFixed(1)} ms / ${(cpuDiff.system / 1000).toFixed(1)} ms`);
 
   await engine.shutdown();
 
   const finalOutput = {
-    timestamp: new Date().toISOString(),
-    commit: '3d665ef',
-    host: { platform: process.platform, arch: process.arch },
+    benchmarkMetadata: {
+      benchmarkId: 'PERF-SOAK-001',
+      provenance: 'IPC Stress, Failure Injection & 1,500-Cycle Checkpointed Soak Test',
+      timestamp: new Date().toISOString(),
+      commit: '3d665ef',
+      host: { platform: process.platform, arch: process.arch, node: process.version },
+    },
     ipcConcurrency: ipcResults,
     notificationStress: notifResults,
     failureInjection: failureResults,
-    soakMetrics: {
+    soakAudit: {
       cycles: SOAK_CYCLES,
       durationSec: totalElapsedSec,
       avgCycleMs,
-      startRssMb: +(memStart.rss / (1024 * 1024)).toFixed(2),
-      endRssMb: +(memEnd.rss / (1024 * 1024)).toFixed(2),
-      rssDeltaMb,
-      startHeapMb: +(memStart.heapUsed / (1024 * 1024)).toFixed(2),
-      endHeapMb: +(memEnd.heapUsed / (1024 * 1024)).toFixed(2),
-      heapDeltaMb,
-      cpuUserMs: +(cpuDiff.user / 1000).toFixed(1),
-      cpuSysMs: +(cpuDiff.system / 1000).toFixed(1),
+      checkpoints: checkpointRecords,
+      midToFinalDeltaRssMb: +midToFinalDelta.toFixed(2),
+      classification: soakClassification,
       crashes: 0,
       errors: 0,
     },
@@ -240,7 +297,7 @@ async function runStressSoakBenchmark() {
   console.log('========================================================================');
 }
 
-runStressSoakBenchmark().catch(err => {
+runStressSoakBenchmark().catch((err) => {
   console.error('Stress soak error:', err);
   process.exit(1);
 });
