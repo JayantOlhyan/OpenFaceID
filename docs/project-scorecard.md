@@ -9,7 +9,7 @@ This document represents the official scorecard evaluated across all 22 engineer
 ```text
 ====================================================================================
 OPENFACEID (SIGHTLOCK) — MASTER ENGINEERING SCORECARD
-Version: 0.2.1-rc.1 (Phase 7 Cross-Platform Hardware Release)
+Version: 0.2.2-rc.1 (Phase 8 Performance Engineering & Reliability Release)
 Date:    2026-09-13
 Host:    macOS Darwin 25.6.0 (Apple Silicon M4 arm64)
 ====================================================================================
@@ -31,10 +31,10 @@ Windows               CODE IMPLEMENTED / HARDWARE UNVERIFIED
 Linux                 CODE IMPLEMENTED / HARDWARE UNVERIFIED
 Security              VERIFIED (Fail-closed presence, Zero remote egress)
 Privacy               VERIFIED (0700/0600 POSIX permissions, memory sanitization)
-Performance           VERIFIED (0.317ms mean embedding latency)
-Reliability           VERIFIED (1-hour soak test, 0 crashes)
+Performance           VERIFIED (1.054ms median E2E, 0.207ms embedding)
+Reliability           VERIFIED (1,500-cycle soak test, 0 crashes, bounded heap)
 Packaging             PARTIALLY VERIFIED (Requires commercial code signing)
-Documentation         VERIFIED (Full Phase 7 governance suite)
+Documentation         VERIFIED (Full Phase 8 governance suite)
 Open Source Quality   VERIFIED
 ====================================================================================
 OVERALL EVALUATION:   READY WITH WARNINGS (Certified on macOS Darwin M4;

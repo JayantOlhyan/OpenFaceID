@@ -1,0 +1,101 @@
+{
+  "timestamp": "2026-09-13T12:42:36.908Z",
+  "commit": "3d665ef",
+  "host": {
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "ipcConcurrency": [
+    {
+      "concurrency": 10,
+      "totalDurationMs": 4.56,
+      "successCount": 0,
+      "medianMs": 2.62,
+      "p95Ms": 4.25,
+      "p99Ms": 4.25
+    },
+    {
+      "concurrency": 50,
+      "totalDurationMs": 3.43,
+      "successCount": 0,
+      "medianMs": 2.63,
+      "p95Ms": 2.92,
+      "p99Ms": 2.98
+    },
+    {
+      "concurrency": 100,
+      "totalDurationMs": 5.88,
+      "successCount": 0,
+      "medianMs": 4.49,
+      "p95Ms": 4.93,
+      "p99Ms": 4.98
+    }
+  ],
+  "notificationStress": [
+    {
+      "event": "UNKNOWN_PERSON",
+      "totalSubmitted": 100,
+      "dispatched": 1,
+      "suppressed": 99,
+      "durationMs": 0.29,
+      "avgLatencyMs": 0.003
+    },
+    {
+      "event": "CAMERA_DISCONNECTED",
+      "totalSubmitted": 100,
+      "dispatched": 1,
+      "suppressed": 99,
+      "durationMs": 0.09,
+      "avgLatencyMs": 0.001
+    },
+    {
+      "event": "MULTIPLE_FACES",
+      "totalSubmitted": 100,
+      "dispatched": 1,
+      "suppressed": 99,
+      "durationMs": 0.13,
+      "avgLatencyMs": 0.001
+    }
+  ],
+  "failureInjection": [
+    {
+      "scenario": "Camera Hot-Plug Disconnect & Reconnect",
+      "resultingPresenceState": "PRESENCE_UNAUTHORIZED",
+      "safeStateMaintained": true,
+      "memoryDeltaKb": 1798.8
+    },
+    {
+      "scenario": "Privacy Mode Pause & Resume",
+      "resultingPresenceState": "PRESENCE_UNAUTHORIZED",
+      "safeStateMaintained": true,
+      "memoryDeltaKb": 1322.8
+    },
+    {
+      "scenario": "Sleep / Wake Zero-Trust Session Reset",
+      "resultingPresenceState": "PRESENCE_UNAUTHORIZED",
+      "safeStateMaintained": true,
+      "memoryDeltaKb": -2953.9
+    },
+    {
+      "scenario": "Multi-Face Intrusion Fail-Closed Transition",
+      "resultingPresenceState": "PRESENCE_AMBIGUOUS",
+      "safeStateMaintained": true,
+      "memoryDeltaKb": 1339.3
+    }
+  ],
+  "soakMetrics": {
+    "cycles": 1500,
+    "durationSec": 0.59,
+    "avgCycleMs": 0.394,
+    "startRssMb": 101.75,
+    "endRssMb": 156.48,
+    "rssDeltaMb": 54.73,
+    "startHeapMb": 14.24,
+    "endHeapMb": 16.43,
+    "heapDeltaMb": 2.19,
+    "cpuUserMs": 579,
+    "cpuSysMs": 57.8,
+    "crashes": 0,
+    "errors": 0
+  }
+}

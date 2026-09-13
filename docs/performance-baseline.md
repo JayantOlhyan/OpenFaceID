@@ -97,3 +97,30 @@ Measured across 1,000 continuous inference cycles under natural ambient lighting
 | **IPC Loopback Latency** | < 2.0 ms | < 1.5 ms | -0.5 ms (-25.0%) | Streamlined canonical state payloads |
 | **Unhandled Errors / Leaks** | 0 | 0 | 0 (Stable) | 100% Reliability |
 
+---
+
+## 7. Phase 8 Hardware Performance Baseline (MAC-01, Apple M4)
+
+Measured on physical host `MAC-01` (Apple MacBook Air M4, 16 GB unified memory, macOS Darwin 25.6.0, commit `3d665ef`):
+
+| Pipeline Stage | Median (ms) | P95 (ms) | P99 (ms) | Min (ms) | Max (ms) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Frame Ingest & Formatting** | 0.608 | 1.615 | 5.709 | 0.591 | 5.709 |
+| **BlazeFace Detection** | 0.181 | 0.517 | 3.716 | 0.165 | 3.716 |
+| **Face Quality Analysis** | 0.052 | 0.118 | 0.712 | 0.050 | 0.712 |
+| **ArcFace 512D Embedding** | 0.207 | 0.403 | 2.665 | 0.201 | 2.665 |
+| **Liveness Anti-Spoofing** | 0.002 | 0.018 | 0.204 | 0.001 | 0.204 |
+| **Identity Matching (Linear Cosine)** | 0.002 | 0.011 | 0.035 | 0.002 | 0.035 |
+| **Presence FSM State Update** | 0.001 | 0.004 | 0.037 | 0.000 | 0.037 |
+| **End-to-End Latency** | **1.054** | **2.474** | **13.078** | **1.011** | **13.078** |
+
+### Resource Metrics Summary
+- **Cold Boot Daemon Startup**: 340.79 ms (Median) / 404.83 ms (P95)
+- **Idle Process CPU**: 0.6%
+- **Active Monitoring CPU**: 0.9%
+- **Continuous Recognition Stress CPU**: 58.0%
+- **Steady RSS**: 94.83 MB (Idle) / 104.05 MB (Active)
+- **Memory Zeroization Latency**: 0.07 ms (1080p), 0.03 ms (720p), 0.01 ms (480p)
+- **Incremental Battery Draw**: ~1.2% / hour
+- **Thermal Behavior**: Package temp < 42°C; 0% thermal throttling
+

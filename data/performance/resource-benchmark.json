@@ -1,0 +1,101 @@
+{
+  "timestamp": "2026-09-13T12:42:35.104Z",
+  "commit": "3d665ef",
+  "host": {
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "stateProfiles": [
+    {
+      "state": "1. Idle (Process Running)",
+      "rssMb": 97.8,
+      "heapUsedMb": 10.42,
+      "cpuUsagePercent": 13.4
+    },
+    {
+      "state": "2. Daemon Active (Camera Inactive)",
+      "rssMb": 97.83,
+      "heapUsedMb": 10.46,
+      "cpuUsagePercent": 0.6
+    },
+    {
+      "state": "3. Camera Active (No Face)",
+      "rssMb": 97.83,
+      "heapUsedMb": 10.47,
+      "cpuUsagePercent": 0.2
+    },
+    {
+      "state": "4. Face Visible",
+      "rssMb": 97.84,
+      "heapUsedMb": 10.48,
+      "cpuUsagePercent": 0.3
+    },
+    {
+      "state": "5. Continuous Recognition",
+      "rssMb": 105.09,
+      "heapUsedMb": 12.16,
+      "cpuUsagePercent": 41.7
+    },
+    {
+      "state": "6. Liveness Evaluation",
+      "rssMb": 105.11,
+      "heapUsedMb": 12.03,
+      "cpuUsagePercent": 0.2
+    },
+    {
+      "state": "7. Multiple Faces (Fail-Closed)",
+      "rssMb": 103.16,
+      "heapUsedMb": 11.84,
+      "cpuUsagePercent": 0.3
+    },
+    {
+      "state": "8. Privacy Pause Active",
+      "rssMb": 95.92,
+      "heapUsedMb": 11.85,
+      "cpuUsagePercent": 0.2
+    }
+  ],
+  "embeddingMemoryScaling": [
+    {
+      "iterations": 100,
+      "durationMs": 28.9,
+      "avgLatencyMs": 0.289,
+      "heapGrowthMb": -0.27,
+      "leakDetected": false
+    },
+    {
+      "iterations": 1000,
+      "durationMs": 206.3,
+      "avgLatencyMs": 0.206,
+      "heapGrowthMb": -0.23,
+      "leakDetected": false
+    },
+    {
+      "iterations": 5000,
+      "durationMs": 983,
+      "avgLatencyMs": 0.197,
+      "heapGrowthMb": 0.23,
+      "leakDetected": false
+    }
+  ],
+  "zeroizationThroughput": [
+    {
+      "resolution": "1080p FHD (1920x1080)",
+      "sizeMb": 7.91,
+      "medianMs": 0.07,
+      "p95Ms": 0.08
+    },
+    {
+      "resolution": "720p HD (1280x720)",
+      "sizeMb": 3.52,
+      "medianMs": 0.03,
+      "p95Ms": 0.03
+    },
+    {
+      "resolution": "480p SD (640x480)",
+      "sizeMb": 1.17,
+      "medianMs": 0.01,
+      "p95Ms": 0.01
+    }
+  ]
+}
