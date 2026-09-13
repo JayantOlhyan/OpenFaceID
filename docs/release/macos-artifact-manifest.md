@@ -14,8 +14,8 @@
 
 | Filename | Version | Architecture | Size | SHA-256 Checksum | Signed? | Notarized? | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`OpenFaceID-0.2.1-rc.1-arm64.dmg`** | `0.2.1-rc.1` | Apple Silicon (`arm64`) | 37 MB | `6f03dd042c9618e86b99ecd45b4a371df3663f2cf3197ca4f0fcd3affa5a11f9` | AD-HOC (`-`) | DEFERRED (RB-01) | **PRODUCTION CANDIDATE READY** |
-| **`OpenFaceID-0.2.1-rc.1-macos.zip`** | `0.2.1-rc.1` | Apple Silicon (`arm64`) | 37 MB | `38bea587474fb3b004114d77f760011f0d3fa5fa7105de274268605644de58ee` | AD-HOC (`-`) | DEFERRED (RB-01) | **PRODUCTION CANDIDATE READY** |
+| **`OpenFaceID-0.2.1-rc.1-arm64.dmg`** | `0.2.1-rc.1` | Apple Silicon (`arm64`) | 37 MB | `b5874e5b87351c638b6dac1c59efab428630876cb3bc995699a6ccbde30dcfc7` | AD-HOC (`-`) | DEFERRED (RB-01) | **PRODUCTION CANDIDATE READY** |
+| **`OpenFaceID-0.2.1-rc.1-macos.zip`** | `0.2.1-rc.1` | Apple Silicon (`arm64`) | 37 MB | `48581b1fffd98ecbe4a6d9c6fda1bf432ff1796257b33f28eb36f296088574a9` | AD-HOC (`-`) | DEFERRED (RB-01) | **PRODUCTION CANDIDATE READY** |
 | **`OpenFaceID.app`** (Bundle) | `0.2.1-rc.1` | Apple Silicon (`arm64`) | 120 MB | N/A (Directory Bundle) | AD-HOC (`-`) | DEFERRED (RB-01) | **STANDALONE VERIFIED** |
 
 ---
@@ -44,5 +44,5 @@ shasum -a 256 OpenFaceID-0.2.1-rc.1-arm64.dmg
 ```
 Expected output:
 ```
-6f03dd042c9618e86b99ecd45b4a371df3663f2cf3197ca4f0fcd3affa5a11f9  OpenFaceID-0.2.1-rc.1-arm64.dmg
+b5874e5b87351c638b6dac1c59efab428630876cb3bc995699a6ccbde30dcfc7  OpenFaceID-0.2.1-rc.1-arm64.dmg
 ```

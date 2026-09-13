@@ -256,7 +256,7 @@
 * **DMG mounts**: **PASS** (`hdiutil attach` verified)
 * **Applications shortcut**: **PASS** (`Applications -> /Applications`)
 * **App copy**: **PASS**
-* **DMG checksum**: `6f03dd042c9618e86b99ecd45b4a371df3663f2cf3197ca4f0fcd3affa5a11f9`
+* **DMG checksum**: `b5874e5b87351c638b6dac1c59efab428630876cb3bc995699a6ccbde30dcfc7`
 
 ### Clean Installation
 * **Download**: **PASS**

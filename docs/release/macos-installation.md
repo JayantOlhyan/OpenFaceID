@@ -59,7 +59,7 @@ shasum -a 256 OpenFaceID-0.2.1-rc.1-arm64.dmg
 
 **Expected SHA-256:**
 ```
-6f03dd042c9618e86b99ecd45b4a371df3663f2cf3197ca4f0fcd3affa5a11f9
+b5874e5b87351c638b6dac1c59efab428630876cb3bc995699a6ccbde30dcfc7
 ```
 
 ---
