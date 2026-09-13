@@ -2,56 +2,62 @@
 set -e
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_DIR="$DIR/dist/OpenFaceID.app"
-MACOS_DIR="$APP_DIR/Contents/MacOS"
-RESOURCES_DIR="$APP_DIR/Contents/Resources"
-
-echo "=== Building OpenFaceID macOS Desktop Application Bundle ==="
-
-rm -rf "$APP_DIR"
-mkdir -p "$MACOS_DIR"
-mkdir -p "$RESOURCES_DIR"
-
-# 1. Copy Info.plist
-cp "$DIR/apps/desktop/packaging/macos/Info.plist" "$APP_DIR/Contents/Info.plist"
-
-# 2. Generate macOS Launcher Script
-cat << 'LAUNCHER' > "$MACOS_DIR/OpenFaceID"
-#!/bin/bash
-CURRENT_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
-NODE_BIN="$(which node || echo "/opt/homebrew/bin/node")"
-
-export NODE_ENV="production"
-export OFID_DESKTOP_STANDALONE="true"
-
-# Launch desktop daemon & UI
-exec "$NODE_BIN" --experimental-strip-types "$CURRENT_DIR/apps/desktop/serve.js" "$@"
-LAUNCHER
-
-chmod +x "$MACOS_DIR/OpenFaceID"
-
-# 3. Create simple AppIcon placeholder
-echo "APPL????" > "$APP_DIR/Contents/PkgInfo"
-
-echo "✓ Created $APP_DIR"
-
-# 4. Package macOS zip archive
+DIST_DIR="$DIR/dist/macos"
 VERSION="0.2.1-rc.1"
-ZIP_PATH="$DIR/dist/OpenFaceID-${VERSION}-macos.zip"
-rm -f "$ZIP_PATH"
-(cd "$DIR/dist" && zip -r -q "OpenFaceID-${VERSION}-macos.zip" "OpenFaceID.app")
-echo "✓ Created $ZIP_PATH"
+ARCH="arm64"
+APP_DIR="$DIST_DIR/OpenFaceID.app"
+DMG_PATH="$DIST_DIR/OpenFaceID-${VERSION}-${ARCH}.dmg"
+ZIP_PATH="$DIST_DIR/OpenFaceID-${VERSION}-macos.zip"
 
-# 5. Create DMG if permitted
-if which hdiutil >/dev/null 2>&1; then
-  DMG_PATH="$DIR/dist/OpenFaceID-${VERSION}-arm64.dmg"
-  rm -f "$DMG_PATH"
-  echo "Attempting macOS Disk Image creation ($DMG_PATH)..."
-  if hdiutil create -volname "OpenFaceID" -srcfolder "$APP_DIR" -ov -format UDZO "$DMG_PATH" 2>/dev/null; then
-    echo "✓ Created $DMG_PATH"
-  else
-    echo "ℹ Note: hdiutil disk image creation restricted in sandbox environment; zip bundle available."
-  fi
+echo "============================================================"
+echo " Packaging OpenFaceID macOS Release Artifacts"
+echo " Version: $VERSION"
+echo " Architecture: $ARCH"
+echo "============================================================"
+
+# Ensure app is built first
+if [ ! -d "$APP_DIR" ]; then
+  echo "OpenFaceID.app not found. Running build first..."
+  "$DIR/scripts/build-macos.sh"
 fi
 
-echo "=== macOS Packaging Complete ==="
+# 1. Package ZIP
+echo "[1/3] Packaging ZIP archive..."
+rm -f "$ZIP_PATH"
+(cd "$DIST_DIR" && zip -r -q "OpenFaceID-${VERSION}-macos.zip" "OpenFaceID.app")
+echo "  ✓ Created $ZIP_PATH ($(du -h "$ZIP_PATH" | cut -f1))"
+
+# 2. Package DMG with Applications link
+echo "[2/3] Packaging DMG disk image..."
+DMG_STAGING="$DIST_DIR/dmg-staging"
+rm -rf "$DMG_STAGING" "$DMG_PATH"
+mkdir -p "$DMG_STAGING"
+
+cp -R "$APP_DIR" "$DMG_STAGING/"
+ln -s /Applications "$DMG_STAGING/Applications"
+
+hdiutil create -volname "OpenFaceID" \
+  -srcfolder "$DMG_STAGING" \
+  -ov -format UDZO \
+  "$DMG_PATH"
+
+rm -rf "$DMG_STAGING"
+echo "  ✓ Created $DMG_PATH ($(du -h "$DMG_PATH" | cut -f1))"
+
+# 3. Generate SHA-256 Checksums
+echo "[3/3] Generating SHA-256 checksums..."
+mkdir -p "$DIR/dist"
+(
+  cd "$DIST_DIR"
+  shasum -a 256 "OpenFaceID-${VERSION}-${ARCH}.dmg" > "$DMG_PATH.sha256"
+  shasum -a 256 "OpenFaceID-${VERSION}-macos.zip" > "$ZIP_PATH.sha256"
+  cat "$DMG_PATH.sha256" "$ZIP_PATH.sha256" > "$DIR/dist/SHA256SUMS"
+)
+echo "  ✓ Checksums:"
+cat "$DIR/dist/SHA256SUMS"
+
+echo "============================================================"
+echo " macOS Release Packaging Complete!"
+echo " DMG: $DMG_PATH"
+echo " ZIP: $ZIP_PATH"
+echo "============================================================"

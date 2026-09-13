@@ -7,23 +7,25 @@
     <key>CFBundleExecutable</key>
     <string>OpenFaceID</string>
     <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
+    <string>OpenFaceID</string>
     <key>CFBundleIdentifier</key>
-    <string>org.openfaceid.desktop</string>
+    <string>com.jayantolhyan.openfaceid</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
     <string>OpenFaceID</string>
+    <key>CFBundleDisplayName</key>
+    <string>OpenFaceID</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
+    <string>0.2.1-rc.1</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>0.2.1-rc.1</string>
     <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
+    <string>14.0</string>
     <key>NSCameraUsageDescription</key>
-    <string>OpenFaceID uses the webcam exclusively in volatile RAM for biometric presence detection and recognition. No images are saved or transmitted.</string>
+    <string>OpenFaceID uses your camera locally to detect and recognize your face for presence awareness. Camera frames are processed locally and are not uploaded.</string>
     <key>LSUIElement</key>
     <false/>
     <key>NSHighResolutionCapable</key>
