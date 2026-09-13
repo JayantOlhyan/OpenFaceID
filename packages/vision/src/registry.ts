@@ -44,7 +44,7 @@ export const REGISTERED_MODELS: Record<string, ModelMetadata> = {
     expectedArchitecture: 'Deep Hyperspherical Embedding (112x112 canonical aligned face -> 512D unit vector)',
     expectedInput: '112x112x3 RGB aligned and normalized',
     expectedOutput: 'Strictly L2-normalized 512-dimensional float vector (||v|| = 1.0)',
-    sha256: 'f669bd4a60cba1d6f043592fb39c9a6f506e820d75b3afb899ff6715b6af9824',
+    sha256: 'f60c36912e5ddb82dd3aa54090120b761e4e18a810291043a41078eda28f89c7',
   },
   'liveness-pad-evaluator': {
     name: 'Modular 8-State Presentation Attack Detector',

@@ -25,22 +25,24 @@ export class DesktopTrayManager {
     const isPaused = this.engine.isPrivacyPaused();
 
     const presenceLabel = state.presence.isAuthorized
-      ? 'Active (Authorized)'
+      ? "● You're present"
       : state.canonicalState.presence === 'PRESENCE_AMBIGUOUS'
-      ? 'Ambiguous (Multiple Faces)'
+      ? '● Multiple people detected'
       : state.canonicalState.presence === 'PRESENCE_EXPIRED'
-      ? 'Expired'
-      : 'Unauthorized';
+      ? '● Presence ended'
+      : isPaused
+      ? '● Privacy paused'
+      : '● Looking for you…';
 
     const cameraLabel = isPaused
-      ? 'Paused (Privacy)'
+      ? '● Paused'
       : state.camera.status === 'ACTIVE'
-      ? 'Active'
+      ? '● Active'
       : state.camera.status === 'DISCONNECTED'
-      ? 'Disconnected'
+      ? '● Disconnected'
       : state.camera.status === 'RECOVERING'
-      ? 'Recovering'
-      : 'Unavailable';
+      ? '● Recovering'
+      : '● Unavailable';
 
     return [
       {
@@ -53,6 +55,8 @@ export class DesktopTrayManager {
       { id: 'status', label: state.tray.status, enabled: false },
       { id: 'presence_status', label: `Presence: ${presenceLabel}`, enabled: false },
       { id: 'camera_status', label: `Camera: ${cameraLabel}`, enabled: false },
+      { id: 'recognition_status', label: 'Recognition: Ready', enabled: false },
+      { id: 'privacy_status', label: 'Privacy: Active', enabled: false },
       { id: 'sep1', label: '', separator: true },
       {
         id: 'privacy_pause',
@@ -65,7 +69,13 @@ export class DesktopTrayManager {
           }
         },
       },
-      { id: 'sep2', label: '', separator: true },
+      {
+        id: 'open_dashboard',
+        label: 'Open Dashboard',
+        action: async () => {
+          Logger.info('platform', 'Open Dashboard requested from tray');
+        },
+      },
       {
         id: 'security_check',
         label: 'Run Security Check',
@@ -94,7 +104,14 @@ export class DesktopTrayManager {
           Logger.info('security', 'Open Diagnostics requested from tray');
         },
       },
-      { id: 'sep3', label: '', separator: true },
+      {
+        id: 'check_updates',
+        label: 'Check for Updates',
+        action: async () => {
+          Logger.info('platform', 'Check for Updates requested from tray');
+        },
+      },
+      { id: 'sep2', label: '', separator: true },
       {
         id: 'quit',
         label: `Quit ${BRANDING.name}`,

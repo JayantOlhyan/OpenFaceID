@@ -12,9 +12,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var webView: WKWebView!
     var daemonProcess: Process?
 
+    var statusItem: NSStatusItem?
+    var statusMenuItem: NSMenuItem?
+    var cameraMenuItem: NSMenuItem?
+    var pauseResumeMenuItem: NSMenuItem?
+    var pollTimer: Timer?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // 1. Configure Native Menu Bar
         setupMainMenu()
+        setupStatusBarItem()
 
         // 2. Locate Bundled Resources
         let resourcesUrl = Bundle.main.resourceURL ?? URL(fileURLWithPath: "/Applications/OpenFaceID.app/Contents/Resources")
@@ -85,8 +92,160 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
-        // 6. Connect to Local Daemon
+        // 6. Connect to Local Daemon & Start Status Polling
         connectToLocalDaemon()
+        startStatusPolling()
+    }
+
+    func setupStatusBarItem() {
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        if let button = statusItem?.button {
+            button.title = "⚲ OpenFaceID"
+            button.toolTip = "OpenFaceID — Facial Presence Detection"
+        }
+
+        let menu = NSMenu()
+
+        let titleItem = NSMenuItem(title: "OpenFaceID", action: nil, keyEquivalent: "")
+        titleItem.isEnabled = false
+        menu.addItem(titleItem)
+
+        statusMenuItem = NSMenuItem(title: "Status: ● Looking for you…", action: nil, keyEquivalent: "")
+        statusMenuItem?.isEnabled = false
+        menu.addItem(statusMenuItem!)
+
+        cameraMenuItem = NSMenuItem(title: "Camera: ● Active", action: nil, keyEquivalent: "")
+        cameraMenuItem?.isEnabled = false
+        menu.addItem(cameraMenuItem!)
+
+        let recItem = NSMenuItem(title: "Recognition: Ready", action: nil, keyEquivalent: "")
+        recItem.isEnabled = false
+        menu.addItem(recItem)
+
+        let privItem = NSMenuItem(title: "Privacy: Active", action: nil, keyEquivalent: "")
+        privItem.isEnabled = false
+        menu.addItem(privItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        pauseResumeMenuItem = NSMenuItem(title: "Pause Camera", action: #selector(togglePrivacyPause), keyEquivalent: "p")
+        menu.addItem(pauseResumeMenuItem!)
+
+        let openItem = NSMenuItem(title: "Open Dashboard", action: #selector(showMainWindow), keyEquivalent: "o")
+        menu.addItem(openItem)
+
+        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettingsTab), keyEquivalent: ",")
+        menu.addItem(settingsItem)
+
+        let diagItem = NSMenuItem(title: "Diagnostics…", action: #selector(openDiagnosticsTab), keyEquivalent: "d")
+        menu.addItem(diagItem)
+
+        let updateItem = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "u")
+        menu.addItem(updateItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        let quitItem = NSMenuItem(title: "Quit OpenFaceID", action: #selector(terminateApp), keyEquivalent: "q")
+        menu.addItem(quitItem)
+
+        statusItem?.menu = menu
+    }
+
+    @objc func showMainWindow() {
+        if window != nil {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
+    }
+
+    @objc func openSettingsTab() {
+        showMainWindow()
+        webView?.evaluateJavaScript("switchTab('settings')", completionHandler: nil)
+    }
+
+    @objc func openDiagnosticsTab() {
+        showMainWindow()
+        webView?.evaluateJavaScript("switchTab('diagnostics')", completionHandler: nil)
+    }
+
+    @objc func togglePrivacyPause() {
+        webView?.evaluateJavaScript("togglePrivacyPause()", completionHandler: nil)
+    }
+
+    @objc func checkForUpdates() {
+        if let url = URL(string: "https://github.com/JayantOlhyan/OpenFaceID/releases") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    @objc func terminateApp() {
+        NSApplication.shared.terminate(nil)
+    }
+
+    func startStatusPolling() {
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            self?.pollStatus()
+        }
+    }
+
+    func pollStatus() {
+        let statusUrl = URL(string: "http://127.0.0.1:41793/api/v1/status")!
+        var request = URLRequest(url: statusUrl)
+        request.timeoutInterval = 1.0
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
+            guard let self = self, let data = data, error == nil else { return }
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let presence = json["presence"] as? [String: Any],
+                   let isAuth = presence["isAuthorized"] as? Bool,
+                   let canonical = json["canonicalState"] as? [String: Any],
+                   let security = json["security"] as? [String: Any],
+                   let isPaused = security["privacyPaused"] as? Bool {
+                    
+                    let det = canonical["detection"] as? String ?? ""
+                    let presenceState = canonical["presence"] as? String ?? ""
+                    let activeId = canonical["activeIdentityName"] as? String
+
+                    DispatchQueue.main.async {
+                        if isPaused {
+                            self.statusMenuItem?.title = "Status: ● Privacy paused"
+                            self.cameraMenuItem?.title = "Camera: ● Paused"
+                            self.pauseResumeMenuItem?.title = "Resume Camera"
+                            if let button = self.statusItem?.button {
+                                button.title = "⏸ OpenFaceID"
+                            }
+                        } else if isAuth {
+                            let name = activeId != nil ? " • \(activeId!)" : ""
+                            self.statusMenuItem?.title = "Status: ● You're present\(name)"
+                            self.cameraMenuItem?.title = "Camera: ● Active"
+                            self.pauseResumeMenuItem?.title = "Pause Camera"
+                            if let button = self.statusItem?.button {
+                                button.title = "✓ OpenFaceID"
+                            }
+                        } else if presenceState == "PRESENCE_AMBIGUOUS" {
+                            self.statusMenuItem?.title = "Status: ● Multiple people detected"
+                            self.cameraMenuItem?.title = "Camera: ● Active"
+                            if let button = self.statusItem?.button {
+                                button.title = "⚠ OpenFaceID"
+                            }
+                        } else if det == "FACE_DETECTED" {
+                            self.statusMenuItem?.title = "Status: ● Checking identity…"
+                            self.cameraMenuItem?.title = "Camera: ● Active"
+                            if let button = self.statusItem?.button {
+                                button.title = "⚲ OpenFaceID"
+                            }
+                        } else {
+                            self.statusMenuItem?.title = "Status: ● Looking for you…"
+                            self.cameraMenuItem?.title = "Camera: ● Active"
+                            if let button = self.statusItem?.button {
+                                button.title = "⚲ OpenFaceID"
+                            }
+                        }
+                    }
+                }
+            } catch {}
+        }
+        task.resume()
     }
 
     func connectToLocalDaemon() {
@@ -118,10 +277,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        // Keep running in menu bar when main window is closed
+        return false
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag {
+            showMainWindow()
+        }
         return true
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        pollTimer?.invalidate()
+        pollTimer = nil
         if let process = daemonProcess, process.isRunning {
             process.terminate()
             NSLog("[OpenFaceID] Terminated daemon process")

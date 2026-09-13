@@ -517,6 +517,146 @@
       padding: 10px 0;
       border-bottom: 1px solid var(--border-subtle);
     }
+
+    /* Glance-Inspired macOS Notch & Dynamic Island HUD */
+    .mac-hud-container {
+      position: sticky;
+      top: 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 4px auto 16px auto;
+      z-index: 35;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .mac-hud-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 20px;
+      background: rgba(18, 21, 28, 0.90);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 9999px;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .mac-hud-pill:hover {
+      background: rgba(24, 28, 38, 0.96);
+      border-color: rgba(255, 255, 255, 0.22);
+      transform: scale(1.02);
+    }
+
+    .mac-hud-container.mode-notch {
+      top: 54px;
+      margin-top: -6px;
+    }
+
+    .mac-hud-container.mode-notch .mac-hud-pill {
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+      border-bottom-left-radius: 20px;
+      border-bottom-right-radius: 20px;
+      padding: 7px 26px 10px 26px;
+      border-top: none;
+      background: #000;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.85);
+    }
+
+    /* Animated Beacon Indicator */
+    .hud-beacon {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      position: relative;
+      background: #64748b;
+      transition: background 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .hud-beacon::after {
+      content: '';
+      position: absolute;
+      top: -4px;
+      left: -4px;
+      right: -4px;
+      bottom: -4px;
+      border-radius: 50%;
+      opacity: 0.6;
+      border: 1.5px solid transparent;
+      animation: beaconPulse 2.4s infinite cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes beaconPulse {
+      0% { transform: scale(0.9); opacity: 0.8; }
+      50% { transform: scale(1.6); opacity: 0; }
+      100% { transform: scale(0.9); opacity: 0; }
+    }
+
+    /* HUD Presence States */
+    .hud-state-idle .hud-beacon { background: #64748b; }
+    .hud-state-idle .hud-beacon::after { display: none; }
+
+    .hud-state-scanning .hud-beacon { background: #38bdf8; }
+    .hud-state-scanning .hud-beacon::after { border-color: #38bdf8; }
+
+    .hud-state-detected .hud-beacon { background: #06b6d4; }
+    .hud-state-detected .hud-beacon::after { border-color: #06b6d4; }
+
+    .hud-state-matching .hud-beacon { background: #f59e0b; }
+    .hud-state-matching .hud-beacon::after { border-color: #f59e0b; }
+
+    .hud-state-liveness .hud-beacon { background: #a855f7; }
+    .hud-state-liveness .hud-beacon::after { border-color: #a855f7; animation-duration: 1.2s; }
+
+    .hud-state-authorized .hud-beacon { background: #10b981; }
+    .hud-state-authorized .hud-beacon::after { border-color: #10b981; }
+
+    .hud-state-ambiguous .hud-beacon { background: #f59e0b; }
+    .hud-state-ambiguous .hud-beacon::after { border-color: #f59e0b; }
+
+    .hud-state-paused .hud-beacon { background: #94a3b8; }
+    .hud-state-paused .hud-beacon::after { display: none; }
+
+    .hud-state-error .hud-beacon { background: #f43f5e; }
+    .hud-state-error .hud-beacon::after { border-color: #f43f5e; }
+
+    .hud-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -0.1px;
+    }
+
+    .hud-subtitle {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .hud-expand-card {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      background: rgba(18, 21, 28, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 16px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+      padding: 16px;
+      min-width: 330px;
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      z-index: 50;
+      animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .mac-hud-container.expanded .hud-expand-card {
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -550,6 +690,47 @@
   </header>
 
   <main role="main">
+    <!-- GLANCE-INSPIRED MACOS NOTCH & DYNAMIC ISLAND HUD -->
+    <div id="macHudContainer" class="mac-hud-container mode-pill hud-state-idle" role="region" aria-label="OpenFaceID Presence HUD">
+      <div id="macHudPill" class="mac-hud-pill" onclick="toggleHudExpand()" title="Click to expand presence controls">
+        <span id="macHudBeacon" class="hud-beacon" aria-hidden="true"></span>
+        <div style="display: flex; align-items: baseline; gap: 6px;">
+          <span id="macHudTitle" class="hud-title">OpenFaceID</span>
+          <span id="macHudSubtitle" class="hud-subtitle">Looking for you…</span>
+        </div>
+        <span id="macHudModeBadge" class="brand-badge" style="font-size: 9px; padding: 1px 6px; margin-left: 4px; opacity: 0.7;">Pill</span>
+      </div>
+
+      <!-- Quick Expand Details Drawer -->
+      <div id="macHudExpandCard" class="hud-expand-card">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border-subtle);">
+          <div style="font-weight: 600; font-size: 13px;">OpenFaceID Presence HUD</div>
+          <button class="btn btn-sm" onclick="toggleHudGeometry(event)">
+            <span id="hudGeometryBtnLabel">Switch to Notch</span>
+          </button>
+        </div>
+        <div class="metric-row" style="padding: 5px 0;">
+          <span class="metric-label">Presence Status</span>
+          <span id="hudExpandStatus" class="metric-value" style="color: #f43f5e;">● Unauthorized</span>
+        </div>
+        <div class="metric-row" style="padding: 5px 0;">
+          <span class="metric-label">Active Identity</span>
+          <span id="hudExpandIdentity" class="metric-value">None</span>
+        </div>
+        <div class="metric-row" style="padding: 5px 0;">
+          <span class="metric-label">Camera Sensor</span>
+          <span id="hudExpandCamera" class="metric-value">Active</span>
+        </div>
+        <div class="metric-row" style="padding: 5px 0;">
+          <span class="metric-label">Liveness</span>
+          <span id="hudExpandLiveness" class="metric-value">Required</span>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-subtle);">
+          <button class="btn btn-sm" style="flex: 1;" onclick="togglePrivacyPause()">Pause Camera</button>
+          <button class="btn btn-sm btn-primary" style="flex: 1;" onclick="openEnrollmentModal()">+ Enroll</button>
+        </div>
+      </div>
+    </div>
     <!-- Fail-Closed Multiple-Face Banner -->
     <div id="multipleFacesBanner" class="alert-banner warning" style="display: none;" role="alert" aria-live="assertive">
       <span style="font-size: 18px;">⚠</span>
@@ -665,21 +846,44 @@
       </div>
     </section>
 
-    <!-- 2. QUICK GLANCE HUD TAB (Section 20) -->
+    <!-- 2. QUICK GLANCE HUD TAB (Glance-Inspired Experience) -->
     <section id="tab-hud" class="tab-content" aria-labelledby="tabBtnHud">
-      <div class="card" style="max-width: 500px; margin: 0 auto; text-align: center; padding: 36px 24px;">
-        <div style="display: inline-block; padding: 6px 12px; background: var(--bg-surface-raised); border-radius: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 20px; color: var(--text-secondary);">
-          Quick Glance HUD
+      <div class="card" style="max-width: 680px; margin: 0 auto; text-align: center; padding: 28px 24px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+          <div style="display: inline-block; padding: 5px 12px; background: var(--bg-surface-raised); border-radius: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary);">
+            Presence HUD Showcase
+          </div>
+          <button class="btn btn-sm" onclick="toggleHudGeometry(event)">
+            <span id="showcaseGeometryBtnLabel">Switch to Notch</span>
+          </button>
         </div>
-        <h1 style="font-size: 18px; margin-bottom: 24px;">OpenFaceID</h1>
 
-        <div style="margin-bottom: 28px;">
-          <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Presence</div>
+        <!-- Live Simulated HUD Pill / Notch Demonstration -->
+        <div style="background: rgba(0, 0, 0, 0.4); border-radius: 16px; padding: 36px 20px; margin-bottom: 24px; border: 1px dashed var(--border-subtle); min-height: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div id="showcaseHudContainer" class="mac-hud-container mode-pill hud-state-authorized" style="position: relative; top: 0; margin: 0;">
+            <div class="mac-hud-pill" style="cursor: default;">
+              <span id="showcaseHudBeacon" class="hud-beacon"></span>
+              <div style="display: flex; align-items: baseline; gap: 6px;">
+                <span id="showcaseHudTitle" class="hud-title">✓ Present</span>
+                <span id="showcaseHudSubtitle" class="hud-subtitle">Alice</span>
+              </div>
+              <span id="showcaseHudModeBadge" class="brand-badge" style="font-size: 9px; padding: 1px 6px; margin-left: 4px; opacity: 0.7;">Dynamic Island Pill</span>
+            </div>
+          </div>
+          <p style="font-size: 11px; color: var(--text-muted); margin-top: 16px;">
+            Glance-inspired compact macOS presence HUD. Designed for both Apple Silicon notched displays and external/notchless screens.
+          </p>
+        </div>
+
+        <!-- Live Authoritative Presence Metrics -->
+        <div style="margin-bottom: 24px; text-align: center;">
+          <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Current Engine Presence</div>
           <div id="hudPresenceBig" style="font-size: 26px; font-weight: 800; color: #f43f5e;">NOT AUTHORIZED</div>
           <div id="hudReason" style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Looking for you...</div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; text-align: center; border-top: 1px solid var(--border-subtle); padding-top: 20px;">
+        <!-- Metric Summary -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; text-align: center; border-top: 1px solid var(--border-subtle); padding: 16px 0 20px 0;">
           <div>
             <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">Identity</div>
             <div id="hudIdentity" style="font-weight: 600; margin-top: 4px;">None</div>
@@ -691,6 +895,22 @@
           <div>
             <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">Camera</div>
             <div id="hudCamera" style="font-weight: 600; margin-top: 4px;">Active</div>
+          </div>
+        </div>
+
+        <!-- Interactive State Testing Controls -->
+        <div style="border-top: 1px solid var(--border-subtle); padding-top: 18px; text-align: left;">
+          <div style="font-size: 12px; font-weight: 600; margin-bottom: 10px;">Test HUD Transition Animations:</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            <button class="btn btn-sm" onclick="setSimulatedHudState('idle', 'OpenFaceID', 'Idle')">Idle</button>
+            <button class="btn btn-sm" onclick="setSimulatedHudState('scanning', 'Scanning', 'Looking for you…')">Scanning</button>
+            <button class="btn btn-sm" onclick="setSimulatedHudState('detected', 'Face Detected', 'Centering face')">Face Detected</button>
+            <button class="btn btn-sm" onclick="setSimulatedHudState('matching', 'Checking Identity', 'ArcFace 512D Cosine')">Matching</button>
+            <button class="btn btn-sm" onclick="setSimulatedHudState('liveness', 'Confirming Presence', 'Turn head slightly')">Liveness Check</button>
+            <button class="btn btn-sm btn-success" onclick="setSimulatedHudState('authorized', '✓ Present', 'Alice')">Authorized</button>
+            <button class="btn btn-sm btn-warning" onclick="setSimulatedHudState('ambiguous', 'Multiple People', 'Fail-Closed')">Multiple Faces</button>
+            <button class="btn btn-sm" onclick="setSimulatedHudState('paused', 'Camera Paused', 'Privacy Mode')">Paused</button>
+            <button class="btn btn-sm" onclick="resetSimulatedHudState()">Restore Live Feed</button>
           </div>
         </div>
       </div>
@@ -1089,6 +1309,65 @@
     let enrollmentStepIndex = 0;
     let enrolledIdentities = [];
     let statePollInterval = null;
+    let currentHudMode = localStorage.getItem('ofid_hud_mode') || 'pill';
+    let isHudExpanded = false;
+    let simulatedHudState = null;
+
+    function toggleHudExpand() {
+      isHudExpanded = !isHudExpanded;
+      const container = document.getElementById('macHudContainer');
+      if (container) {
+        if (isHudExpanded) container.classList.add('expanded');
+        else container.classList.remove('expanded');
+      }
+    }
+
+    function toggleHudGeometry(e) {
+      if (e) e.stopPropagation();
+      currentHudMode = currentHudMode === 'pill' ? 'notch' : 'pill';
+      localStorage.setItem('ofid_hud_mode', currentHudMode);
+      applyHudGeometry();
+    }
+
+    function applyHudGeometry() {
+      const container = document.getElementById('macHudContainer');
+      const badge = document.getElementById('macHudModeBadge');
+      const btnLabel = document.getElementById('hudGeometryBtnLabel');
+      const showcaseContainer = document.getElementById('showcaseHudContainer');
+      const showcaseBadge = document.getElementById('showcaseHudModeBadge');
+      const showcaseBtnLabel = document.getElementById('showcaseGeometryBtnLabel');
+
+      if (container) {
+        container.classList.remove('mode-pill', 'mode-notch');
+        container.classList.add(`mode-${currentHudMode}`);
+      }
+      if (badge) badge.textContent = currentHudMode === 'notch' ? 'Notch' : 'Pill';
+      if (btnLabel) btnLabel.textContent = currentHudMode === 'notch' ? 'Switch to Dynamic Pill' : 'Switch to Notch';
+
+      if (showcaseContainer) {
+        showcaseContainer.classList.remove('mode-pill', 'mode-notch');
+        showcaseContainer.classList.add(`mode-${currentHudMode}`);
+      }
+      if (showcaseBadge) showcaseBadge.textContent = currentHudMode === 'notch' ? 'Notch Attached' : 'Dynamic Island Pill';
+      if (showcaseBtnLabel) showcaseBtnLabel.textContent = currentHudMode === 'notch' ? 'Switch to Dynamic Pill' : 'Switch to Notch';
+    }
+
+    function setSimulatedHudState(stateClass, title, subtitle) {
+      simulatedHudState = { stateClass, title, subtitle };
+      const showcase = document.getElementById('showcaseHudContainer');
+      const t = document.getElementById('showcaseHudTitle');
+      const st = document.getElementById('showcaseHudSubtitle');
+      if (showcase) {
+        showcase.className = `mac-hud-container mode-${currentHudMode} hud-state-${stateClass}`;
+      }
+      if (t) t.textContent = title;
+      if (st) st.textContent = subtitle;
+    }
+
+    function resetSimulatedHudState() {
+      simulatedHudState = null;
+      pollAuthoritativeState();
+    }
 
     // Helper: HTML entity escaping to prevent XSS
     function escapeHtml(str) {
@@ -1218,6 +1497,76 @@
       if (pauseBtnText) {
         pauseBtnText.textContent = state.security.privacyPaused ? 'Resume Camera' : 'Pause Camera';
       }
+
+      // Glance-Inspired macOS Notch & Dynamic Island HUD Updates
+      const macHudContainer = document.getElementById('macHudContainer');
+      const macHudTitle = document.getElementById('macHudTitle');
+      const macHudSubtitle = document.getElementById('macHudSubtitle');
+      const hudExpandStatus = document.getElementById('hudExpandStatus');
+      const hudExpandIdentity = document.getElementById('hudExpandIdentity');
+      const hudExpandCamera = document.getElementById('hudExpandCamera');
+      const hudExpandLiveness = document.getElementById('hudExpandLiveness');
+
+      let liveHudClass = 'hud-state-idle';
+      let liveTitle = 'OpenFaceID';
+      let liveSubtitle = 'Looking for you…';
+
+      if (state.security.privacyPaused) {
+        liveHudClass = 'hud-state-paused';
+        liveTitle = 'Camera Paused';
+        liveSubtitle = 'Privacy mode';
+      } else if (state.camera.status === 'DISCONNECTED' || state.camera.status === 'ERROR') {
+        liveHudClass = 'hud-state-error';
+        liveTitle = 'Camera Unavailable';
+        liveSubtitle = 'Check permissions';
+      } else if (isAuth) {
+        liveHudClass = 'hud-state-authorized';
+        liveTitle = '✓ Present';
+        liveSubtitle = canonical.activeIdentityName || 'Authorized User';
+      } else if (canonical.presence === 'PRESENCE_AMBIGUOUS') {
+        liveHudClass = 'hud-state-ambiguous';
+        liveTitle = 'Multiple People';
+        liveSubtitle = 'Only 1 person allowed';
+      } else if (canonical.detection === 'FACE_DETECTED') {
+        if (canonical.liveness === 'LIVENESS_RUNNING') {
+          liveHudClass = 'hud-state-liveness';
+          liveTitle = 'Confirming Presence';
+          liveSubtitle = 'Hold still';
+        } else {
+          liveHudClass = 'hud-state-matching';
+          liveTitle = 'Checking Identity';
+          liveSubtitle = 'Matching biometric features…';
+        }
+      } else {
+        liveHudClass = 'hud-state-scanning';
+        liveTitle = 'Scanning';
+        liveSubtitle = 'Looking for you…';
+      }
+
+      if (macHudContainer) {
+        macHudContainer.className = `mac-hud-container mode-${currentHudMode} ${liveHudClass}${isHudExpanded ? ' expanded' : ''}`;
+        if (macHudTitle) macHudTitle.textContent = liveTitle;
+        if (macHudSubtitle) macHudSubtitle.textContent = liveSubtitle;
+        if (hudExpandStatus) {
+          hudExpandStatus.textContent = isAuth ? '● Authorized' : (state.security.privacyPaused ? '○ Paused' : '● Unauthorized');
+          hudExpandStatus.style.color = isAuth ? '#10b981' : (state.security.privacyPaused ? '#94a3b8' : '#f43f5e');
+        }
+        if (hudExpandIdentity) hudExpandIdentity.textContent = canonical.activeIdentityName || 'None';
+        if (hudExpandCamera) hudExpandCamera.textContent = state.security.privacyPaused ? 'Paused' : 'Active';
+        if (hudExpandLiveness) hudExpandLiveness.textContent = canonical.liveness === 'LIVENESS_PASSED' ? 'Passed' : canonical.liveness === 'LIVENESS_FAILED' ? 'Failed' : 'Required';
+      }
+
+      // Update Showcase HUD if not under manual test override
+      if (!simulatedHudState) {
+        const showcaseHud = document.getElementById('showcaseHudContainer');
+        const scTitle = document.getElementById('showcaseHudTitle');
+        const scSub = document.getElementById('showcaseHudSubtitle');
+        if (showcaseHud) {
+          showcaseHud.className = `mac-hud-container mode-${currentHudMode} ${liveHudClass}`;
+        }
+        if (scTitle) scTitle.textContent = liveTitle;
+        if (scSub) scSub.textContent = liveSubtitle;
+      }
     }
 
     function renderFailClosedState() {
@@ -1234,6 +1583,15 @@
         hudPresenceBig.textContent = 'NOT AUTHORIZED';
         hudPresenceBig.style.color = '#f43f5e';
       }
+
+      const macHudContainer = document.getElementById('macHudContainer');
+      if (macHudContainer) {
+        macHudContainer.className = `mac-hud-container mode-${currentHudMode} hud-state-error`;
+      }
+      const macHudTitle = document.getElementById('macHudTitle');
+      if (macHudTitle) macHudTitle.textContent = 'Disconnected';
+      const macHudSubtitle = document.getElementById('macHudSubtitle');
+      if (macHudSubtitle) macHudSubtitle.textContent = 'Fail-closed active';
     }
 
     // Privacy Pause Toggle
@@ -1761,6 +2119,7 @@
 
     // App Initialization
     window.addEventListener('DOMContentLoaded', () => {
+      applyHudGeometry();
       pollAuthoritativeState();
       statePollInterval = setInterval(pollAuthoritativeState, 1000);
       checkFirstRunOnboarding();

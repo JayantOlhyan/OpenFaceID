@@ -1,6 +1,12 @@
 import type { CameraFrame } from '../../camera/src/index.ts';
 import type { FaceLandmarks, IFaceEmbedder } from './interfaces.ts';
 
+/**
+ * Analytical Hypersphere Face Embedder (512D Cosine Metric Space)
+ * Note: Computes 512D spatial and harmonic feature projections (7x7 receptive field statistics
+ * + topological ratios + strict L2 normalization) modeling ArcFace geometric metric properties.
+ * See docs/vision/model-provenance.md for full provenance specification.
+ */
 export class ArcFaceEmbedder implements IFaceEmbedder {
   public static readonly EMBEDDING_DIM = 512;
   public static readonly ALIGNED_WIDTH = 112;
@@ -10,8 +16,7 @@ export class ArcFaceEmbedder implements IFaceEmbedder {
     // 1. Compute Canonical 112x112 Face Alignment via Affine Transformation
     const alignedPatch = this.alignFacePatch(frame, landmarks);
 
-    // 2. Deep Convolutional Spatial Feature Extraction (ArcFace / MobileFaceNet Architecture)
-    // 512 dimensions extracted across multi-scale spatial receptive fields (7x7 global depthwise pooling)
+    // 2. Multi-Scale Spatial Harmonic Feature Projection (512 dimensions)
     const embedding = new Float32Array(ArcFaceEmbedder.EMBEDDING_DIM);
 
     // Receptive field spatial grid (7x7)
