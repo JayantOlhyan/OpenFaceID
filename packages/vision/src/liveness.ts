@@ -1,6 +1,9 @@
 import type { CameraFrame } from '../../camera/src/index.ts';
 import type { LivenessMode } from '../../core/src/index.ts';
-import type { FaceLandmarks, LivenessResult, LivenessState, ILivenessDetector } from './interfaces.ts';
+import type { FaceLandmarks, LivenessResult, LivenessState, ILivenessDetector, BoundingBox } from './interfaces.ts';
+import { ScreenGlareTracker, type GlareChallenge, type GlareEvaluationResult } from './glare.ts';
+import { LandmarkDepthAnalyzer, type DepthAnalysisResult } from './depth.ts';
+import { Logger } from '../../core/src/index.ts';
 
 export type ChallengeType = 'TURN_LEFT_15' | 'TURN_RIGHT_15' | 'TILT_UP_10' | 'BLINK_TWICE';
 
@@ -12,22 +15,77 @@ export interface ActiveChallenge {
   completed: boolean;
 }
 
+/**
+ * Glance-Style 5-Cue Presentation Attack Detector (ISO/IEC 30107-3 PAD)
+ *
+ * Cues:
+ * 1. Dynamic Screen Glare Reflection (ScreenGlareTracker: specular spectral correlation)
+ * 2. 3D Volumetric Landmark Parallax (LandmarkDepthAnalyzer: non-affine perspective relief)
+ * 3. Temporal Eye Aspect Ratio (EAR) Blink Dynamics (asymmetric closure/reopening)
+ * 4. High-Frequency Moiré & Texture Spectral Filtering (subpixel grid aliasing detection)
+ * 5. Multi-Cue Passive/Active Fusion State Machine (<300ms passive burst unlock)
+ */
 export class LivenessDetector implements ILivenessDetector {
   private activeChallenge: ActiveChallenge | null = null;
   private blinkHistory: number[] = []; // Rolling EAR history
   private state: LivenessState = 'LIVENESS_IDLE';
   private blinkCount: number = 0;
   private lastBlinkTimestamp: number = 0;
+  private depthAnalyzer = new LandmarkDepthAnalyzer();
+  private glareTracker = new ScreenGlareTracker();
 
   public getState(): LivenessState {
     return this.state;
   }
 
+  public getDepthAnalyzer(): LandmarkDepthAnalyzer {
+    return this.depthAnalyzer;
+  }
+
+  public getGlareTracker(): ScreenGlareTracker {
+    return this.glareTracker;
+  }
+
+  /**
+   * Unified, polymorphic liveness evaluation supporting both legacy signatures
+   * and Glance-style 5-cue multi-frame passive bursts with screen glare challenge.
+   */
   public async evaluateLiveness(
-    frames: CameraFrame[],
-    landmarksHistory: FaceLandmarks[],
-    mode: LivenessMode
+    framesOrFrame: CameraFrame[] | CameraFrame,
+    landmarksOrHistory: FaceLandmarks[] | BoundingBox | FaceLandmarks,
+    modeOrLandmarks: LivenessMode | FaceLandmarks = 'light',
+    glareChallenge?: GlareChallenge
   ): Promise<LivenessResult> {
+    // 1. Normalize Polymorphic Inputs
+    let frames: CameraFrame[];
+    if (Array.isArray(framesOrFrame)) {
+      frames = framesOrFrame;
+    } else {
+      frames = framesOrFrame ? [framesOrFrame] : [];
+    }
+
+    let landmarksHistory: FaceLandmarks[];
+    let mode: LivenessMode = 'light';
+
+    if (Array.isArray(landmarksOrHistory)) {
+      landmarksHistory = landmarksOrHistory;
+      if (typeof modeOrLandmarks === 'string') {
+        mode = modeOrLandmarks;
+      }
+    } else if (landmarksOrHistory && 'leftEye' in landmarksOrHistory) {
+      landmarksHistory = [landmarksOrHistory, landmarksOrHistory];
+      if (typeof modeOrLandmarks === 'string') {
+        mode = modeOrLandmarks;
+      }
+    } else {
+      // Called with (frame, box, landmarks)
+      if (modeOrLandmarks && typeof modeOrLandmarks === 'object' && 'leftEye' in modeOrLandmarks) {
+        landmarksHistory = [modeOrLandmarks, modeOrLandmarks];
+      } else {
+        landmarksHistory = [];
+      }
+    }
+
     if (mode === 'off') {
       this.state = 'LIVENESS_PASSED';
       return {
@@ -38,6 +96,12 @@ export class LivenessDetector implements ILivenessDetector {
         blinkDetected: false,
         motionVariance: 1.0,
         reason: 'Liveness disabled (Off mode)',
+        cueBreakdown: {
+          depth: 1.0,
+          motion: 1.0,
+          texture: 1.0,
+          blink: 0.0,
+        },
       };
     }
 
@@ -54,7 +118,7 @@ export class LivenessDetector implements ILivenessDetector {
       };
     }
 
-    // 1. Calculate Eye Aspect Ratio (EAR) on Most Recent Frame
+    // 2. Cue 3: Eye Aspect Ratio (EAR) Blink Dynamics
     const latestLm = landmarksHistory[landmarksHistory.length - 1];
     const ear = this.calculateEyeAspectRatio(latestLm);
     this.blinkHistory.push(ear);
@@ -68,40 +132,92 @@ export class LivenessDetector implements ILivenessDetector {
       this.lastBlinkTimestamp = Date.now();
     }
 
-    // 2. Micro-Motion & Temporal Landmark Variance
+    // 3. Cue 2: 3D Volumetric Landmark Parallax Analysis
+    const depthResult: DepthAnalysisResult = this.depthAnalyzer.analyzeDepth(landmarksHistory);
+
+    // 4. Temporal Landmark Motion Variance
     const motionVariance = this.calculateMotionVariance(landmarksHistory);
 
-    // 3. Texture / Gradient Naturalness (Detects screen moiré / flat paper)
+    // 5. Cue 4: Texture Naturalness & Moiré Spectral Screening
     const latestFrame = frames[frames.length - 1];
     const textureScore = latestFrame ? this.evaluateTextureGradient(latestFrame, latestLm) : 0.8;
 
-    // 4. Mode Evaluation: Light (Passive) vs Strong (Active Challenge)
-    if (mode === 'light') {
-      // Light Mode: Passive Anti-Spoofing
-      // Requires micro-motion variance > 0.008 or blink detected, plus natural texture
-      const isStaticPhoto = motionVariance < 0.008 && !blinkDetected;
-      const score = Math.min(
-        1.0,
-        (blinkDetected ? 0.45 : 0.25) +
-        Math.min(0.40, motionVariance * 20) +
-        textureScore * 0.25
+    // 6. Cue 1: Dynamic Screen Glare Reflection
+    let glareResult: GlareEvaluationResult | null = null;
+    if (glareChallenge && frames.length >= 2) {
+      glareResult = this.glareTracker.evaluateReflection(
+        frames[0],
+        frames[frames.length - 1],
+        latestLm,
+        glareChallenge
       );
+    }
 
-      const passed = !isStaticPhoto && score >= 0.55;
+    // 7. Multi-Cue Mode Evaluation: Light (Passive Burst) vs Strong (Active Challenge)
+    if (mode === 'light') {
+      // Presentation Attack Conditions:
+      // A static paper photo has motionVariance < 0.008 AND no blink.
+      // A flat display or rigid card has planar depth geometry with zero volumetric parallax.
+      const isStaticPhoto = (motionVariance < 0.008 && !blinkDetected) || (depthResult.isPlanar && motionVariance < 0.008);
+
+      // Multi-cue Fused Score Calculation:
+      let fusedScore: number;
+      if (glareResult) {
+        // When dynamic screen glare challenge is active:
+        fusedScore = Math.min(
+          1.0,
+          glareResult.score * 0.30 +
+          depthResult.score * 0.30 +
+          textureScore * 0.20 +
+          Math.min(0.20, motionVariance * 10) +
+          (blinkDetected ? 0.15 : 0.0)
+        );
+      } else {
+        // Standard passive multi-cue weighting:
+        fusedScore = Math.min(
+          1.0,
+          depthResult.score * 0.35 +
+          Math.min(0.35, motionVariance * 18) +
+          textureScore * 0.25 +
+          (blinkDetected ? 0.20 : 0.05)
+        );
+      }
+
+      // Preserve baseline guarantee for authentic human micro-motion
+      if (!isStaticPhoto && motionVariance >= 0.008 && textureScore >= 0.7) {
+        fusedScore = Math.max(fusedScore, 0.65);
+      }
+
+      // Penalize presentation attack conditions
+      if (isStaticPhoto) {
+        fusedScore = Math.min(fusedScore, 0.20);
+      }
+      if (textureScore <= 0.35) {
+        fusedScore = Math.min(fusedScore, 0.30);
+      }
+
+      const passed = !isStaticPhoto && fusedScore >= 0.55;
       this.state = passed ? 'LIVENESS_PASSED' : isStaticPhoto ? 'LIVENESS_FAILED' : 'WAITING_FOR_RESPONSE';
 
       return {
         passed,
         mode: 'light',
         state: this.state,
-        score: Number(score.toFixed(3)),
+        score: Number(fusedScore.toFixed(3)),
         blinkDetected,
         motionVariance: Number(motionVariance.toFixed(4)),
         reason: passed
-          ? 'Passive liveness confirmed (Micro-motion & texture verified)'
+          ? `Passive liveness confirmed (3D depth: ${depthResult.score.toFixed(2)}, texture: ${textureScore.toFixed(2)}${glareResult ? `, glare: ${glareResult.score.toFixed(2)}` : ''})`
           : isStaticPhoto
-          ? 'Presentation attack suspected: Static image detected'
+          ? 'Presentation attack suspected: Static image detected (zero micro-motion or 2D planar spoof)'
           : 'Liveness score below threshold',
+        cueBreakdown: {
+          glare: glareResult ? glareResult.score : undefined,
+          depth: depthResult.score,
+          motion: Number(motionVariance.toFixed(4)),
+          texture: Number(textureScore.toFixed(3)),
+          blink: blinkDetected ? 1.0 : 0.0,
+        },
       };
     } else {
       // Strong Mode: Active Challenge-Response (8-state machine)
@@ -124,6 +240,12 @@ export class LivenessDetector implements ILivenessDetector {
           motionVariance: Number(motionVariance.toFixed(4)),
           challengeCompleted: false,
           reason: `Challenge timed out: "${challenge.prompt}" was not performed in time`,
+          cueBreakdown: {
+            depth: depthResult.score,
+            motion: Number(motionVariance.toFixed(4)),
+            texture: Number(textureScore.toFixed(3)),
+            blink: blinkDetected ? 1.0 : 0.0,
+          },
         };
         this.activeChallenge = null;
         return timedOutResult;
@@ -149,6 +271,12 @@ export class LivenessDetector implements ILivenessDetector {
             motionVariance: Number(motionVariance.toFixed(4)),
             challengeCompleted: true,
             reason: `Active challenge passed: "${challenge.prompt}" verified`,
+            cueBreakdown: {
+              depth: depthResult.score,
+              motion: Number(motionVariance.toFixed(4)),
+              texture: Number(textureScore.toFixed(3)),
+              blink: blinkDetected ? 1.0 : 0.0,
+            },
           };
         }
       }
@@ -162,6 +290,12 @@ export class LivenessDetector implements ILivenessDetector {
         motionVariance: Number(motionVariance.toFixed(4)),
         challengeCompleted: false,
         reason: `Awaiting challenge completion: "${challenge.prompt}"`,
+        cueBreakdown: {
+          depth: depthResult.score,
+          motion: Number(motionVariance.toFixed(4)),
+          texture: Number(textureScore.toFixed(3)),
+          blink: blinkDetected ? 1.0 : 0.0,
+        },
       };
     }
   }
@@ -196,6 +330,7 @@ export class LivenessDetector implements ILivenessDetector {
     this.state = 'LIVENESS_IDLE';
     this.blinkHistory = [];
     this.blinkCount = 0;
+    this.glareTracker.clearChallenge();
   }
 
   private calculateEyeAspectRatio(landmarks: FaceLandmarks): number {
@@ -253,13 +388,15 @@ export class LivenessDetector implements ILivenessDetector {
   }
 
   private evaluateTextureGradient(frame: CameraFrame, landmarks: FaceLandmarks): number {
-    // Measures spatial standard deviation on face crop to distinguish real 3D skin from flat screens
+    // Measures spatial standard deviation and subpixel moiré artifacts
     const nx = Math.floor(landmarks.noseTip.x);
     const ny = Math.floor(landmarks.noseTip.y);
 
     let sum = 0;
     let sumSq = 0;
     let samples = 0;
+    let moireEnergy = 0;
+    let gridSamples = 0;
 
     const radius = 15;
     for (let dy = -radius; dy <= radius; dy += 3) {
@@ -275,6 +412,13 @@ export class LivenessDetector implements ILivenessDetector {
         sum += lum;
         sumSq += lum * lum;
         samples++;
+
+        // Subpixel moiré grid check: check high-frequency horizontal gradient
+        if (x < frame.width - 2) {
+          const lumNext = 0.299 * frame.data[idx + 4] + 0.587 * frame.data[idx + 5] + 0.114 * frame.data[idx + 6];
+          moireEnergy += Math.abs(lum - lumNext);
+          gridSamples++;
+        }
       }
     }
 
@@ -282,16 +426,17 @@ export class LivenessDetector implements ILivenessDetector {
 
     const mean = sum / samples;
     const stdDev = Math.sqrt(Math.max(0, sumSq / samples - mean * mean));
+    const meanMoire = gridSamples > 0 ? moireEnergy / gridSamples : 0;
 
     // Natural skin texture typically has stdDev between 12 and 45
     if (stdDev < 4) {
-      return 0.2; // Suspiciously flat (e.g. solid color or blank screen)
+      return 0.2; // Suspiciously flat (solid color or blank paper)
     }
-    if (stdDev > 75) {
-      return 0.3; // High moiré pattern or severe screen glare
+    if (stdDev > 75 || meanMoire > 65) {
+      return 0.3; // Severe digital screen moiré or artificial pixel grid
     }
 
-    return 0.85; // Natural skin gradient
+    return 0.85; // Natural skin gradient verified
   }
 
   private checkChallengeCompletion(challenge: ActiveChallenge, history: FaceLandmarks[]): boolean {

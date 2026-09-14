@@ -83,7 +83,7 @@ export const REGISTERED_MODELS: Record<string, ModelMetadata> = {
     expectedArchitecture: 'Temporal EAR Blink Tracker + Spatial Micro-Motion Variance + Active Challenge FSM',
     expectedInput: 'Temporal sequence of facial landmarks, Laplacian sharpness, and bounding boxes',
     expectedOutput: 'LivenessResult (passed: boolean, state: LivenessState, score: 0.0-1.0)',
-    sha256: 'f58f9a473935cf0c4ebd82614da19d07f8346b791f9300b4f331d832dde96198',
+    sha256: 'd955bde44a1ea875d31024e5dfc2142216c33d6802171fee11521f502beb5bde',
   },
 };
 

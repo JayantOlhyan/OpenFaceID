@@ -96,6 +96,13 @@ export interface LivenessResult {
   motionVariance: number;
   challengeCompleted?: boolean;
   reason?: string;
+  cueBreakdown?: {
+    glare?: number;
+    depth: number;
+    motion: number;
+    texture: number;
+    blink: number;
+  };
 }
 
 export interface IFaceDetector {

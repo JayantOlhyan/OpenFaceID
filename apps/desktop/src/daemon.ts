@@ -22,6 +22,8 @@ import {
   EnrollmentManager,
   ModelRegistry,
   type FaceLandmarks,
+  type GlareChallenge,
+  type LivenessResult,
 } from '../../../packages/vision/src/index.ts';
 import { IdentityStore, ActivityLog, ConfigStore } from '../../../packages/storage/src/index.ts';
 import { PresenceTracker } from '../../../packages/presence/src/index.ts';
@@ -93,6 +95,12 @@ export class DesktopEngine {
   private powerCheckInterval: NodeJS.Timeout | null = null;
   private sessionCheckInterval: NodeJS.Timeout | null = null;
   private lastPowerCheckTime: number = Date.now();
+
+  // Glance-Style 5-Cue Liveness & Glare Challenge
+  private activeGlareChallenge: GlareChallenge | null = null;
+  private burstFrames: CameraFrame[] = [];
+  private burstLandmarks: FaceLandmarks[] = [];
+  private lastLivenessResult: LivenessResult | null = null;
 
   constructor(options: DesktopEngineOptions = {}) {
     this.options = options;
@@ -544,6 +552,9 @@ export class DesktopEngine {
     this.unlockFsm.triggerWake(triggerSource);
     this.canonicalFsm.setSystemState('SYSTEM_READY');
     this.cameraState = 'ACTIVE';
+    this.burstFrames = [];
+    this.burstLandmarks = [];
+    this.activeGlareChallenge = this.liveness.getGlareTracker().generateChallenge(250);
 
     this.activeUnlockPromise = new Promise<UnlockResult>(async (resolve) => {
       this.pendingUnlockResolver = resolve;
@@ -612,13 +623,20 @@ export class DesktopEngine {
     }
 
     const detection = detections[0];
+    this.burstFrames.push(frame);
+    if (this.burstFrames.length > 10) this.burstFrames.shift();
+    this.burstLandmarks.push(detection.landmarks);
+    if (this.burstLandmarks.length > 10) this.burstLandmarks.shift();
 
-    // 2. Liveness check
+    // 2. Glance-Style 5-Cue Liveness check (Screen Glare + 3D Depth + EAR + Texture + FSM)
     const livenessResult = await this.liveness.evaluateLiveness(
-      frame,
-      detection.box,
-      detection.landmarks
+      this.burstFrames,
+      this.burstLandmarks,
+      'light',
+      this.activeGlareChallenge ?? undefined
     );
+    this.lastLivenessResult = livenessResult;
+
     if (!livenessResult.passed) {
       Logger.debug('unlock', 'Liveness check pending or failed', { reason: livenessResult.reason });
       return;
@@ -656,6 +674,9 @@ export class DesktopEngine {
     this.cameraState = 'IDLE';
     this.canonicalFsm.setCameraState('CAMERA_READY');
     this.activeUnlockPromise = null;
+    this.activeGlareChallenge = null;
+    this.burstFrames = [];
+    this.burstLandmarks = [];
 
     if (this.pendingUnlockResolver) {
       const resolver = this.pendingUnlockResolver;
@@ -674,6 +695,10 @@ export class DesktopEngine {
     setTimeout(() => {
       this.unlockFsm.resetToStandby();
     }, 1000);
+  }
+
+  public getActiveGlareChallenge(): GlareChallenge | null {
+    return this.activeGlareChallenge ?? this.liveness.getGlareTracker().getActiveChallenge();
   }
 
   public async startLivePreview(onFrame?: (frame: CameraFrame) => void): Promise<boolean> {
@@ -868,9 +893,12 @@ export class DesktopEngine {
       liveness: {
         state: this.liveness.getState(),
         mode: 'light',
-        score: snapshot.liveness === 'LIVENESS_PASSED' ? 0.95 : 0.0,
-        blinkDetected: false,
-        motionVariance: 0.015,
+        score: this.lastLivenessResult?.score ?? (snapshot.liveness === 'LIVENESS_PASSED' ? 0.95 : 0.0),
+        blinkDetected: this.lastLivenessResult?.blinkDetected ?? false,
+        motionVariance: this.lastLivenessResult?.motionVariance ?? 0.015,
+        glareScore: this.lastLivenessResult?.cueBreakdown?.glare,
+        depthScore: this.lastLivenessResult?.cueBreakdown?.depth,
+        cueBreakdown: this.lastLivenessResult?.cueBreakdown,
       },
       presence: {
         state: this.presenceTracker.getState(),

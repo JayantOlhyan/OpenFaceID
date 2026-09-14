@@ -440,6 +440,17 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 8c-2. Glance Liveness: Active Screen Glare Challenge Pulse
+  if ((url.pathname === '/api/v1/liveness/challenge' || url.pathname === '/api/liveness/challenge') && method === 'GET') {
+    const challenge = engine.getActiveGlareChallenge();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      active: !!challenge,
+      challenge: challenge || null,
+    }));
+    return;
+  }
+
   // 8d. Camera Live Preview On-Demand Start (for Enrollment & Camera Settings)
   if (url.pathname === '/api/v1/camera/preview/start' && method === 'POST') {
     try {

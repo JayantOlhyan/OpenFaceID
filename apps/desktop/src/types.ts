@@ -63,6 +63,15 @@ export interface ApplicationState {
     score: number;
     blinkDetected: boolean;
     motionVariance: number;
+    glareScore?: number;
+    depthScore?: number;
+    cueBreakdown?: {
+      glare?: number;
+      depth: number;
+      motion: number;
+      texture: number;
+      blink: number;
+    };
   };
   presence: {
     state: PresenceState;
