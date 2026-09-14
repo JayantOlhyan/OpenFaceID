@@ -62,4 +62,25 @@ export abstract class PlatformAdapter {
   public abstract storeSecret(key: string, secret: string): Promise<boolean>;
   public abstract retrieveSecret(key: string): Promise<string | null>;
   public abstract deleteSecret(key: string): Promise<boolean>;
+
+  // Screen Unlock & Credential Vault operations
+  public async unlockScreen(secret?: string): Promise<boolean> {
+    return false;
+  }
+
+  public async storeCredential(user: string, secret: string): Promise<boolean> {
+    const safeUser = user.replace(/[^a-zA-Z0-9_-]/g, '_');
+    return this.storeSecret(`cred_${safeUser}`, secret);
+  }
+
+  public async retrieveCredential(user: string): Promise<string | null> {
+    const safeUser = user.replace(/[^a-zA-Z0-9_-]/g, '_');
+    return this.retrieveSecret(`cred_${safeUser}`);
+  }
+
+  public async deleteCredential(user: string): Promise<boolean> {
+    const safeUser = user.replace(/[^a-zA-Z0-9_-]/g, '_');
+    return this.deleteSecret(`cred_${safeUser}`);
+  }
 }
+

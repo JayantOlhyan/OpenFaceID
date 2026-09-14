@@ -451,6 +451,73 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 8c-3. Platform Credential Vault: Enroll Unlock Credentials (Phase 4)
+  if (url.pathname === '/api/v1/credentials/enroll' && method === 'POST') {
+    try {
+      const body = await readJsonBody();
+      const userId = body?.userId;
+      const secret = body?.secret;
+      if (!userId || typeof userId !== 'string' || !secret || typeof secret !== 'string') {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Missing or invalid userId or secret' }));
+        return;
+      }
+      const stored = await engine.adapter.storeCredential(userId, secret);
+      res.writeHead(stored ? 200 : 500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: stored, userId }));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
+    }
+    return;
+  }
+
+  // 8c-4. Platform Credential Vault: Query Enrollment Status (Phase 4)
+  if (url.pathname === '/api/v1/credentials/status' && method === 'GET') {
+    try {
+      const userId = url.searchParams.get('userId') || 'default_user';
+      const secret = await engine.adapter.retrieveCredential(userId);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        userId,
+        enrolled: !!secret && secret.length > 0,
+        keystore: engine.adapter.getPlatformInfo().os + ' Keystore',
+      }));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
+    }
+    return;
+  }
+
+  // 8c-5. Platform Credential Vault: Remove Credential (Phase 4)
+  if (url.pathname === '/api/v1/credentials' && method === 'DELETE') {
+    try {
+      const userId = url.searchParams.get('userId');
+      if (!userId) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Missing userId parameter' }));
+        return;
+      }
+      const deleted = await engine.adapter.deleteCredential(userId);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: deleted, userId }));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
+    }
+    return;
+  }
+
+  // 8c-6. Face Unlock: Reset Rate-Limit Lockout (Phase 4)
+  if (url.pathname === '/api/v1/unlock/reset-lockout' && method === 'POST') {
+    engine.resetLockout();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, message: 'Biometric lockout reset' }));
+    return;
+  }
+
+
   // 8d. Camera Live Preview On-Demand Start (for Enrollment & Camera Settings)
   if (url.pathname === '/api/v1/camera/preview/start' && method === 'POST') {
     try {

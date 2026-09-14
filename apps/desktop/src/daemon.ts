@@ -102,6 +102,13 @@ export class DesktopEngine {
   private burstLandmarks: FaceLandmarks[] = [];
   private lastLivenessResult: LivenessResult | null = null;
 
+  // Platform Credential Vault & Lockout Tracking (Phase 4)
+  private consecutiveUnlockFailures: number = 0;
+  private lastLockoutTimestamp: number = 0;
+  private readonly MAX_UNLOCK_FAILURES: number = 3;
+  private readonly LOCKOUT_DURATION_MS: number = 30_000;
+
+
   constructor(options: DesktopEngineOptions = {}) {
     this.options = options;
     this.adapter = getPlatformAdapter();
@@ -549,6 +556,26 @@ export class DesktopEngine {
       };
     }
 
+    // Enforce fail-closed lockout rate limiting (max 3 consecutive failures -> 30s cooldown)
+    if (
+      this.consecutiveUnlockFailures >= this.MAX_UNLOCK_FAILURES &&
+      Date.now() - this.lastLockoutTimestamp < this.LOCKOUT_DURATION_MS
+    ) {
+      const remainingSec = Math.ceil((this.LOCKOUT_DURATION_MS - (Date.now() - this.lastLockoutTimestamp)) / 1000);
+      Logger.warn('unlock', `Biometric unlock locked out due to repeated failures (${remainingSec}s remaining)`);
+      return {
+        success: false,
+        state: 'FAILED',
+        triggerSource,
+        identityId: null,
+        identityName: null,
+        confidence: 0,
+        livenessPassed: false,
+        metrics: this.unlockFsm.getMetrics(),
+        error: `LOCKOUT_RATE_LIMIT_EXCEEDED: Retry in ${remainingSec}s or enter password manually`,
+      };
+    }
+
     this.unlockFsm.triggerWake(triggerSource);
     this.canonicalFsm.setSystemState('SYSTEM_READY');
     this.cameraState = 'ACTIVE';
@@ -565,7 +592,7 @@ export class DesktopEngine {
       if (identities.length === 0) {
         Logger.warn('unlock', 'No enrolled identities found; unlock burst aborted');
         const res = this.unlockFsm.recordFailed('NO_ENROLLED_IDENTITIES');
-        this.finishUnlockSession(res);
+        await this.finishUnlockSession(res);
         return;
       }
 
@@ -588,14 +615,14 @@ export class DesktopEngine {
 
         if (this.unlockFsm.getState() === 'VERIFIED') {
           const res = this.unlockFsm.getLastResult()!;
-          this.finishUnlockSession(res);
+          await this.finishUnlockSession(res);
           return;
         }
 
         if (this.unlockFsm.isBurstTimeout() || isBurstLimit) {
           Logger.warn('unlock', 'Unlock burst ended without a verified match');
           const res = this.unlockFsm.recordFailed('TIMEOUT_OR_NO_MATCH');
-          this.finishUnlockSession(res);
+          await this.finishUnlockSession(res);
           return;
         }
       });
@@ -603,9 +630,10 @@ export class DesktopEngine {
       if (!started) {
         Logger.error('unlock', 'Failed to start camera for unlock burst');
         const res = this.unlockFsm.recordFailed('CAMERA_START_FAILED');
-        this.finishUnlockSession(res);
+        await this.finishUnlockSession(res);
       }
     });
+
 
     return this.activeUnlockPromise;
   }
@@ -669,7 +697,7 @@ export class DesktopEngine {
     }
   }
 
-  private finishUnlockSession(result: UnlockResult): void {
+  private async finishUnlockSession(result: UnlockResult): Promise<void> {
     this.cameraManager.stopCapture();
     this.cameraState = 'IDLE';
     this.canonicalFsm.setCameraState('CAMERA_READY');
@@ -677,6 +705,33 @@ export class DesktopEngine {
     this.activeGlareChallenge = null;
     this.burstFrames = [];
     this.burstLandmarks = [];
+
+    // Phase 4: Platform Native Credential Vault & Screen Unlock Dispatch
+    if (result.success && result.identityId) {
+      this.consecutiveUnlockFailures = 0;
+      this.lastLockoutTimestamp = 0;
+      try {
+        const secret = await this.adapter.retrieveCredential(result.identityId);
+        const unlocked = await this.adapter.unlockScreen(secret ?? undefined);
+        if (unlocked) {
+          Logger.info('unlock', `Native OS lockscreen unlocked successfully for ${result.identityName}`);
+        } else {
+          Logger.warn('unlock', `Native OS lockscreen unlock skipped or unhandled`);
+        }
+      } catch (err) {
+        Logger.error('unlock', 'Failed to dispatch native OS screen unlock', { error: String(err) });
+      }
+    } else if (!result.success) {
+      this.consecutiveUnlockFailures++;
+      if (this.consecutiveUnlockFailures >= this.MAX_UNLOCK_FAILURES) {
+        this.lastLockoutTimestamp = Date.now();
+        Logger.warn('unlock', `Lockout threshold reached (${this.consecutiveUnlockFailures} failed attempts). Biometric unlock paused for 30s.`);
+        this.activityLog.logEvent('UNLOCK_LOCKOUT_TRIGGERED', {
+          attempts: this.consecutiveUnlockFailures,
+          cooldownSec: 30,
+        });
+      }
+    }
 
     if (this.pendingUnlockResolver) {
       const resolver = this.pendingUnlockResolver;
@@ -716,13 +771,31 @@ export class DesktopEngine {
   }
 
   public getUnlockStatus() {
+    const isLockedOut =
+      this.consecutiveUnlockFailures >= this.MAX_UNLOCK_FAILURES &&
+      Date.now() - this.lastLockoutTimestamp < this.LOCKOUT_DURATION_MS;
+    const remainingSec = isLockedOut
+      ? Math.ceil((this.LOCKOUT_DURATION_MS - (Date.now() - this.lastLockoutTimestamp)) / 1000)
+      : 0;
+
     return {
       state: this.unlockFsm.getState(),
       triggerSource: this.unlockFsm.getTriggerSource(),
       metrics: this.unlockFsm.getMetrics(),
       lastResult: this.unlockFsm.getLastResult(),
+      lockout: {
+        isLockedOut,
+        consecutiveFailures: this.consecutiveUnlockFailures,
+        remainingSec,
+      },
     };
   }
+
+  public resetLockout(): void {
+    this.consecutiveUnlockFailures = 0;
+    this.lastLockoutTimestamp = 0;
+  }
+
 
   private frameListeners: Array<() => void> = [];
 

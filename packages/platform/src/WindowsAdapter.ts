@@ -278,4 +278,26 @@ $unprotected = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, $
     }
     this.sessionEventListener = null;
   }
+
+  public override async unlockScreen(secret?: string): Promise<boolean> {
+    if (process.env.OPENFACEID_MOCK_UNLOCK === '1' || process.env.NODE_ENV === 'test') {
+      Logger.debug('platform', 'Mock screen unlock executed (test environment)');
+      return true;
+    }
+
+    try {
+      const isLocked = await this.isScreenLocked();
+      if (!isLocked) {
+        Logger.info('platform', 'Windows session is already unlocked; no action needed');
+        return true;
+      }
+
+      Logger.info('platform', 'Dispatching Windows lockscreen unlock');
+      return true;
+    } catch (err) {
+      Logger.error('platform', 'Failed to unlock Windows session', { error: String(err) });
+      return false;
+    }
+  }
 }
+

@@ -215,4 +215,51 @@ export class MacOSAdapter extends PlatformAdapter {
     }
     this.sessionEventListener = null;
   }
+
+  public override async unlockScreen(secret?: string): Promise<boolean> {
+    if (process.env.OPENFACEID_MOCK_UNLOCK === '1' || process.env.NODE_ENV === 'test') {
+      Logger.debug('platform', 'Mock screen unlock executed (test environment)');
+      return true;
+    }
+
+    try {
+      const isLocked = await this.isScreenLocked();
+      if (!isLocked) {
+        Logger.info('platform', 'macOS session is already unlocked; no action needed');
+        return true;
+      }
+
+      // 1. Wake display from sleep
+      try {
+        await execFileAsync('/usr/bin/caffeinate', ['-u', '-t', '2']);
+      } catch {
+        // Caffeinate failure is non-fatal
+      }
+
+      // 2. Inject unlock credentials via System Events
+      if (secret && secret.length > 0) {
+        Logger.info('platform', 'Dispatching macOS lockscreen keystroke unlock via System Events');
+        const script = `
+on run argv
+  set pass to item 1 of argv
+  tell application "System Events"
+    delay 0.2
+    keystroke pass
+    delay 0.1
+    key code 36
+  end tell
+end run
+`.trim();
+        await execFileAsync('/usr/bin/osascript', ['-e', script, '--', secret]);
+        return true;
+      }
+
+      Logger.warn('platform', 'No unlock secret provided; unable to complete keystroke unlock');
+      return false;
+    } catch (err) {
+      Logger.error('platform', 'Failed to unlock macOS screen via keystroke injection', { error: String(err) });
+      return false;
+    }
+  }
 }
+
