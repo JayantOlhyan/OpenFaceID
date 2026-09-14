@@ -5,6 +5,7 @@ export * from './state/recognition.ts';
 export * from './state/security.ts';
 export * from './state/presence.ts';
 export * from './state/canonical.ts';
+export * from './state/unlock.ts';
 export * from './events/bus.ts';
 export * from './logger/logger.ts';
 export * from './session/session.ts';
