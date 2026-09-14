@@ -169,4 +169,50 @@ export class MacOSAdapter extends PlatformAdapter {
       return false;
     }
   }
+
+  private sessionEventListener: ((event: 'wake' | 'lock' | 'unlock') => void) | null = null;
+  private sessionMonitorTimer: NodeJS.Timeout | null = null;
+  private lastSessionLockedState: boolean = false;
+  private lastSessionMonitorTick: number = Date.now();
+
+  public startWakeAndLockListener(listener: (event: 'wake' | 'lock' | 'unlock') => void): void {
+    this.stopWakeAndLockListener();
+    this.sessionEventListener = listener;
+    this.lastSessionMonitorTick = Date.now();
+
+    this.sessionMonitorTimer = setInterval(async () => {
+      const now = Date.now();
+      const elapsed = now - this.lastSessionMonitorTick;
+      this.lastSessionMonitorTick = now;
+
+      // 1. Hardware sleep/wake delta check (>3000ms delta indicates suspension)
+      if (elapsed > 3000) {
+        Logger.info('platform', `Hardware sleep/wake detected (slept for ~${Math.round(elapsed / 1000)}s)`);
+        this.sessionEventListener?.('wake');
+      }
+
+      // 2. Screen Lock State Transition Detection
+      const isLocked = await this.isScreenLocked();
+      if (isLocked !== this.lastSessionLockedState) {
+        this.lastSessionLockedState = isLocked;
+        if (isLocked) {
+          Logger.info('platform', 'macOS session locked');
+          this.sessionEventListener?.('lock');
+        } else {
+          Logger.info('platform', 'macOS session unlocked');
+          this.sessionEventListener?.('unlock');
+        }
+      }
+    }, 1000);
+
+    this.sessionMonitorTimer.unref();
+  }
+
+  public stopWakeAndLockListener(): void {
+    if (this.sessionMonitorTimer) {
+      clearInterval(this.sessionMonitorTimer);
+      this.sessionMonitorTimer = null;
+    }
+    this.sessionEventListener = null;
+  }
 }
