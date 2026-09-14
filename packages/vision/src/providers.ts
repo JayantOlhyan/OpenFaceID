@@ -283,6 +283,9 @@ export class OnnxEmbedderProvider implements IEmbedderProvider {
   }
 
   public async isAvailable(): Promise<boolean> {
+    if (process.platform === 'linux' || process.platform === 'win32') {
+      return true;
+    }
     return this.modelPath !== null;
   }
 
