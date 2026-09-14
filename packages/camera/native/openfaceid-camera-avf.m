@@ -2,6 +2,7 @@
 #import <AVFoundation/AVFoundation.h>
 #import <CoreVideo/CoreVideo.h>
 #import <CoreMedia/CoreMedia.h>
+#import <Accelerate/Accelerate.h>
 
 /**
  * OpenFaceID Native AVFoundation Camera Helper
@@ -44,7 +45,7 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
     CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
     if (!imageBuffer) return;
 
-    if (CVPixelBufferLockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly) != kCVReturnSuccess) {
+    if (CVPixelBufferLockBaseAddress(imageBuffer, 0) != kCVReturnSuccess) {
         return;
     }
 
@@ -54,9 +55,19 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
     uint8_t *baseAddress = (uint8_t *)CVPixelBufferGetBaseAddress(imageBuffer);
 
     if (!baseAddress || width == 0 || height == 0) {
-        CVPixelBufferUnlockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly);
+        CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
         return;
     }
+
+    // High-performance hardware SIMD channel swap BGRA -> RGBA using Apple Accelerate
+    const uint8_t permuteMap[4] = { 2, 1, 0, 3 }; // B->R, G->G, R->B, A->A
+    vImage_Buffer vBuf = {
+        .data = baseAddress,
+        .height = height,
+        .width = width,
+        .rowBytes = bytesPerRow
+    };
+    vImagePermuteChannels_ARGB8888(&vBuf, &vBuf, permuteMap, kvImageNoFlags);
 
     self.frameIndex++;
     uint32_t payloadLen = (uint32_t)(width * height * 4);
@@ -66,7 +77,7 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
     // [0..3]:   "OFID" (magic)
     // [4..7]:   uint32 width (LE)
     // [8..11]:  uint32 height (LE)
-    // [12..15]: "BGRA" (format)
+    // [12..15]: "RGBA" (format)
     // [16..23]: uint64 timestampMs (LE)
     // [24..27]: uint32 payloadLen (LE)
     uint8_t header[28];
@@ -77,14 +88,14 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
     memcpy(&header[4], &uWidth, 4);
     memcpy(&header[8], &uHeight, 4);
 
-    header[12] = 'B'; header[13] = 'G'; header[14] = 'R'; header[15] = 'A';
+    header[12] = 'R'; header[13] = 'G'; header[14] = 'B'; header[15] = 'A';
     memcpy(&header[16], &timestampMs, 8);
     memcpy(&header[24], &payloadLen, 4);
 
     // Write header to stdout
     size_t wHead = fwrite(header, 1, 28, stdout);
     if (wHead != 28) {
-        CVPixelBufferUnlockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly);
+        CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
         self.isRunning = NO;
         return;
     }
@@ -93,7 +104,7 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
     if (bytesPerRow == width * 4) {
         size_t wBody = fwrite(baseAddress, 1, payloadLen, stdout);
         if (wBody != payloadLen) {
-            CVPixelBufferUnlockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly);
+            CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
             self.isRunning = NO;
             return;
         }
@@ -105,7 +116,7 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
     }
     fflush(stdout);
 
-    CVPixelBufferUnlockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly);
+    CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
 }
 
 @end
@@ -177,6 +188,7 @@ static void printDevicesJson() {
     if (data) {
         NSString *str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
         printf("%s\n", [str UTF8String]);
+        fflush(stdout);
     }
 }
 
@@ -206,6 +218,7 @@ static void requestPermissionAndOutputJson() {
     if (data) {
         NSString *str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
         printf("%s\n", [str UTF8String]);
+        fflush(stdout);
     }
 }
 
@@ -241,11 +254,21 @@ static int startStreaming(NSString *targetDeviceId, int reqWidth, int reqHeight,
     }
 
     AVCaptureSession *session = [[AVCaptureSession alloc] init];
-    if (reqWidth >= 1920) {
+    if ([session canAddInput:input]) {
+        [session addInput:input];
+    } else {
+        fprintf(stderr, "Error: Cannot add input to capture session\n");
+        return 3;
+    }
+
+    int targetW = reqWidth > 0 ? reqWidth : 1280;
+    int targetH = reqHeight > 0 ? reqHeight : 720;
+
+    if (targetW >= 1920) {
         if ([session canSetSessionPreset:AVCaptureSessionPreset1920x1080]) {
             [session setSessionPreset:AVCaptureSessionPreset1920x1080];
         }
-    } else if (reqWidth >= 1280) {
+    } else if (targetW >= 1280) {
         if ([session canSetSessionPreset:AVCaptureSessionPreset1280x720]) {
             [session setSessionPreset:AVCaptureSessionPreset1280x720];
         }
@@ -255,16 +278,11 @@ static int startStreaming(NSString *targetDeviceId, int reqWidth, int reqHeight,
         }
     }
 
-    if ([session canAddInput:input]) {
-        [session addInput:input];
-    } else {
-        fprintf(stderr, "Error: Cannot add input to capture session\n");
-        return 3;
-    }
-
     AVCaptureVideoDataOutput *output = [[AVCaptureVideoDataOutput alloc] init];
     output.videoSettings = @{
-        (id)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)
+        (id)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA),
+        (id)kCVPixelBufferWidthKey: @(targetW),
+        (id)kCVPixelBufferHeightKey: @(targetH)
     };
     output.alwaysDiscardsLateVideoFrames = YES;
 

@@ -1,5 +1,6 @@
 import Cocoa
 import WebKit
+import AVFoundation
 
 /**
  * OpenFaceID Native macOS Desktop Application Launcher
@@ -19,6 +20,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var pollTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Request Camera Access natively upfront under app bundle identity
+        if AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined {
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                NSLog("[OpenFaceID] Camera access authorization: %d", granted)
+            }
+        }
+
         // 1. Configure Native Menu Bar
         setupMainMenu()
         setupStatusBarItem()

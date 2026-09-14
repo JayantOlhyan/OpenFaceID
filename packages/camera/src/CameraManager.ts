@@ -60,7 +60,8 @@ export class CameraManager {
   private cachedDevices: CameraDevice[] | null = null;
   private frameCount: number = 0;
   private nativeProcess: ChildProcess | null = null;
-  private nativeStreamBuffer: Buffer = Buffer.alloc(0);
+  private accumulator: Buffer = Buffer.alloc(16 * 1024 * 1024);
+  private accumulatorOffset: number = 0;
   private simulationTimer: NodeJS.Timeout | null = null;
   private fpsWindowStart: number = Date.now();
   private fpsWindowFrames: number = 0;
@@ -325,7 +326,7 @@ export class CameraManager {
     }
 
     this.state = 'active';
-    this.nativeStreamBuffer = Buffer.alloc(0);
+    this.accumulatorOffset = 0;
 
     EventBus.getInstance().emit('CAMERA_CONNECTED', {
       deviceId: this.selectedDeviceId,
@@ -360,41 +361,75 @@ export class CameraManager {
   }
 
   private handleNativeData(chunk: Buffer): void {
-    this.nativeStreamBuffer = Buffer.concat([this.nativeStreamBuffer, chunk]);
+    if (this.accumulatorOffset + chunk.length > this.accumulator.length) {
+      const newCap = Math.max(this.accumulator.length * 2, this.accumulatorOffset + chunk.length + 1024 * 1024);
+      const newBuf = Buffer.alloc(newCap);
+      this.accumulator.copy(newBuf, 0, 0, this.accumulatorOffset);
+      this.accumulator = newBuf;
+    }
+    chunk.copy(this.accumulator, this.accumulatorOffset);
+    this.accumulatorOffset += chunk.length;
 
     // Protocol Header: 28 bytes
     // [0..3]:   "OFID"
     // [4..7]:   width (uint32 LE)
     // [8..11]:  height (uint32 LE)
-    // [12..15]: format ("BGRA")
+    // [12..15]: format ("BGRA" or "RGBA")
     // [16..23]: timestamp (uint64 LE)
     // [24..27]: payloadLen (uint32 LE)
-    while (this.nativeStreamBuffer.length >= 28) {
-      const magic = this.nativeStreamBuffer.toString('utf8', 0, 4);
+    while (this.accumulatorOffset >= 28) {
+      const magic = this.accumulator.toString('utf8', 0, 4);
       if (magic !== 'OFID') {
-        // Resync: advance 1 byte
         this.diagnostics.invalidFrames++;
-        this.nativeStreamBuffer = this.nativeStreamBuffer.subarray(1);
+        let nextIdx = -1;
+        for (let i = 1; i <= this.accumulatorOffset - 4; i++) {
+          if (
+            this.accumulator[i] === 0x4f &&
+            this.accumulator[i + 1] === 0x46 &&
+            this.accumulator[i + 2] === 0x49 &&
+            this.accumulator[i + 3] === 0x44
+          ) {
+            nextIdx = i;
+            break;
+          }
+        }
+        if (nextIdx !== -1) {
+          this.accumulator.copy(this.accumulator, 0, nextIdx, this.accumulatorOffset);
+          this.accumulatorOffset -= nextIdx;
+        } else {
+          this.accumulatorOffset = 0;
+          break;
+        }
         continue;
       }
 
-      const frameWidth = this.nativeStreamBuffer.readUInt32LE(4);
-      const frameHeight = this.nativeStreamBuffer.readUInt32LE(8);
-      const payloadLen = this.nativeStreamBuffer.readUInt32LE(24);
+      const frameWidth = this.accumulator.readUInt32LE(4);
+      const frameHeight = this.accumulator.readUInt32LE(8);
+      const format = this.accumulator.toString('utf8', 12, 16);
+      const timestampMs = Number(this.accumulator.readBigUInt64LE(16));
+      const payloadLen = this.accumulator.readUInt32LE(24);
 
       if (frameWidth === 0 || frameHeight === 0 || payloadLen !== frameWidth * frameHeight * 4) {
         this.diagnostics.invalidFrames++;
-        this.nativeStreamBuffer = this.nativeStreamBuffer.subarray(4);
+        this.accumulator.copy(this.accumulator, 0, 4, this.accumulatorOffset);
+        this.accumulatorOffset -= 4;
         continue;
       }
 
-      if (this.nativeStreamBuffer.length < 28 + payloadLen) {
+      const totalFrameBytes = 28 + payloadLen;
+      if (this.accumulatorOffset < totalFrameBytes) {
         // Wait for full frame
         break;
       }
 
-      const rawPayload = this.nativeStreamBuffer.subarray(28, 28 + payloadLen);
-      this.nativeStreamBuffer = this.nativeStreamBuffer.subarray(28 + payloadLen);
+      const rawPayload = Buffer.allocUnsafe(payloadLen);
+      this.accumulator.copy(rawPayload, 0, 28, totalFrameBytes);
+
+      const rem = this.accumulatorOffset - totalFrameBytes;
+      if (rem > 0) {
+        this.accumulator.copy(this.accumulator, 0, totalFrameBytes, this.accumulatorOffset);
+      }
+      this.accumulatorOffset = rem;
 
       this.frameCount++;
       this.diagnostics.framesReceived++;
@@ -412,12 +447,15 @@ export class CameraManager {
         this.fpsWindowStart = now;
       }
 
-      // In-place BGRA to RGBA conversion
       const rawData = new Uint8ClampedArray(rawPayload.buffer, rawPayload.byteOffset, rawPayload.length);
-      for (let i = 0; i < rawData.length; i += 4) {
-        const b = rawData[i];
-        rawData[i] = rawData[i + 2]; // R = B
-        rawData[i + 2] = b;          // B = old R
+
+      // In-place BGRA to RGBA conversion ONLY if not already RGBA
+      if (format === 'BGRA') {
+        for (let i = 0; i < rawData.length; i += 4) {
+          const b = rawData[i];
+          rawData[i] = rawData[i + 2]; // R = B
+          rawData[i + 2] = b;          // B = old R
+        }
       }
 
       // If caller requested specific dimensions, resample real frame
@@ -588,7 +626,7 @@ export class CameraManager {
     }
     this.state = 'paused';
     this.onFrameCallback = null;
-    this.nativeStreamBuffer = Buffer.alloc(0);
+    this.accumulatorOffset = 0;
     Logger.info('camera', 'Camera capture pipeline paused');
   }
 

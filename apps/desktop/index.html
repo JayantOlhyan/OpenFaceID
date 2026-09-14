@@ -1974,23 +1974,24 @@
       }
 
       // 5. ABSENT / NOT IN VIEW (Screen 7)
+      const hasFace = Boolean((state.presence && state.presence.faceDetected) || (canonical.detection && canonical.detection !== 'NO_FACE') || (state.vision && state.vision.faceCount > 0));
       presenceBanner.classList.add('absent');
       presenceIconBubble.textContent = '○';
-      presenceTitle.textContent = 'Not in view';
-      presenceSubtitle.textContent = state.presence.unauthorizedReason || 'Looking for you...';
-      if (absentPlaceholder) absentPlaceholder.style.display = 'flex';
-      if (faceBoxOverlay) faceBoxOverlay.style.display = 'none';
+      presenceTitle.textContent = hasFace ? 'Matching face…' : 'Not in view';
+      presenceSubtitle.textContent = state.presence.unauthorizedReason || (hasFace ? 'Verifying biometric signature…' : 'Looking for you...');
+      if (absentPlaceholder) absentPlaceholder.style.display = hasFace ? 'none' : 'flex';
+      if (faceBoxOverlay && !hasFace) faceBoxOverlay.style.display = 'none';
 
       cameraDot.className = 'status-dot active';
       cameraStatusText.textContent = 'Active';
       recDot.className = 'status-dot';
-      recStatusText.textContent = 'Waiting...';
+      recStatusText.textContent = hasFace ? 'Matching…' : 'Waiting...';
       liveDot.className = 'status-dot';
       liveStatusText.textContent = 'N/A';
 
       hudBeaconDot.className = 'hud-beacon scanning';
       hudStateTitle.textContent = 'OpenFaceID';
-      hudStateSubtitle.textContent = 'Looking for you…';
+      hudStateSubtitle.textContent = hasFace ? 'Verifying profile…' : 'Looking for you…';
     }
 
     function updatePauseButtons(isPaused) {

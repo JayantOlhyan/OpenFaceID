@@ -28,6 +28,7 @@ clang -O3 -fobjc-arc \
   -framework CoreMedia \
   -framework CoreVideo \
   -framework Foundation \
+  -framework Accelerate \
   "$DIR/packages/camera/native/openfaceid-camera-avf.m" \
   -o "$DIR/packages/camera/bin/openfaceid-camera-avf"
 chmod +x "$DIR/packages/camera/bin/openfaceid-camera-avf"
