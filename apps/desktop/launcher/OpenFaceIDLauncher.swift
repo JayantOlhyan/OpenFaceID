@@ -115,6 +115,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // 6. Connect to Local Daemon & Start Status Polling
         connectToLocalDaemon()
         startStatusPolling()
+        setupSessionNotifications()
     }
 
     func setupStatusBarItem() {
@@ -130,11 +131,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         titleItem.isEnabled = false
         menu.addItem(titleItem)
 
-        statusMenuItem = NSMenuItem(title: "Status: ● Looking for you…", action: nil, keyEquivalent: "")
+        statusMenuItem = NSMenuItem(title: "Status: ● Standby (Camera Off)", action: nil, keyEquivalent: "")
         statusMenuItem?.isEnabled = false
         menu.addItem(statusMenuItem!)
 
-        cameraMenuItem = NSMenuItem(title: "Camera: ● Active", action: nil, keyEquivalent: "")
+        cameraMenuItem = NSMenuItem(title: "Camera: ● Standby", action: nil, keyEquivalent: "")
         cameraMenuItem?.isEnabled = false
         menu.addItem(cameraMenuItem!)
 
@@ -147,6 +148,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         menu.addItem(privItem)
 
         menu.addItem(NSMenuItem.separator())
+
+        let unlockTestItem = NSMenuItem(title: "Test Face Unlock Now", action: #selector(testUnlockAction), keyEquivalent: "u")
+        menu.addItem(unlockTestItem)
 
         pauseResumeMenuItem = NSMenuItem(title: "Pause Camera", action: #selector(togglePrivacyPause), keyEquivalent: "p")
         menu.addItem(pauseResumeMenuItem!)
@@ -208,6 +212,56 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @objc func terminateApp() {
         NSApplication.shared.terminate(nil)
+    }
+
+    // MARK: - Event-Driven Wake & Lock Session Integration
+
+    func setupSessionNotifications() {
+        let wsCenter = NSWorkspace.shared.notificationCenter
+        wsCenter.addObserver(self, selector: #selector(handleWakeNotification), name: NSWorkspace.screensDidWakeNotification, object: nil)
+        wsCenter.addObserver(self, selector: #selector(handleSessionDidBecomeActive), name: NSWorkspace.sessionDidBecomeActiveNotification, object: nil)
+
+        let distCenter = DistributedNotificationCenter.default()
+        distCenter.addObserver(self, selector: #selector(handleScreenUnlocked), name: NSNotification.Name("com.apple.screenIsUnlocked"), object: nil)
+        NSLog("[OpenFaceID] Registered native macOS sleep/wake & session notifications")
+    }
+
+    @objc func handleWakeNotification() {
+        NSLog("[OpenFaceID] macOS screensDidWakeNotification fired; triggering unlock burst")
+        triggerUnlockSession(source: "screens_did_wake")
+    }
+
+    @objc func handleSessionDidBecomeActive() {
+        NSLog("[OpenFaceID] macOS sessionDidBecomeActive fired; triggering unlock burst")
+        triggerUnlockSession(source: "session_did_become_active")
+    }
+
+    @objc func handleScreenUnlocked() {
+        NSLog("[OpenFaceID] macOS screenIsUnlocked notification received")
+    }
+
+    @objc func testUnlockAction() {
+        NSLog("[OpenFaceID] User triggered manual face unlock test from menu bar")
+        triggerUnlockSession(source: "manual_menu_test")
+    }
+
+    func triggerUnlockSession(source: String) {
+        guard let url = URL(string: "http://127.0.0.1:41793/api/v1/unlock/trigger") else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let payload = ["source": source]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: payload, options: [])
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                NSLog("[OpenFaceID] triggerUnlockSession error: %@", error.localizedDescription)
+                return
+            }
+            if let data = data, let str = String(data: data, encoding: .utf8) {
+                NSLog("[OpenFaceID] Unlock session completed: %@", str)
+            }
+        }.resume()
     }
 
     func startStatusPolling() {
