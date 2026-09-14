@@ -341,10 +341,28 @@ static int startStreaming(NSString *targetDeviceId, int reqWidth, int reqHeight,
     return 0;
 }
 
+#import <Vision/Vision.h>
+
+static void printVisionCapabilityJson(void) {
+    BOOL visionAvailable = (NSClassFromString(@"VNImageRequestHandler") != nil && NSClassFromString(@"VNDetectFaceLandmarksRequest") != nil);
+    NSDictionary *dict = @{
+        @"available": @(visionAvailable),
+        @"engine": @"Apple Vision (Neural Engine / GPU)",
+        @"framework": @"Vision.framework",
+        @"features": @[@"faceDetection", @"76PointLandmarks", @"coreMLNeuralEngine"]
+    };
+    NSData *data = [NSJSONSerialization dataWithJSONObject:dict options:0 error:nil];
+    if (data) {
+        NSString *str = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        printf("%s\n", [str UTF8String]);
+        fflush(stdout);
+    }
+}
+
 int main(int argc, const char * argv[]) {
     @autoreleasepool {
         if (argc < 2) {
-            printf("Usage: openfaceid-camera-avf <devices|permission|stream> [deviceId] [width] [height] [fps]\n");
+            printf("Usage: openfaceid-camera-avf <devices|permission|stream|vision-test> [deviceId] [width] [height] [fps]\n");
             return 1;
         }
 
@@ -354,6 +372,9 @@ int main(int argc, const char * argv[]) {
             return 0;
         } else if ([command isEqualToString:@"permission"]) {
             requestPermissionAndOutputJson();
+            return 0;
+        } else if ([command isEqualToString:@"vision-test"]) {
+            printVisionCapabilityJson();
             return 0;
         } else if ([command isEqualToString:@"stream"]) {
             NSString *devId = (argc > 2) ? [NSString stringWithUTF8String:argv[2]] : @"default";
