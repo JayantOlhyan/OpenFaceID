@@ -417,6 +417,55 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 8b. Face Unlock: Trigger Wake Burst Session (Event-Driven)
+  if ((url.pathname === '/api/v1/unlock/trigger' || url.pathname === '/api/unlock/trigger') && method === 'POST') {
+    try {
+      let body = {};
+      try { body = await readJsonBody(); } catch {}
+      const triggerSource = body?.source || 'ipc';
+      const result = await engine.triggerUnlockSession(triggerSource);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
+    }
+    return;
+  }
+
+  // 8c. Face Unlock: Status and Latency Diagnostics
+  if ((url.pathname === '/api/v1/unlock/status' || url.pathname === '/api/unlock/status') && method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(engine.getUnlockStatus()));
+    return;
+  }
+
+  // 8d. Camera Live Preview On-Demand Start (for Enrollment & Camera Settings)
+  if (url.pathname === '/api/v1/camera/preview/start' && method === 'POST') {
+    try {
+      await engine.startLivePreview();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, camera: 'ACTIVE' }));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
+    }
+    return;
+  }
+
+  // 8e. Camera Live Preview Stop (Return to Zero-Power Standby)
+  if (url.pathname === '/api/v1/camera/preview/stop' && method === 'POST') {
+    try {
+      engine.stopLivePreview();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, camera: 'IDLE' }));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
+    }
+    return;
+  }
+
   // 9. Identities List (Protected)
   if (url.pathname === '/api/v1/identities' && method === 'GET') {
     if (!verifyAuth()) {
@@ -457,6 +506,7 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify({ error: 'Invalid name: Must be a non-empty string of 1 to 64 characters' }));
         return;
       }
+      await engine.startLivePreview();
       const enrollmentMgr = engine.startEnrollmentSession(body.name.trim());
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
@@ -545,6 +595,7 @@ const server = http.createServer(async (req, res) => {
 
       await engine.identityStore.saveIdentity(identityToSave);
       engine.cancelEnrollmentSession();
+      engine.stopLivePreview();
       engine.activityLog.logEvent('IDENTITY_ENROLLED', { identityId: identityToSave.id, name: identityToSave.name });
 
       res.writeHead(201, { 'Content-Type': 'application/json' });
@@ -567,6 +618,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     engine.cancelEnrollmentSession();
+    engine.stopLivePreview();
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: true, message: 'Enrollment session cancelled' }));
     return;
