@@ -46,6 +46,7 @@ export interface ApplicationState {
     status: VisionLifecycleState;
     model: string;
     embedder: string;
+    embedderProvider: string;
     faceDetected: boolean;
     landmarkCount: number;
   };
@@ -93,4 +94,17 @@ export interface ApplicationState {
     keystoreType: string;
   };
   canonicalState: CanonicalStateSnapshot;
+  unlock: {
+    state: string;
+    triggerSource: string;
+    metrics: {
+      wakeTimestamp: number | null;
+      firstFrameTimestamp: number | null;
+      wakeToFirstFrameMs: number | null;
+      verificationLatencyMs: number | null;
+      totalDurationMs: number;
+      framesCaptured: number;
+    };
+    lastResult: any;
+  };
 }
