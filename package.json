@@ -30,7 +30,10 @@
     "package:macos": "./scripts/package-macos.sh",
     "package:linux": "./scripts/package-linux.sh",
     "package:deb": "./scripts/package-deb.sh",
+    "package:rpm": "./scripts/package-rpm.sh",
+    "package:all": "./scripts/package-all.sh",
     "package:release": "node --experimental-strip-types scripts/generate-release-manifest.js",
+
     "hardware:doctor": "node scripts/hardware/doctor.js",
     "hardware:camera": "node scripts/hardware/camera-test.js",
     "hardware:recognition": "node scripts/hardware/recognition-test.js",

@@ -29,8 +29,10 @@ clang -O3 -fobjc-arc \
   -framework CoreVideo \
   -framework Foundation \
   -framework Accelerate \
+  -framework Vision \
   "$DIR/packages/camera/native/openfaceid-camera-avf.m" \
   -o "$DIR/packages/camera/bin/openfaceid-camera-avf"
+
 chmod +x "$DIR/packages/camera/bin/openfaceid-camera-avf"
 cp "$DIR/packages/camera/bin/openfaceid-camera-avf" "$BIN_DIR/openfaceid-camera-avf"
 echo "  ✓ Bundled openfaceid-camera-avf binary"
