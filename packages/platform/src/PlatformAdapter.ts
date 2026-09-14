@@ -26,6 +26,9 @@ export interface SecureStorageResult {
   error?: string;
 }
 
+export type SessionEventType = 'wake' | 'lock' | 'unlock';
+export type SessionEventListener = (event: SessionEventType) => void;
+
 export abstract class PlatformAdapter {
   private static lastNotificationTime = new Map<string, number>();
 
@@ -51,6 +54,10 @@ export abstract class PlatformAdapter {
   public abstract getDisplayInfo(): Promise<DisplayInfo[]>;
   public abstract showNotification(title: string, body: string): Promise<void>;
   
+  // Event-Driven Wake & Lock Session Monitors
+  public abstract startWakeAndLockListener(listener: SessionEventListener): void;
+  public abstract stopWakeAndLockListener(): void;
+
   // Secure Keystore operations
   public abstract storeSecret(key: string, secret: string): Promise<boolean>;
   public abstract retrieveSecret(key: string): Promise<string | null>;
