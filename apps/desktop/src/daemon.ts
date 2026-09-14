@@ -208,7 +208,7 @@ export class DesktopEngine {
     this.visionState = 'PROCESSING';
 
     // Reset frame-level FSMs to clean state for each incoming frame
-    if (this.recognitionFsm.getState() !== 'IDLE' && this.recognitionFsm.getState() !== 'SEARCHING') {
+    if (this.recognitionFsm.getState() !== 'SEARCHING') {
       this.recognitionFsm.reset('SEARCHING');
     }
     if (this.securityFsm.getState() !== 'UNKNOWN') {
@@ -318,15 +318,20 @@ export class DesktopEngine {
       this.recognitionFsm.transition('RECOGNIZING');
       const matchResult = this.recognizer.evaluateFrame(embedding, enabledIdentities);
 
-      if (matchResult.match && matchResult.identity) {
-        this.activeIdentityId = matchResult.identity.id;
-        this.activeIdentityName = matchResult.identity.name;
-        this.lastConfidence = matchResult.confidence;
+      const isMatch = Boolean(matchResult.matched || (matchResult as any).match);
+      const matchedId = matchResult.identityId || (matchResult as any).identity?.id;
+      const matchedName = matchResult.identityName || (matchResult as any).identity?.name || 'Authorized User';
+      const matchedConfidence = matchResult.temporalConfidence ?? matchResult.similarity ?? (matchResult as any).confidence ?? 0;
+
+      if (isMatch && matchedId) {
+        this.activeIdentityId = matchedId;
+        this.activeIdentityName = matchedName;
+        this.lastConfidence = matchedConfidence;
         this.lastMatchTimestamp = Date.now();
 
         this.securityFsm.transition('IDENTITY_MATCHED', {
-          identityId: matchResult.identity.id,
-          confidence: matchResult.confidence,
+          identityId: matchedId,
+          confidence: matchedConfidence,
         });
 
         // 5. Liveness Verification
@@ -338,11 +343,11 @@ export class DesktopEngine {
         );
 
         if (livenessResult.passed) {
-          this.recognitionFsm.transition('AUTHORIZED', matchResult.identity.id);
+          this.recognitionFsm.transition('AUTHORIZED', matchedId);
           this.securityFsm.transition('LIVENESS_VERIFIED', { score: livenessResult.score });
 
           // 6. Authorized Presence Verification
-          this.presenceTracker.onAuthorizedPresence(matchResult.identity.id, matchResult.identity.name);
+          this.presenceTracker.onAuthorizedPresence(matchedId, matchedName);
           this.securityFsm.transition('POLICY_APPROVED');
 
           // Update Canonical State Machine to AUTHORIZED
@@ -351,8 +356,8 @@ export class DesktopEngine {
             detectionState: 'FACE_DETECTED',
             livenessState: 'LIVENESS_PASSED',
             identityState: 'IDENTITY_RECOGNIZED',
-            identityId: matchResult.identity.id,
-            identityName: matchResult.identity.name,
+            identityId: matchedId,
+            identityName: matchedName,
           });
         } else {
           Logger.debug('vision', `Liveness check pending or failed: ${livenessResult.reason}`);
@@ -361,15 +366,15 @@ export class DesktopEngine {
             detectionState: 'FACE_DETECTED',
             livenessState: 'LIVENESS_FAILED',
             identityState: 'IDENTITY_RECOGNIZED',
-            identityId: matchResult.identity.id,
-            identityName: matchResult.identity.name,
+            identityId: matchedId,
+            identityName: matchedName,
           });
         }
       } else {
         // Unknown face detected
         this.activeIdentityId = null;
         this.activeIdentityName = null;
-        this.lastConfidence = matchResult.confidence;
+        this.lastConfidence = matchedConfidence;
         this.presenceTracker.onUnknownFaceDetected();
 
         this.canonicalFsm.updateVisionState({
@@ -532,6 +537,9 @@ export class DesktopEngine {
     };
   }
 
+  private cachedBmpBuffer: Buffer | null = null;
+  private cachedBmpSize: number = 0;
+
   private generateBmpSnapshot(rgbaData: Uint8ClampedArray, srcW: number, srcH: number): Buffer {
     // Generate a clean 480x270 or proportional preview BMP for low CPU usage
     const targetW = 480;
@@ -543,18 +551,23 @@ export class DesktopEngine {
     const pixelArraySize = rowSize * targetH;
     const fileSize = fileHeaderSize + infoHeaderSize + pixelArraySize;
 
-    const buf = Buffer.alloc(fileSize);
-    buf.write('BM', 0);
-    buf.writeUInt32LE(fileSize, 2);
-    buf.writeUInt32LE(fileHeaderSize + infoHeaderSize, 10);
-    buf.writeUInt32LE(infoHeaderSize, 14);
-    buf.writeInt32LE(targetW, 18);
-    buf.writeInt32LE(-targetH, 22); // Top-down
-    buf.writeUInt16LE(1, 26);
-    buf.writeUInt16LE(24, 28);
-    buf.writeUInt32LE(0, 30);
-    buf.writeUInt32LE(pixelArraySize, 34);
+    if (!this.cachedBmpBuffer || this.cachedBmpSize !== fileSize) {
+      this.cachedBmpBuffer = Buffer.alloc(fileSize);
+      this.cachedBmpSize = fileSize;
+      const buf = this.cachedBmpBuffer;
+      buf.write('BM', 0);
+      buf.writeUInt32LE(fileSize, 2);
+      buf.writeUInt32LE(fileHeaderSize + infoHeaderSize, 10);
+      buf.writeUInt32LE(infoHeaderSize, 14);
+      buf.writeInt32LE(targetW, 18);
+      buf.writeInt32LE(-targetH, 22); // Top-down
+      buf.writeUInt16LE(1, 26);
+      buf.writeUInt16LE(24, 28);
+      buf.writeUInt32LE(0, 30);
+      buf.writeUInt32LE(pixelArraySize, 34);
+    }
 
+    const buf = this.cachedBmpBuffer;
     const xRatio = srcW / targetW;
     const yRatio = srcH / targetH;
     let offset = 54;

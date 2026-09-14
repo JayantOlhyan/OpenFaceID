@@ -4,10 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OpenFaceID — Facial Presence Detection</title>
-  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
   <style>
     :root {
       --bg-base: #0c0e12;
@@ -48,11 +49,17 @@
       }
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: var(--font-sans);
+      background-color: var(--bg-base);
+      color: var(--text-primary);
       -webkit-font-smoothing: antialiased;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     *:focus-visible {
@@ -60,78 +67,63 @@
       outline-offset: 2px;
     }
 
-    body {
-      background-color: var(--bg-base);
-      background-image: radial-gradient(ellipse at 50% 0%, rgba(18, 30, 49, 0.45) 0%, rgba(12, 14, 18, 1) 75%);
-      color: var(--text-primary);
-      font-family: var(--font-sans);
-      font-size: 13px;
-      line-height: 1.45;
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      user-select: none;
-    }
-
-    /* macOS App Shell Layout */
     #app-container {
       display: flex;
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
+      width: 100%;
+      height: 100%;
     }
 
-    /* Left Sidebar */
-    aside#sidebar {
-      width: 220px;
-      min-width: 220px;
-      background: rgba(14, 17, 23, 0.88);
-      backdrop-filter: blur(28px);
-      -webkit-backdrop-filter: blur(28px);
+    /* Left Sidebar Navigation */
+    #sidebar {
+      width: 240px;
+      background: rgba(15, 18, 24, 0.85);
       border-right: 1px solid var(--border-subtle);
       display: flex;
       flex-direction: column;
-      padding: 38px 12px 16px 12px;
-      z-index: 20;
+      padding: 16px 12px;
+      z-index: 10;
+      flex-shrink: 0;
     }
 
     .brand-header {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 0 8px 20px 8px;
+      gap: 12px;
+      padding: 0 4px 18px 4px;
       border-bottom: 1px solid var(--border-subtle);
       margin-bottom: 14px;
     }
 
-    .brand-icon-box {
-      width: 32px;
-      height: 32px;
-      border-radius: 9px;
-      background: linear-gradient(135deg, #1e3a8a, #0284c7);
-      border: 1px solid rgba(56, 189, 248, 0.3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      box-shadow: 0 2px 10px rgba(2, 132, 199, 0.3);
+    .brand-logo-img {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0, 113, 227, 0.35);
+      object-fit: cover;
+      display: block;
+      flex-shrink: 0;
     }
 
     .brand-titles {
       display: flex;
       flex-direction: column;
+      justify-content: center;
+      gap: 2px;
     }
 
     .brand-title {
-      font-size: 14px;
-      font-weight: 600;
-      letter-spacing: -0.2px;
-      color: #fff;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: #ffffff;
+      line-height: 1.2;
     }
 
     .brand-tagline {
-      font-size: 10px;
-      color: var(--text-secondary);
+      font-size: 12.5px;
+      color: #8e9aa8;
+      font-weight: 400;
+      line-height: 1.2;
     }
 
     /* Sidebar Navigation */
@@ -492,7 +484,9 @@
       position: absolute;
       top: 0;
       left: 0;
-      background: rgba(12, 14, 18, 0.94);
+      background: rgba(12, 14, 18, 0.25);
+      backdrop-filter: blur(1px);
+      pointer-events: none;
       z-index: 5;
     }
 
@@ -882,6 +876,16 @@
       color: var(--text-secondary);
     }
 
+    .hud-logo-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      object-fit: cover;
+      flex-shrink: 0;
+      margin-right: 3px;
+      box-shadow: 0 0 6px rgba(0, 113, 227, 0.4);
+    }
+
     /* Onboarding Modal Wizard (Screens 1 to 5) */
     #onboardingModal {
       position: fixed;
@@ -929,6 +933,16 @@
       align-items: center;
       text-align: center;
       padding: 10px 0 20px 0;
+    }
+
+    .onboarding-hero-logo {
+      width: 76px;
+      height: 76px;
+      border-radius: 18px;
+      box-shadow: 0 10px 32px rgba(0, 113, 227, 0.45);
+      margin-bottom: 18px;
+      display: block;
+      object-fit: cover;
     }
 
     .onboarding-icon-box {
@@ -1108,6 +1122,7 @@
 
   <!-- Floating Dynamic Island / Notch Presence HUD -->
   <div id="macHudPill" class="mac-hud-pill-container" role="status" aria-live="polite" onclick="toggleHudExpand()" title="OpenFaceID Presence Status">
+    <img src="assets/icon.png" class="hud-logo-icon" width="16" height="16" alt="OpenFaceID" />
     <span id="hudBeaconDot" class="hud-beacon"></span>
     <span id="hudStateTitle" class="hud-title">OpenFaceID</span>
     <span id="hudStateSubtitle" class="hud-subtitle">Looking for you…</span>
@@ -1117,11 +1132,7 @@
     <!-- Left macOS Application Sidebar -->
     <aside id="sidebar" role="navigation" aria-label="Sidebar Navigation">
       <div class="brand-header">
-        <div class="brand-icon-box" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8V5a2 2 0 012-2h3m11 0h3a2 2 0 012 2v3m0 11v3a2 2 0 01-2 2h-3m-11 0H5a2 2 0 01-2-2v-3M9 10a1 1 0 102 0 1 1 0 00-2 0zm4 0a1 1 0 102 0 1 1 0 00-2 0zm-4 4a4 4 0 006 0" />
-          </svg>
-        </div>
+        <img src="assets/icon.png" class="brand-logo-img" alt="OpenFaceID Logo" width="38" height="38" />
         <div class="brand-titles">
           <span class="brand-title">OpenFaceID</span>
           <span class="brand-tagline">Presence Detection</span>
@@ -1621,11 +1632,7 @@
       <!-- STEP 1: WELCOME (Screen 1) -->
       <div id="step-welcome" class="onboarding-step active">
         <div class="onboarding-step-hero">
-          <div class="onboarding-icon-box">
-            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 8V5a2 2 0 012-2h3m11 0h3a2 2 0 012 2v3m0 11v3a2 2 0 01-2 2h-3m-11 0H5a2 2 0 01-2-2v-3M9 10a1 1 0 102 0 1 1 0 00-2 0zm4 0a1 1 0 102 0 1 1 0 00-2 0zm-4 4a4 4 0 006 0" />
-            </svg>
-          </div>
+          <img src="assets/icon.png" class="onboarding-hero-logo" width="76" height="76" alt="OpenFaceID" />
           <h1 id="onboardingModalTitle" class="onboarding-title">Welcome to OpenFaceID</h1>
           <p class="onboarding-subtitle">Your Mac knows when you're there.</p>
         </div>

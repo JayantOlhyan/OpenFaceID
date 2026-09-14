@@ -186,11 +186,22 @@ const server = http.createServer(async (req, res) => {
     });
   };
 
-  // Generic rate limit check (120 req/min per IP)
-  if (isRateLimited(`global:${clientIp}`, 120)) {
-    res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '60' });
-    res.end(JSON.stringify({ error: 'Too Many Requests: Rate limit exceeded' }));
-    return;
+  // Generic rate limit check for external/abuse protection (exempt local high-frequency camera stream and UI polling)
+  const isHighFreqLocal = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp === 'localhost';
+  const isStreamingPath = url.pathname.startsWith('/api/v1/camera/snapshot') ||
+                          url.pathname === '/api/v1/status' ||
+                          url.pathname === '/api/v1/camera/diagnostics' ||
+                          url.pathname === '/' ||
+                          url.pathname.endsWith('.html') ||
+                          url.pathname.endsWith('.js') ||
+                          url.pathname.endsWith('.css');
+
+  if (!isStreamingPath && (!isHighFreqLocal || isRateLimited(`global:${clientIp}`, 1200))) {
+    if (isRateLimited(`global:${clientIp}`, 120)) {
+      res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '60' });
+      res.end(JSON.stringify({ error: 'Too Many Requests: Rate limit exceeded' }));
+      return;
+    }
   }
 
   // 1. Authoritative Application State (Public)

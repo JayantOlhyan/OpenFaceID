@@ -178,6 +178,10 @@ export function resolveDesktopAsset(assetPath: string): string | null {
     candidates.push(path.resolve(resourcesDir, 'app/apps/desktop', clean));
     candidates.push(path.resolve(resourcesDir, 'apps/desktop', clean));
     candidates.push(path.resolve(resourcesDir, clean));
+    if (clean === 'icon.png' || clean === 'logo.png') {
+      candidates.push(path.resolve(resourcesDir, 'app/apps/desktop/assets/icon.png'));
+      candidates.push(path.resolve(resourcesDir, 'apps/desktop/assets/icon.png'));
+    }
   }
 
   if (process.env.OFID_APP_DIR) {
