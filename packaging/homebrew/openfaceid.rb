@@ -1,6 +1,6 @@
 cask "openfaceid" do
   version "0.2.1-rc.1"
-  sha256 :no_check # Updated automatically during release manifest generation
+  sha256 "9bd8bed00fa4dbd6a7795ff299eb954bfd68711bb8acb34d3b56870acdc2996c"
 
   url "https://github.com/JayantOlhyan/OpenFaceID/releases/download/v#{version}/OpenFaceID-#{version}-arm64.dmg"
   name "OpenFaceID"
