@@ -4,10 +4,12 @@ import {
   SecurityStateMachine,
   PresenceStateMachine,
   CanonicalStateMachine,
+  UnlockStateMachine,
   NotificationManager,
   EventBus,
   Logger,
   type CanonicalStateSnapshot,
+  type UnlockResult,
 } from '../../../packages/core/src/index.ts';
 import { getPlatformAdapter, type PlatformAdapter } from '../../../packages/platform/src/index.ts';
 import { CameraManager, type CameraFrame } from '../../../packages/camera/src/index.ts';
@@ -54,6 +56,12 @@ export class DesktopEngine {
   // Canonical Authoritative State Machine (Phase 5)
   public readonly canonicalFsm: CanonicalStateMachine;
 
+  // Event-Driven Face Unlock State Machine (Phase 1)
+  public readonly unlockFsm: UnlockStateMachine;
+  private activeUnlockPromise: Promise<UnlockResult> | null = null;
+  private pendingUnlockResolver: ((result: UnlockResult) => void) | null = null;
+  private options: DesktopEngineOptions;
+
   // Legacy FSMs for backward compatibility
   private recognitionFsm: RecognitionStateMachine;
   private securityFsm: SecurityStateMachine;
@@ -87,6 +95,7 @@ export class DesktopEngine {
   private lastPowerCheckTime: number = Date.now();
 
   constructor(options: DesktopEngineOptions = {}) {
+    this.options = options;
     this.adapter = getPlatformAdapter();
     this.identityStore = new IdentityStore();
     this.activityLog = new ActivityLog();
@@ -109,6 +118,7 @@ export class DesktopEngine {
     });
 
     this.canonicalFsm = new CanonicalStateMachine(leaveTimeout);
+    this.unlockFsm = new UnlockStateMachine({ maxBurstFrames: 20, burstTimeoutMs: 2500 });
     this.recognitionFsm = new RecognitionStateMachine('IDLE');
     this.securityFsm = new SecurityStateMachine('UNKNOWN');
 
@@ -159,23 +169,28 @@ export class DesktopEngine {
         this.canonicalFsm.setCameraState('CAMERA_DISCONNECTED');
         this.visionState = 'READY';
       } else {
-        this.cameraState = 'ACTIVE';
+        this.cameraState = 'IDLE';
         this.canonicalFsm.setCameraState('CAMERA_READY');
         this.visionState = 'READY';
 
-        // Section 22: Begin real camera processing when permission is granted
-        if (permission === 'granted') {
+        // Phase 1 Event-Driven Model: Camera remains in low-power IDLE standby
+        // until an OS wake, lock screen, or manual unlock trigger occurs.
+        // If autoStartCamera is explicitly set to true (e.g. legacy test suite), start continuous capture.
+        if (this.options?.autoStartCamera && permission === 'granted') {
           await this.cameraManager.startCapture((frame) => this.processFrame(frame));
         }
       }
 
-      // 4. Start background power monitor (sleep/wake)
+      // 4. Start platform wake and lock session event listener
+      this.adapter.startWakeAndLockListener((event) => this.handleSessionEvent(event));
+
+      // 5. Start background power monitor (sleep/wake)
       this.startPowerMonitor();
 
-      // 5. Start periodic session expiration checker (every 1000ms)
+      // 6. Start periodic session expiration checker (every 1000ms)
       this.startSessionExpirationChecker();
 
-      // 6. Register process shutdown hooks
+      // 7. Register process shutdown hooks
       this.registerShutdownHooks();
 
       this.canonicalFsm.setSystemState('SYSTEM_READY');
@@ -484,6 +499,206 @@ export class DesktopEngine {
     });
   }
 
+  /**
+   * Platform session event handler (wake, lock, unlock)
+   */
+  public handleSessionEvent(event: 'wake' | 'lock' | 'unlock'): void {
+    Logger.info('platform', `Session event received from platform adapter: ${event}`);
+    if (event === 'wake') {
+      this.triggerUnlockSession('wake').catch((err) => {
+        Logger.error('unlock', 'Error during wake unlock session', { error: String(err) });
+      });
+    } else if (event === 'lock') {
+      this.cameraManager.stopCapture();
+      this.cameraState = 'IDLE';
+      this.canonicalFsm.resetOnWake();
+      this.unlockFsm.resetToStandby();
+    }
+  }
+
+  /**
+   * Event-Driven Face Unlock Burst Session
+   * Wakes camera, captures 5-15 frames, evaluates liveness and face recognition,
+   * records outcome, and immediately stops camera capture to return to standby.
+   */
+  public async triggerUnlockSession(triggerSource: string = 'wake'): Promise<UnlockResult> {
+    if (this.activeUnlockPromise) {
+      return this.activeUnlockPromise;
+    }
+
+    const currentState = this.unlockFsm.getState();
+    if (currentState === 'WAKE_TRIGGERED' || currentState === 'CAPTURING_BURST' || currentState === 'ANALYZING') {
+      return this.unlockFsm.getLastResult() || {
+        success: false,
+        state: currentState,
+        triggerSource,
+        identityId: null,
+        identityName: null,
+        confidence: 0,
+        livenessPassed: false,
+        metrics: this.unlockFsm.getMetrics(),
+        error: 'Unlock session already in progress',
+      };
+    }
+
+    this.unlockFsm.triggerWake(triggerSource);
+    this.canonicalFsm.setSystemState('SYSTEM_READY');
+    this.cameraState = 'ACTIVE';
+
+    this.activeUnlockPromise = new Promise<UnlockResult>(async (resolve) => {
+      this.pendingUnlockResolver = resolve;
+
+      let isFirstFrame = true;
+      const identities = await this.identityStore.listIdentities();
+
+      if (identities.length === 0) {
+        Logger.warn('unlock', 'No enrolled identities found; unlock burst aborted');
+        const res = this.unlockFsm.recordFailed('NO_ENROLLED_IDENTITIES');
+        this.finishUnlockSession(res);
+        return;
+      }
+
+      const started = await this.cameraManager.startCapture(async (frame) => {
+        if (isFirstFrame) {
+          isFirstFrame = false;
+          const latency = this.unlockFsm.onFirstFrameReceived();
+          Logger.info('unlock', `Wake-to-first-frame latency: ${latency}ms`);
+        }
+
+        const isBurstLimit = this.unlockFsm.onFrameCaptured();
+
+        try {
+          await this.processUnlockBurstFrame(frame);
+        } catch (err) {
+          Logger.error('unlock', 'Error during unlock burst evaluation', { error: String(err) });
+        } finally {
+          frame.zeroize();
+        }
+
+        if (this.unlockFsm.getState() === 'VERIFIED') {
+          const res = this.unlockFsm.getLastResult()!;
+          this.finishUnlockSession(res);
+          return;
+        }
+
+        if (this.unlockFsm.isBurstTimeout() || isBurstLimit) {
+          Logger.warn('unlock', 'Unlock burst ended without a verified match');
+          const res = this.unlockFsm.recordFailed('TIMEOUT_OR_NO_MATCH');
+          this.finishUnlockSession(res);
+          return;
+        }
+      });
+
+      if (!started) {
+        Logger.error('unlock', 'Failed to start camera for unlock burst');
+        const res = this.unlockFsm.recordFailed('CAMERA_START_FAILED');
+        this.finishUnlockSession(res);
+      }
+    });
+
+    return this.activeUnlockPromise;
+  }
+
+  private async processUnlockBurstFrame(frame: CameraFrame): Promise<void> {
+    this.unlockFsm.setAnalyzing();
+
+    // 1. Detect faces
+    const detections = await this.detector.detect(frame);
+    if (detections.length === 0) return;
+
+    if (detections.length > 1) {
+      Logger.warn('unlock', 'Multiple faces detected during unlock; reject for security');
+      return;
+    }
+
+    const detection = detections[0];
+
+    // 2. Liveness check
+    const livenessResult = await this.liveness.evaluateLiveness(
+      frame,
+      detection.box,
+      detection.landmarks
+    );
+    if (!livenessResult.passed) {
+      Logger.debug('unlock', 'Liveness check pending or failed', { reason: livenessResult.reason });
+      return;
+    }
+
+    // 3. Embedding extraction
+    const embedding = await this.embedder.embed(frame, detection.landmarks);
+
+    // 4. Match against enrolled gallery
+    const identities = await this.identityStore.listIdentities();
+    const match = this.recognizer.evaluateFrame(embedding, identities);
+
+    if (match.matched && match.identityId) {
+      Logger.info('unlock', `Face recognized: ${match.identityName} (${match.identityId}) [similarity: ${match.similarity.toFixed(3)}]`);
+      this.lastMatchTimestamp = Date.now();
+      this.lastConfidence = match.similarity;
+      this.activeIdentityId = match.identityId;
+      this.activeIdentityName = match.identityName;
+
+      this.canonicalFsm.updateVisionState({
+        faceCount: 1,
+        detectionState: 'FACE_DETECTED',
+        livenessState: 'LIVENESS_PASSED',
+        identityState: 'IDENTITY_RECOGNIZED',
+        activeIdentityId: match.identityId,
+        activeIdentityName: match.identityName,
+      });
+
+      this.unlockFsm.recordVerified(match.identityId, match.identityName ?? 'Authorized User', match.similarity);
+    }
+  }
+
+  private finishUnlockSession(result: UnlockResult): void {
+    this.cameraManager.stopCapture();
+    this.cameraState = 'IDLE';
+    this.canonicalFsm.setCameraState('CAMERA_READY');
+    this.activeUnlockPromise = null;
+
+    if (this.pendingUnlockResolver) {
+      const resolver = this.pendingUnlockResolver;
+      this.pendingUnlockResolver = null;
+      resolver(result);
+    }
+
+    this.activityLog.logEvent(result.success ? 'FACE_UNLOCK_SUCCESS' : 'FACE_UNLOCK_FAILED', {
+      source: result.triggerSource,
+      identityId: result.identityId,
+      confidence: result.confidence,
+      metrics: result.metrics,
+      error: result.error,
+    });
+
+    setTimeout(() => {
+      this.unlockFsm.resetToStandby();
+    }, 1000);
+  }
+
+  public async startLivePreview(onFrame?: (frame: CameraFrame) => void): Promise<boolean> {
+    if (this.cameraState === 'ACTIVE') return true;
+    this.cameraState = 'ACTIVE';
+    this.canonicalFsm.setCameraState('CAMERA_READY');
+    return this.cameraManager.startCapture(onFrame || ((frame) => this.processFrame(frame)));
+  }
+
+  public stopLivePreview(): void {
+    this.cameraManager.stopCapture();
+    this.cameraState = 'IDLE';
+    this.canonicalFsm.setCameraState('CAMERA_READY');
+    this.latestFrameBmp = null;
+  }
+
+  public getUnlockStatus() {
+    return {
+      state: this.unlockFsm.getState(),
+      triggerSource: this.unlockFsm.getTriggerSource(),
+      metrics: this.unlockFsm.getMetrics(),
+      lastResult: this.unlockFsm.getLastResult(),
+    };
+  }
+
   private frameListeners: Array<() => void> = [];
 
   public handlePreviewFrame(frame: CameraFrame): void {
@@ -639,6 +854,7 @@ export class DesktopEngine {
         status: this.visionState,
         model: 'BlazeFace (896 Anchors, IoU NMS)',
         embedder: 'ArcFace / MobileFaceNet (512D Aligned)',
+        embedderProvider: this.embedder.getActiveProvider(),
         faceDetected: snapshot.faceCount > 0,
         landmarkCount: 6,
       },
@@ -685,6 +901,12 @@ export class DesktopEngine {
         keystoreType: info.os === 'macos' ? 'macOS Keychain' : info.os === 'windows' ? 'Windows DPAPI' : 'Secret Service',
       },
       canonicalState: snapshot,
+      unlock: {
+        state: this.unlockFsm.getState(),
+        triggerSource: this.unlockFsm.getTriggerSource(),
+        metrics: this.unlockFsm.getMetrics(),
+        lastResult: this.unlockFsm.getLastResult(),
+      },
     };
   }
 
@@ -760,6 +982,8 @@ export class DesktopEngine {
     if (this.isShuttingDown) return;
     this.isShuttingDown = true;
     Logger.info('core', `Gracefully shutting down ${BRANDING.name} Desktop Engine`);
+
+    this.adapter.stopWakeAndLockListener();
 
     if (this.powerCheckInterval) {
       clearInterval(this.powerCheckInterval);
