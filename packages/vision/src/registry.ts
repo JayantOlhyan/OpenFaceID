@@ -115,7 +115,9 @@ export class ModelRegistry {
         }
 
         if (fs.existsSync(targetFile)) {
-          dataToHash = fs.readFileSync(targetFile);
+          const raw = fs.readFileSync(targetFile);
+          // Normalize Windows CRLF (\r\n) to LF (\n) to guarantee cross-platform deterministic hashing
+          dataToHash = Buffer.from(raw.toString('utf8').replace(/\r\n/g, '\n'), 'utf8');
         } else {
           // Fallback to static manifest signature if running in bundled environment
           dataToHash = Buffer.from(JSON.stringify(meta));
