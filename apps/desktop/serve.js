@@ -1099,15 +1099,51 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 21. Static Favicons and Branding Assets
-  if (url.pathname === '/favicon.ico' || url.pathname.endsWith('.png')) {
+  // 21. Static Favicons, Branding Assets, and Animation Videos (Glance parity)
+  const staticExts = ['.ico', '.png', '.jpg', '.jpeg', '.svg', '.webp', '.mp4'];
+  const matchedExt = staticExts.find(ext => url.pathname.endsWith(ext));
+  if (matchedExt) {
     const relPath = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
     const safePath = path.normalize(relPath).replace(/^(\.\.[\/\\])+/, '');
     const assetPath = resolveDesktopAsset(safePath) || path.join(__dirname, safePath);
     if (fs.existsSync(assetPath)) {
-      const mime = safePath.endsWith('.ico') ? 'image/x-icon' : 'image/png';
-      res.writeHead(200, { 'Content-Type': mime });
-      res.end(fs.readFileSync(assetPath));
+      const mimeMap = {
+        '.ico': 'image/x-icon',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.svg': 'image/svg+xml',
+        '.webp': 'image/webp',
+        '.mp4': 'video/mp4',
+      };
+      const contentType = mimeMap[matchedExt] || 'application/octet-stream';
+      const stat = fs.statSync(assetPath);
+      const fileSize = stat.size;
+      const range = req.headers.range;
+
+      if (matchedExt === '.mp4' && range) {
+        // Handle HTTP 206 Partial Content for smooth video seeking & loop streaming
+        const parts = range.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        const chunksize = (end - start) + 1;
+        const fileStream = fs.createReadStream(assetPath, { start, end });
+        res.writeHead(206, {
+          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunksize,
+          'Content-Type': contentType,
+        });
+        fileStream.pipe(res);
+        return;
+      }
+
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': contentType,
+        'Accept-Ranges': 'bytes',
+      });
+      fs.createReadStream(assetPath).pipe(res);
       return;
     }
   }
