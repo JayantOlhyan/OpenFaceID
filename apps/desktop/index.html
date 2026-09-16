@@ -939,37 +939,242 @@
       font-weight: 600;
     }
 
-    /* Ref 3: Dynamic Island / Notch HUD */
+    /* Ref 3: Apple-Like Dynamic Island / Notch HUD (Glance Parity) */
     .mac-hud-pill-container {
       position: fixed;
-      top: 6px;
+      top: 8px;
       left: 50%;
       transform: translateX(-50%);
-      z-index: 100;
+      z-index: 1000;
       display: flex;
       align-items: center;
-      gap: 8px;
-      background: rgba(0, 0, 0, 0.88);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 20px;
-      padding: 4px 14px;
-      backdrop-filter: blur(28px);
-      -webkit-backdrop-filter: blur(28px);
-      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
+      gap: 10px;
+      background: rgba(5, 7, 10, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 24px;
+      padding: 5px 14px;
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.04);
       cursor: pointer;
-      transition: var(--transition-spring);
+      transition: all 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
     }
 
     .mac-hud-pill-container:hover {
-      background: rgba(14, 18, 24, 0.96);
-      border-color: rgba(255, 255, 255, 0.25);
+      background: rgba(8, 12, 18, 0.98);
+      border-color: rgba(255, 255, 255, 0.24);
+      transform: translateX(-50%) scale(1.02);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85), 0 0 16px rgba(0, 113, 227, 0.25);
+    }
+
+    /* Notch-Attachment Mode (hugging top bezel) */
+    .mac-hud-pill-container.notch-mode {
+      top: 0;
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+      border-bottom-left-radius: 18px;
+      border-bottom-right-radius: 18px;
+      border-top: none;
+      padding-top: 7px;
+      padding-bottom: 8px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85);
+    }
+
+    /* Left Element: Apple Animated Padlock Glyph */
+    .hud-lock-glyph {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      color: rgba(255, 255, 255, 0.85);
+      transition: color 0.3s ease;
+    }
+
+    .hud-lock-glyph svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+
+    .hud-lock-glyph .lock-shackle {
+      transform-origin: 6px 6px;
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .hud-lock-glyph.unlocked {
+      color: var(--accent-green, #30d158);
+    }
+
+    .hud-lock-glyph.unlocked .lock-shackle {
+      transform: translateY(-3.5px) rotate(-22deg);
+    }
+
+    /* Center Element: Dynamic Status Typography */
+    .hud-content-center {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1px;
+    }
+
+    .hud-title {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #fff;
+      line-height: 1.2;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .hud-subtitle {
+      font-size: 10.5px;
+      color: var(--text-secondary);
+      line-height: 1.2;
+    }
+
+    /* Right Element: Apple Face ID Scanning & Verification Glyph Container */
+    .hud-faceid-container {
+      position: relative;
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hud-scan-video {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      object-fit: cover;
+      display: none;
+    }
+
+    .hud-faceid-container.video-mode .hud-scan-video {
+      display: block;
+    }
+
+    .hud-faceid-container.video-mode .hud-vector-faceid {
+      display: none;
+    }
+
+    .hud-vector-faceid {
+      position: relative;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .faceid-svg {
+      width: 100%;
+      height: 100%;
+      stroke: var(--accent-blue, #0a84ff);
+      fill: none;
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: stroke 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Continuous breathing pulse while scanning (so user knows it's actively working) */
+    .hud-faceid-container.scanning {
+      animation: appleScanPulse 1.8s ease-in-out infinite alternate;
+    }
+
+    @keyframes appleScanPulse {
+      0% {
+        transform: scale(0.94);
+        opacity: 0.72;
+        filter: drop-shadow(0 0 2px rgba(0, 113, 227, 0.3));
+      }
+      100% {
+        transform: scale(1.05);
+        opacity: 1.0;
+        filter: drop-shadow(0 0 7px rgba(0, 113, 227, 0.85));
+      }
+    }
+
+    /* Active laser scanner sweep line */
+    .faceid-laser {
+      position: absolute;
+      left: 2px;
+      right: 2px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #00f0ff, transparent);
+      box-shadow: 0 0 6px #00f0ff;
+      top: 2px;
+      opacity: 0;
+      border-radius: 1px;
+      pointer-events: none;
+    }
+
+    .hud-faceid-container.scanning .faceid-laser {
+      opacity: 1;
+      animation: appleLaserSweep 1.4s ease-in-out infinite alternate;
+    }
+
+    @keyframes appleLaserSweep {
+      0% { top: 2px; opacity: 0.25; }
+      50% { opacity: 1; }
+      100% { top: 16px; opacity: 0.25; }
+    }
+
+    /* Success State: Smooth morph and spring pop into Apple checkmark */
+    .hud-faceid-container.success .faceid-svg {
+      stroke: var(--accent-green, #30d158);
+      animation: appleSuccessPop 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .hud-faceid-container.success .faceid-laser {
+      opacity: 0;
+    }
+
+    @keyframes appleSuccessPop {
+      0% { transform: scale(0.85); }
+      50% { transform: scale(1.15); filter: drop-shadow(0 0 8px rgba(48, 209, 88, 0.9)); }
+      100% { transform: scale(1.0); filter: drop-shadow(0 0 4px rgba(48, 209, 88, 0.5)); }
+    }
+
+    /* Failure State: Apple Horizontal Head-Shake */
+    .hud-faceid-container.failure {
+      animation: appleShake 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    }
+
+    .hud-faceid-container.failure .faceid-svg {
+      stroke: var(--accent-amber, #ff9f0a);
+      filter: drop-shadow(0 0 6px rgba(255, 159, 10, 0.6));
+    }
+
+    .hud-faceid-container.failure .faceid-laser {
+      opacity: 0;
+    }
+
+    @keyframes appleShake {
+      10%, 90% { transform: translate3d(-1.5px, 0, 0); }
+      20%, 80% { transform: translate3d(2.5px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-3.5px, 0, 0); }
+      40%, 60% { transform: translate3d(3.5px, 0, 0); }
+    }
+
+    /* Paused State */
+    .hud-faceid-container.paused .faceid-svg {
+      stroke: var(--text-muted, #86868b);
+      opacity: 0.5;
     }
 
     .hud-beacon {
-      width: 7px;
-      height: 7px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
       background: var(--text-muted);
+      display: inline-block;
     }
 
     .hud-beacon.authorized {
@@ -992,32 +1197,60 @@
       box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
     }
 
-    .hud-title {
-      font-size: 11.5px;
-      font-weight: 600;
-      color: #fff;
-    }
-
-    .hud-subtitle {
-      font-size: 11px;
-      color: var(--text-secondary);
-    }
-
-    .hud-logo-icon {
-      width: 16px;
-      height: 16px;
-      border-radius: 4px;
-      object-fit: cover;
-      flex-shrink: 0;
-      margin-right: 2px;
-      box-shadow: 0 0 6px rgba(0, 113, 227, 0.4);
-    }
-
     .hud-chevron {
-      font-size: 9px;
+      font-size: 8px;
       color: var(--text-muted);
-      margin-left: 2px;
+      margin-left: 1px;
       transition: transform 0.2s ease;
+    }
+
+    /* In-Camera Viewport Scanning Reticle */
+    .camera-scan-reticle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 140px;
+      height: 140px;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 12;
+      opacity: 0;
+    }
+
+    .camera-scan-reticle.active {
+      opacity: 1;
+    }
+
+    .camera-scan-reticle svg {
+      width: 100%;
+      height: 100%;
+      stroke: rgba(0, 113, 227, 0.85);
+      stroke-width: 2.2;
+      fill: none;
+    }
+
+    .camera-scan-reticle.scanning {
+      opacity: 1;
+      animation: cameraReticlePulse 1.8s ease-in-out infinite alternate;
+    }
+
+    @keyframes cameraReticlePulse {
+      0% { transform: translate(-50%, -50%) scale(0.96); filter: drop-shadow(0 0 4px rgba(0, 113, 227, 0.4)); }
+      100% { transform: translate(-50%, -50%) scale(1.04); filter: drop-shadow(0 0 12px rgba(0, 113, 227, 0.85)); }
+    }
+
+    .camera-scan-reticle.success {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.08);
+    }
+
+    .camera-scan-reticle.success svg {
+      stroke: var(--accent-green, #30d158);
+      filter: drop-shadow(0 0 14px rgba(48, 209, 88, 0.9));
     }
 
     /* HUD Expanded Overlay (Ref 3 Screen 5) */
@@ -1587,13 +1820,62 @@
 </head>
 <body>
 
-  <!-- 1. Floating Dynamic Island / Notch Presence HUD (Ref 3) -->
-  <div id="macHudPill" class="mac-hud-pill-container" role="status" aria-live="polite" onclick="toggleHudExpand()" title="OpenFaceID Notch HUD (Click to Expand)">
-    <img src="assets/icon.png" class="hud-logo-icon" width="16" height="16" alt="OpenFaceID" />
-    <span id="hudBeaconDot" class="hud-beacon authorized"></span>
-    <span id="hudStateTitle" class="hud-title">You're present</span>
-    <span id="hudStateSubtitle" class="hud-subtitle">Face recognized</span>
-    <span class="hud-chevron" id="hudChevron">▼</span>
+  <!-- 1. Apple-Like Floating Dynamic Island / Notch Presence HUD (Glance Parity) -->
+  <div id="macHudPill" class="mac-hud-pill-container" role="status" aria-live="polite" onclick="toggleHudExpand()" onmouseenter="playAppleHapticFeedback('hover')" title="OpenFaceID Notch HUD (Click to Expand)">
+    <!-- Left: Apple Padlock Glyph -->
+    <div id="hudLockGlyph" class="hud-lock-glyph unlocked" title="Biometric Presence Lock State">
+      <svg viewBox="0 0 24 24">
+        <!-- Padlock shackle (swings/slides open on unlock) -->
+        <path class="lock-shackle" d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        <!-- Padlock body -->
+        <rect class="lock-body" x="5" y="10" width="14" height="11" rx="3" fill="currentColor"/>
+        <!-- Keyhole dot -->
+        <circle cx="12" cy="15.5" r="1.5" fill="#000"/>
+      </svg>
+    </div>
+
+    <!-- Center: Dynamic State Information -->
+    <div class="hud-content-center">
+      <div class="hud-title">
+        <span id="hudBeaconDot" class="hud-beacon authorized"></span>
+        <span id="hudStateTitle">You're present</span>
+        <span class="hud-chevron" id="hudChevron">▼</span>
+      </div>
+      <div id="hudStateSubtitle" class="hud-subtitle">Face recognized · Just now</div>
+    </div>
+
+    <!-- Right: Apple Face ID Scanning & Verification Glyph / Video Animation -->
+    <div id="hudFaceIdContainer" class="hud-faceid-container" title="Apple Face ID Optical & Liveness Sensor">
+      <!-- High-Fidelity 60FPS Glance Video Asset Player -->
+      <video id="hudScanVideo" class="hud-scan-video" muted playsinline></video>
+      
+      <!-- Vector SVG Apple Face ID Reticle with Animated Laser Sweeper & Breathing Pulse -->
+      <div id="hudVectorFaceId" class="hud-vector-faceid">
+        <svg class="faceid-svg" id="faceIdVectorSvg" viewBox="0 0 36 36">
+          <!-- Top Left Corner -->
+          <path d="M4 11V8a4 4 0 0 1 4-4h3" />
+          <!-- Top Right Corner -->
+          <path d="M25 4h3a4 4 0 0 1 4 4v3" />
+          <!-- Bottom Left Corner -->
+          <path d="M4 25v3a4 4 0 0 0 4 4h3" />
+          <!-- Bottom Right Corner -->
+          <path d="M25 32h3a4 4 0 0 0 4-4v-3" />
+          
+          <!-- Eyes & Nose & Smile Face Details -->
+          <g id="faceIdFeatures">
+            <line x1="13" y1="12" x2="13" y2="16" stroke-width="2.2" stroke-linecap="round" />
+            <line x1="23" y1="12" x2="23" y2="16" stroke-width="2.2" stroke-linecap="round" />
+            <path d="M20 13l-2 9h2" stroke-width="1.8" stroke-linejoin="round" />
+            <path d="M12 24c1.8 3.2 10.2 3.2 12 0" stroke-width="2.2" stroke-linecap="round" />
+          </g>
+          
+          <!-- Checkmark Icon (Revealed on Unlock Success) -->
+          <path id="faceIdCheckmark" d="M11 18l5 5 9-9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: none;" />
+        </svg>
+        <!-- Scanning laser line sweep -->
+        <div class="faceid-laser" id="hudFaceIdLaser"></div>
+      </div>
+    </div>
   </div>
 
   <!-- 1b. HUD Expanded State Dropdown (Ref 3 Screen 5) -->
@@ -1819,6 +2101,27 @@
                   <div class="face-corner-mark" style="top: -2px; right: -2px; border-top: 3px solid inherit; border-right: 3px solid inherit;"></div>
                   <div class="face-corner-mark" style="bottom: -2px; left: -2px; border-bottom: 3px solid inherit; border-left: 3px solid inherit;"></div>
                   <div class="face-corner-mark" style="bottom: -2px; right: -2px; border-bottom: 3px solid inherit; border-right: 3px solid inherit;"></div>
+                </div>
+
+                <!-- Apple Face ID In-Camera Scanning Reticle Overlay -->
+                <div id="cameraScanReticle" class="camera-scan-reticle scanning">
+                  <svg viewBox="0 0 48 48">
+                    <!-- Corner Reticle Brackets -->
+                    <path d="M6 16V10a4 4 0 0 1 4-4h6" />
+                    <path d="M32 6h6a4 4 0 0 1 4 4v6" />
+                    <path d="M6 32v6a4 4 0 0 0 4 4h6" />
+                    <path d="M32 42h6a4 4 0 0 0 4-4v-6" />
+                    
+                    <!-- Center Smiley Features -->
+                    <g id="camReticleFeatures">
+                      <line x1="18" y1="16" x2="18" y2="21" stroke-width="2.5" stroke-linecap="round" />
+                      <line x1="30" y1="16" x2="30" y2="21" stroke-width="2.5" stroke-linecap="round" />
+                      <path d="M26 18l-2 11h3" stroke-width="2" stroke-linejoin="round" />
+                      <path d="M16 32c2.4 4.2 13.6 4.2 16 0" stroke-width="2.5" stroke-linecap="round" />
+                    </g>
+                    <!-- Checkmark (Revealed on Unlock) -->
+                    <path id="camReticleCheckmark" d="M15 24l6 6 12-12" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="display: none;" />
+                  </svg>
                 </div>
 
                 <!-- Absent Placeholder -->
@@ -2340,6 +2643,67 @@
                   <span class="slider"></span>
                 </label>
                 <button class="btn btn-sm" onclick="alert('Checking for updates... You are running the latest version: v0.2.1.')">Check Now</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Notch & Face ID Animation (Glance Parity) -->
+          <div class="content-card" style="margin-top: 20px;">
+            <div class="content-card-title">Dynamic Notch & Face ID Animation (Glance Parity)</div>
+            <div class="content-card-desc">Configure Apple-like Face ID scan feedback, notch geometry, and interactive haptics.</div>
+
+            <div class="settings-row">
+              <div class="settings-label-group">
+                <span class="settings-label">HUD Silhouette Mode</span>
+                <span class="settings-sublabel">Choose between a floating Dynamic Island pill or notch-attached geometry.</span>
+              </div>
+              <select id="settingHudSilhouette" class="mac-select" onchange="changeHudSilhouette(this.value)">
+                <option value="pill" selected>Floating Dynamic Island (Pill)</option>
+                <option value="notch">MacBook Notch Attachment</option>
+                <option value="hidden">Hidden</option>
+              </select>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label-group">
+                <span class="settings-label">Face ID Animation Engine</span>
+                <span class="settings-sublabel">Select between high-fidelity 60 FPS video or hardware-accelerated SVG vector engine.</span>
+              </div>
+              <select id="settingHudAnimEngine" class="mac-select" onchange="changeHudAnimEngine(this.value)">
+                <option value="vector" selected>Vector SVG & CSS Engine (Low Latency)</option>
+                <option value="video">Glance 60 FPS Video Assets (idle, unlock, failure)</option>
+              </select>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label-group">
+                <span class="settings-label">Tactile & Audio Feedback</span>
+                <span class="settings-sublabel">Simulate Apple trackpad micro-clicks on hover, scan, and unlock.</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="settingHudHaptics" checked onchange="toggleHudHaptics(this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="settings-row" style="border-bottom: none; padding-top: 14px; flex-direction: column; align-items: flex-start; gap: 8px;">
+              <div class="settings-label-group">
+                <span class="settings-label">Live Animation Preview & Diagnostics</span>
+                <span class="settings-sublabel">Test each state of the Apple-like Face ID scanning and unlock animation immediately:</span>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;">
+                <button class="btn btn-sm" onclick="previewHudState('scanning')">
+                  <span>▶ Test Scanning Pulse</span>
+                </button>
+                <button class="btn btn-sm btn-primary" onclick="previewHudState('authorized')">
+                  <span>✓ Test Unlock Success</span>
+                </button>
+                <button class="btn btn-sm" style="border-color: rgba(245, 158, 11, 0.4);" onclick="previewHudState('failure')">
+                  <span>✗ Test Head-Shake Failure</span>
+                </button>
+                <button class="btn btn-sm" onclick="previewHudState('paused')">
+                  <span>⏸ Test Privacy Pause</span>
+                </button>
               </div>
             </div>
           </div>
@@ -2993,6 +3357,220 @@
       event.target.classList.add('active');
     }
 
+    // =========================================================================
+    // Apple-Style Dynamic Notch HUD & Face ID Animation Controller (Glance Parity)
+    // =========================================================================
+    let hudAnimEngine = localStorage.getItem('ofid_hud_anim_engine') || 'vector';
+    let hudSilhouette = localStorage.getItem('ofid_hud_silhouette') || 'pill';
+    let hudHapticsEnabled = localStorage.getItem('ofid_hud_haptics') !== 'false';
+    let currentHudState = 'idle';
+    let previewStateTimeout = null;
+
+    function initHudPreferences() {
+      const silSelect = document.getElementById('settingHudSilhouette');
+      const engSelect = document.getElementById('settingHudAnimEngine');
+      const hapToggle = document.getElementById('settingHudHaptics');
+      if (silSelect) silSelect.value = hudSilhouette;
+      if (engSelect) engSelect.value = hudAnimEngine;
+      if (hapToggle) hapToggle.checked = hudHapticsEnabled;
+      applyHudSilhouette(hudSilhouette);
+      applyHudAnimEngine(hudAnimEngine);
+    }
+
+    function applyHudSilhouette(mode) {
+      hudSilhouette = mode;
+      localStorage.setItem('ofid_hud_silhouette', mode);
+      const pill = document.getElementById('macHudPill');
+      if (!pill) return;
+      if (mode === 'notch') {
+        pill.classList.add('notch-mode');
+        pill.style.display = 'flex';
+      } else if (mode === 'pill') {
+        pill.classList.remove('notch-mode');
+        pill.style.display = 'flex';
+      } else if (mode === 'hidden') {
+        pill.style.display = 'none';
+      }
+    }
+
+    function changeHudSilhouette(mode) {
+      applyHudSilhouette(mode);
+      playAppleHapticFeedback('click');
+    }
+
+    function applyHudAnimEngine(engine) {
+      hudAnimEngine = engine;
+      localStorage.setItem('ofid_hud_anim_engine', engine);
+      const container = document.getElementById('hudFaceIdContainer');
+      if (!container) return;
+      if (engine === 'video') {
+        container.classList.add('video-mode');
+      } else {
+        container.classList.remove('video-mode');
+      }
+      setHudAnimationState(currentHudState, true);
+    }
+
+    function changeHudAnimEngine(engine) {
+      applyHudAnimEngine(engine);
+      playAppleHapticFeedback('click');
+    }
+
+    function toggleHudHaptics(enabled) {
+      hudHapticsEnabled = enabled;
+      localStorage.setItem('ofid_hud_haptics', enabled ? 'true' : 'false');
+      if (enabled) playAppleHapticFeedback('click');
+    }
+
+    function playAppleHapticFeedback(type = 'click') {
+      if (!hudHapticsEnabled) return;
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        if (type === 'unlock') {
+          // Authentic Apple-like Face ID chime (bright harmonic bell)
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(880, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.08);
+          gain.gain.setValueAtTime(0.06, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 0.22);
+        } else if (type === 'fail') {
+          // Subtle double low-pitch warning thud
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(220, ctx.currentTime);
+          gain.gain.setValueAtTime(0.06, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 0.12);
+        } else if (type === 'hover') {
+          // Delicate trackpad touch tap
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(320, ctx.currentTime);
+          gain.gain.setValueAtTime(0.02, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.02);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 0.02);
+        } else {
+          // Standard tactile click
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(240, ctx.currentTime);
+          gain.gain.setValueAtTime(0.04, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.03);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 0.03);
+        }
+      } catch (err) {}
+    }
+
+    function setHudAnimationState(state, force = false) {
+      if (!force && currentHudState === state && previewStateTimeout === null) return;
+      if (previewStateTimeout !== null && !force) return;
+      currentHudState = state;
+
+      const container = document.getElementById('hudFaceIdContainer');
+      const lockGlyph = document.getElementById('hudLockGlyph');
+      const video = document.getElementById('hudScanVideo');
+      const faceFeatures = document.getElementById('faceIdFeatures');
+      const checkmark = document.getElementById('faceIdCheckmark');
+      const camReticle = document.getElementById('cameraScanReticle');
+      const camFeatures = document.getElementById('camReticleFeatures');
+      const camCheckmark = document.getElementById('camReticleCheckmark');
+
+      if (!container) return;
+
+      container.classList.remove('scanning', 'success', 'failure', 'paused');
+      if (camReticle) camReticle.classList.remove('scanning', 'success', 'failure', 'paused');
+
+      if (state === 'scanning') {
+        container.classList.add('scanning');
+        if (lockGlyph) lockGlyph.classList.remove('unlocked');
+        if (faceFeatures) faceFeatures.style.display = 'block';
+        if (checkmark) checkmark.style.display = 'none';
+
+        if (camReticle) {
+          camReticle.classList.add('scanning');
+          if (camFeatures) camFeatures.style.display = 'block';
+          if (camCheckmark) camCheckmark.style.display = 'none';
+        }
+
+        if (hudAnimEngine === 'video' && video) {
+          if (!video.src.includes('idleanimation.mp4')) {
+            video.src = 'assets/animations/idleanimation.mp4';
+            video.loop = true;
+            video.play().catch(() => {});
+          }
+        }
+      } else if (state === 'authorized') {
+        container.classList.add('success');
+        if (lockGlyph) lockGlyph.classList.add('unlocked');
+        if (faceFeatures) faceFeatures.style.display = 'none';
+        if (checkmark) checkmark.style.display = 'block';
+
+        if (camReticle) {
+          camReticle.classList.add('success');
+          if (camFeatures) camFeatures.style.display = 'none';
+          if (camCheckmark) camCheckmark.style.display = 'block';
+        }
+
+        playAppleHapticFeedback('unlock');
+
+        if (hudAnimEngine === 'video' && video) {
+          video.src = 'assets/animations/unlockanimation.mp4';
+          video.loop = false;
+          video.play().catch(() => {});
+        }
+      } else if (state === 'failure') {
+        container.classList.add('failure');
+        if (lockGlyph) lockGlyph.classList.remove('unlocked');
+        if (faceFeatures) faceFeatures.style.display = 'block';
+        if (checkmark) checkmark.style.display = 'none';
+
+        if (camReticle) {
+          camReticle.classList.add('failure');
+          if (camFeatures) camFeatures.style.display = 'block';
+          if (camCheckmark) camCheckmark.style.display = 'none';
+        }
+
+        playAppleHapticFeedback('fail');
+
+        if (hudAnimEngine === 'video' && video) {
+          video.src = 'assets/animations/unsuccessfulunlockanimation.mp4';
+          video.loop = false;
+          video.play().catch(() => {});
+        }
+      } else if (state === 'paused') {
+        container.classList.add('paused');
+        if (lockGlyph) lockGlyph.classList.remove('unlocked');
+        if (camReticle) camReticle.classList.add('paused');
+        if (hudAnimEngine === 'video' && video) {
+          video.pause();
+        }
+      }
+    }
+
+    // Manual test preview for Settings
+    function previewHudState(state) {
+      if (previewStateTimeout) {
+        clearTimeout(previewStateTimeout);
+        previewStateTimeout = null;
+      }
+      setHudAnimationState(state, true);
+
+      // Revert back to live polling state after 4 seconds
+      previewStateTimeout = setTimeout(() => {
+        previewStateTimeout = null;
+        pollAuthoritativeState();
+      }, 4000);
+    }
+
     // Presence Dashboard Renderer (Ref 2, 3, 5)
     function renderAuthoritativePresence(state) {
       if (!state) return;
@@ -3050,6 +3628,7 @@
         hudStateSubtitle.textContent = 'Camera is paused';
         if (hudExpandedTitle) hudExpandedTitle.textContent = 'Privacy paused';
         updatePauseButtons(true);
+        setHudAnimationState('paused');
         return;
       }
       updatePauseButtons(false);
@@ -3071,9 +3650,10 @@
 
         hudBeaconDot.className = 'hud-beacon authorized';
         hudStateTitle.textContent = "You're present";
-        hudStateSubtitle.textContent = 'Face recognized';
+        hudStateSubtitle.textContent = `Face recognized · ${name}`;
         if (hudExpandedTitle) hudExpandedTitle.textContent = "You're present";
         if (faceBoxOverlay) faceBoxOverlay.className = 'face-box-overlay';
+        setHudAnimationState('authorized');
         return;
       }
 
@@ -3093,9 +3673,10 @@
 
         hudBeaconDot.className = 'hud-beacon multiple';
         hudStateTitle.textContent = 'Multiple people';
-        hudStateSubtitle.textContent = 'Not authorized';
+        hudStateSubtitle.textContent = 'Not authorized (fail-closed)';
         if (hudExpandedTitle) hudExpandedTitle.textContent = 'Multiple people';
         if (faceBoxOverlay) faceBoxOverlay.className = 'face-box-overlay multiple';
+        setHudAnimationState('failure');
         return;
       }
 
@@ -3115,9 +3696,10 @@
 
         hudBeaconDot.className = 'hud-beacon unknown';
         hudStateTitle.textContent = 'Face detected';
-        hudStateSubtitle.textContent = 'Analyzing...';
+        hudStateSubtitle.textContent = 'Analyzing biometric…';
         if (hudExpandedTitle) hudExpandedTitle.textContent = 'Face detected';
         if (faceBoxOverlay) faceBoxOverlay.className = 'face-box-overlay unknown';
+        setHudAnimationState('failure');
         return;
       }
 
@@ -3139,8 +3721,9 @@
 
       hudBeaconDot.className = 'hud-beacon scanning';
       hudStateTitle.textContent = hasFace ? 'Verifying presence' : 'Looking for you...';
-      hudStateSubtitle.textContent = hasFace ? 'Follow the guide' : 'Scanning for a face';
+      hudStateSubtitle.textContent = hasFace ? 'Evaluating liveness' : 'Scanning for a face';
       if (hudExpandedTitle) hudExpandedTitle.textContent = hasFace ? 'Verifying presence' : 'Looking for you...';
+      setHudAnimationState('scanning');
     }
 
     function updatePauseButtons(isPaused) {
@@ -3574,6 +4157,7 @@
 
     // Initialize on DOM load
     window.addEventListener('DOMContentLoaded', () => {
+      initHudPreferences();
       startCameraLoop();
       startWaveformLoop();
       pollAuthoritativeState();
