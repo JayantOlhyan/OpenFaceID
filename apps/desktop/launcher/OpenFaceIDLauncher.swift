@@ -18,6 +18,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var cameraMenuItem: NSMenuItem?
     var pauseResumeMenuItem: NSMenuItem?
     var pollTimer: Timer?
+    var lastAuthorizedState: Bool = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Request Camera Access natively upfront under app bundle identity
@@ -152,6 +153,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let unlockTestItem = NSMenuItem(title: "Test Face Unlock Now", action: #selector(testUnlockAction), keyEquivalent: "u")
         menu.addItem(unlockTestItem)
 
+        let notchHudItem = NSMenuItem(title: "Toggle Notch HUD", action: #selector(toggleNotchOverlay), keyEquivalent: "n")
+        menu.addItem(notchHudItem)
+
         pauseResumeMenuItem = NSMenuItem(title: "Pause Camera", action: #selector(togglePrivacyPause), keyEquivalent: "p")
         menu.addItem(pauseResumeMenuItem!)
 
@@ -202,6 +206,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @objc func togglePrivacyPause() {
         webView?.evaluateJavaScript("togglePrivacyPause()", completionHandler: nil)
+    }
+
+    @objc func toggleNotchOverlay() {
+        showMainWindow()
+        webView?.evaluateJavaScript("toggleHudExpand()", completionHandler: nil)
     }
 
     @objc func checkForUpdates() {
@@ -297,6 +306,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                                 button.title = "⏸ OpenFaceID"
                             }
                         } else if isAuth {
+                            if !self.lastAuthorizedState {
+                                // Haptic pulse upon presence verification (Glance parity)
+                                NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .default)
+                            }
+                            self.lastAuthorizedState = true
                             let name = activeId != nil ? " • \(activeId!)" : ""
                             self.statusMenuItem?.title = "Status: ● You're present\(name)"
                             self.cameraMenuItem?.title = "Camera: ● Active"
@@ -305,18 +319,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                                 button.title = "✓ OpenFaceID"
                             }
                         } else if presenceState == "PRESENCE_AMBIGUOUS" {
+                            self.lastAuthorizedState = false
                             self.statusMenuItem?.title = "Status: ● Multiple people detected"
                             self.cameraMenuItem?.title = "Camera: ● Active"
                             if let button = self.statusItem?.button {
                                 button.title = "⚠ OpenFaceID"
                             }
                         } else if det == "FACE_DETECTED" {
+                            self.lastAuthorizedState = false
                             self.statusMenuItem?.title = "Status: ● Checking identity…"
                             self.cameraMenuItem?.title = "Camera: ● Active"
                             if let button = self.statusItem?.button {
                                 button.title = "⚲ OpenFaceID"
                             }
                         } else {
+                            self.lastAuthorizedState = false
                             self.statusMenuItem?.title = "Status: ● Looking for you…"
                             self.cameraMenuItem?.title = "Camera: ● Active"
                             if let button = self.statusItem?.button {
