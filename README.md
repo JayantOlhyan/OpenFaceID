@@ -12,11 +12,12 @@
 ---
 
 [![Release](https://img.shields.io/badge/release-v0.2.1--rc.1%20(Release%20Candidate)-blue.svg)](https://github.com/JayantOlhyan/OpenFaceID/releases)
+[![CI](https://github.com/JayantOlhyan/OpenFaceID/actions/workflows/ci.yml/badge.svg)](https://github.com/JayantOlhyan/OpenFaceID/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-macOS%20(Verified)%20%7C%20Windows%20(Code)%20%7C%20Linux%20(Code)-brightgreen.svg)](#platform-support-matrix)
+[![Platform](https://img.shields.io/badge/platform-macOS%20(Certified)%20%7C%20Linux%20%7C%20Windows-brightgreen.svg)](#platform-support-matrix)
 [![Privacy](https://img.shields.io/badge/privacy-100%25%20Local%20%7C%20Zero%20Cloud-success.svg)](PRIVACY.md)
 [![Security](https://img.shields.io/badge/security-AES--256--GCM%20%7C%20OS%20Keystore-blueviolet.svg)](SECURITY.md)
-[![Tests](https://img.shields.io/badge/tests-179%20passed%20%7C%200%20failed-success.svg)](#testing--verification)
+[![Tests](https://img.shields.io/badge/tests-203%20passed%20%7C%200%20failed-success.svg)](#testing--verification)
 [![Node](https://img.shields.io/badge/node-%3E%3D22.6.0-informational.svg)](.nvmrc)
 
 <br />
@@ -212,195 +213,217 @@ Vision Pipeline & Desktop WebKit UI
 
 Select your operating system:
 
-| [macOS](#macos) | [Windows](#windows) | [Linux](#linux) |
-| :--- | :--- | :--- |
-| <a href="#macos"><img src="assets/download-for-mac-button.png" width="165" alt="Download for Mac" /></a> | <a href="#windows"><img src="assets/download-for-windows-button.png" width="165" alt="Download for Windows" /></a> | <a href="#linux"><img src="assets/download-for-linux-button.png" width="165" alt="Download for Linux" /></a> |
+| Platform | Quick Install Method | Standalone Packages | System Requirements |
+| :--- | :--- | :--- | :--- |
+| **macOS** | `brew install --cask ...` | [`.dmg` (Apple Silicon)](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-arm64.dmg) | macOS 14+ (Sonoma / Sequoia), Apple Silicon or Intel |
+| **Linux** | `sudo apt install ./openfaceid*.deb` | [`.deb`](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/openfaceid_0.2.1-rc.1_amd64.deb) • [`.tar.gz`](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/openfaceid-0.2.1-rc.1-linux-x86_64.tar.gz) | Ubuntu 22.04+, Debian 12+, Fedora 38+, Arch; `/dev/video*` |
+| **Windows** | Portable Run | [`.zip` (x64)](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-windows-x64.zip) | Windows 10 / 11 64-bit, compatible webcam |
 
 ---
 
-### macOS
+### macOS Installation & Setup
 
-Requirements:
-
-* macOS 15 Sequoia or later
-* Apple Silicon or Intel Mac
-
-<a href="https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-arm64.dmg">
-  <img src="assets/download-for-mac-button.png" width="190" alt="Download for Mac" />
-</a>
-
-Open the `.dmg` file and drag OpenFaceID to `/Applications` , then open it.
-
-<details>
-<summary><b>macOS Verification & First-Launch Security Guidance</b></summary>
-
-#### SHA-256 Checksum Verification
+#### Option 1: Homebrew Cask (Recommended)
+Install directly using Homebrew:
 ```bash
-shasum -a 256 OpenFaceID-0.2.1-rc.1-arm64.dmg
-# Expected: b5874e5b87351c638b6dac1c59efab428630876cb3bc995699a6ccbde30dcfc7
+brew install --cask https://raw.githubusercontent.com/JayantOlhyan/OpenFaceID/main/packaging/homebrew/openfaceid.rb
 ```
 
-> [!NOTE]
-> **Transparent Signing Posture (RB-01)**: Current macOS release candidate builds are ad-hoc signed locally while Apple Developer ID certification remains deferred. On first launch, right-click (Control-click) `OpenFaceID.app` in `/Applications` and select **Open**, or allow it under *System Settings &rarr; Privacy & Security*.
+#### Option 2: Standalone Disk Image (.dmg)
+1. Download **[OpenFaceID-0.2.1-rc.1-arm64.dmg](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-arm64.dmg)**.
+2. Double-click the `.dmg` and drag `OpenFaceID.app` into your `/Applications` folder.
+3. Open `OpenFaceID.app` from `/Applications` or Spotlight.
 
-</details>
+> [!TIP]
+> **First-Launch Gatekeeper Note (RB-01)**: Current release candidate builds are ad-hoc signed locally while Apple Developer ID certification remains in progress.
+> If macOS alerts that the developer cannot be verified, simply **Right-Click (Control-Click)** `OpenFaceID.app` in `/Applications` and select **Open**, or run this one-liner in Terminal:
+> ```bash
+> xattr -cr /Applications/OpenFaceID.app
+> ```
 
----
-
-### Windows
-
-Requirements:
-
-* Windows 10 or Windows 11 (64-bit)
-* DirectShow or MediaFoundation compatible webcam
-
-<a href="https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-windows-x64.zip">
-  <img src="assets/download-for-windows-button.png" width="190" alt="Download for Windows" />
-</a>
-
-Open the `.zip` file, extract **OpenFaceID** to your chosen directory, and run `OpenFaceID.cmd`.
-
-<details>
-<summary><b>Windows Verification & Service Setup</b></summary>
-
-#### SHA-256 Checksum Verification
-```powershell
-Get-FileHash -Algorithm SHA256 OpenFaceID-0.2.1-rc.1-windows-x64.zip
-# Expected: c0b2c40168c455ce59701e02ef0ba400ee11953af7f0d1de18f4bdb2210c6df6
-```
-
-#### Optional Autostart at Login
-Double-click `register-autostart.reg` inside the extracted folder to automatically launch OpenFaceID when logging in to Windows.
-
-> [!NOTE]
-> **Windows Security Invariants**: Key storage leverages Windows Credential Manager DPAPI (`CryptProtectData`) to isolate and protect the 256-bit encryption key on local hardware.
-
-</details>
+#### Camera Permissions
+On first launch, macOS prompts for Camera access (`kTCCServiceCamera`). Click **OK**.
+If you ever need to grant or re-check permissions:
+* Open **System Settings &rarr; Privacy & Security &rarr; Camera**.
+* Toggle **OpenFaceID** (or your Terminal) **ON**.
 
 ---
 
-### Linux
+### Linux Installation & Setup
 
-Requirements:
+#### Requirements
+* Modern Linux distribution (Ubuntu 22.04+, Debian 12+, Fedora 38+, Arch Linux)
+* Webcam accessible under `/dev/video*`
 
-* Ubuntu 22.04+, Debian 12+, Fedora 38+, or Arch Linux
-* V4L2-compatible video capture device (`/dev/video0`)
-
-<a href="https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/openfaceid_0.2.1-rc.1_amd64.deb">
-  <img src="assets/download-for-linux-button.png" width="190" alt="Download for Linux" />
-</a>
-
-Open the `.deb` file and install with `sudo dpkg -i` , then open **OpenFaceID** from the application launcher.
-
-<details>
-<summary><b>Linux Verification, Tarball & Systemd User Service</b></summary>
-
-#### Debian / Ubuntu Installation (.deb)
+#### Option 1: Debian / Ubuntu (.deb)
 ```bash
-# Verify checksum
-sha256sum openfaceid_0.2.1-rc.1_amd64.deb
-# Expected: 7da5b550f55bb9cfa491e48f8b1d389a1b5295ecc9138a4023d8f9226306c7c9
+# Download latest .deb release
+curl -LO https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/openfaceid_0.2.1-rc.1_amd64.deb
 
 # Install package
-sudo dpkg -i openfaceid_0.2.1-rc.1_amd64.deb
-openfaceid
+sudo apt install ./openfaceid_0.2.1-rc.1_amd64.deb
 ```
 
-#### Standalone Linux Tarball (.tar.gz)
+#### Option 2: Fedora / RHEL (.rpm)
+```bash
+# Install with DNF
+sudo dnf install ./openfaceid-0.2.1-rc.1-1.x86_64.rpm
+```
+
+#### Option 3: Universal Standalone Tarball (.tar.gz)
 ```bash
 tar -xzf openfaceid-0.2.1-rc.1-linux-x86_64.tar.gz
 cd linux/bin
 ./openfaceid
 ```
 
-#### Optional Systemd Background Service
-To enable continuous optical presence tracking on desktop login:
-```bash
-systemctl --user enable --now openfaceid
-```
+#### Essential Linux Configuration
+1. **Grant Camera Permissions**:
+   Add your user account to the `video` group so OpenFaceID can read your hardware capture device:
+   ```bash
+   sudo usermod -a -G video $USER
+   ```
+   *(Log out and log back in for this group membership to take effect)*
+
+2. **Enable Background Presence Daemon (Systemd User Service)**:
+   To run OpenFaceID continuously in the background upon login:
+   ```bash
+   systemctl --user enable --now openfaceid
+   ```
+
+---
+
+### Windows Installation & Setup
+
+#### Requirements
+* Windows 10 or Windows 11 (64-bit)
+* DirectShow / MediaFoundation compatible USB or integrated webcam
+
+#### Standalone Setup
+1. Download **[OpenFaceID-0.2.1-rc.1-windows-x64.zip](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-windows-x64.zip)**.
+2. Extract the archive into a folder of your choice (e.g. `%LOCALAPPDATA%\OpenFaceID` or `C:\Program Files\OpenFaceID`).
+3. Double-click `OpenFaceID.cmd` to start the background engine.
 
 > [!NOTE]
-> **Linux Security Invariants**: Key management connects to desktop `libsecret` (GNOME Keyring / KWallet). Hardware frame ingestion uses native kernel Video4Linux2 (`v4l2`) buffers with zero-copy RGBA transformation.
+> **Windows SmartScreen Prompt**: If Windows displays *"Windows protected your PC"*, click **"More info"** and then **"Run anyway"**.
+> **Camera Access**: Open **Settings &rarr; Privacy & Security &rarr; Camera** and confirm that **"Let desktop apps access your camera"** is enabled.
 
-</details>
+#### Optional Autostart at Windows Login
+Inside the extracted folder, double-click `register-autostart.reg` to configure OpenFaceID to automatically monitor presence upon Windows user logon.
 
 ---
 
-## Quick Start (Developers)
+## First-Time Setup & Guided Face Enrollment
+
+Once OpenFaceID is installed, complete this quick 3-step setup to activate presence detection:
+
+### Step 1: Verify Hardware Camera Access
+Run an automated diagnostic check to ensure your webcam is communicating and delivering real optical frames:
+```bash
+openfaceid camera test
+```
+*Expected: Confirms camera permission is granted, resolution is acquired, and frame buffers are zeroized.*
+
+### Step 2: Enroll Your Biometric Profile (5-Pose Guided Capture)
+OpenFaceID uses a **multi-pose guided capture** protocol. By registering 5 distinct head orientations, the in-tree 512D spatial embedder constructs an invariant topological representation that prevents false rejections during everyday head movements.
+
+* **Via Desktop Web Interface**:
+  Open the OpenFaceID dashboard (`http://localhost:41793`) and click **"Enroll Face"**.
+* **Via Terminal CLI**:
+  ```bash
+  openfaceid identity enroll "Your Name"
+  ```
+
+Follow the prompts to capture each pose:
+1. 👤 **Frontal**: Look straight ahead at the camera.
+2. ⬆️ **Pitch Up**: Tilt your chin slightly upward (~15°).
+3. ⬇️ **Pitch Down**: Tilt your chin slightly downward (~15°).
+4. ⬅️ **Yaw Left**: Turn your head slightly to the left (~20°).
+5. ➡️ **Yaw Right**: Turn your head slightly to the right (~20°).
+
+> [!IMPORTANT]
+> Your facial biometric templates are encrypted immediately on-device using **AES-256-GCM** and saved with strict user-only permissions (`0600`). Raw images from enrollment are permanently zeroized from volatile memory.
+
+### Step 3: Verify Active Presence & Auto-Lock
+1. Inspect your active system status:
+   ```bash
+   openfaceid status
+   ```
+2. **Test Presence Defense**:
+   - Step away from your computer or cover the webcam lens.
+   - Once the absence timeout expires (default: 30 seconds), OpenFaceID automatically dispatches a system lock.
+   - Return to your desk and wake the screen: OpenFaceID verifies your face in ~200ms and authenticates presence.
+
+---
+
+## Developer Quick Start (Building from Source)
+
+For contributors and developers who want to run or inspect OpenFaceID directly from the TypeScript source code:
 
 ### Prerequisites
-* **Node.js >= 22.6.0** (native `--experimental-strip-types` support required)
-* **macOS 14+ / macOS 15 Sequoia** (for native AVFoundation capture)
-* Xcode Command Line Tools (`clang`, `swiftc`) for building the native launcher
+* **Node.js >= 22.6.0** (Node 22 LTS or newer; required for native `--experimental-strip-types` support)
+* **Git**
+* *(macOS only)* Xcode Command Line Tools (`xcode-select --install`) for building native Swift launcher and AVFoundation binary.
 
-### Clone & Run
-
+### 1. Clone & Install
 ```bash
-# 1. Clone repository
 git clone https://github.com/JayantOlhyan/OpenFaceID.git
 cd OpenFaceID
+npm install
+```
 
-# 2. Install dependencies (dev tooling only; zero runtime npm dependencies)
-npm ci
-
-# 3. Run hardware camera diagnostics (tests real webcam on physical host)
-npm run camera:diagnose
-
-# 4. Run automated test suite
+### 2. Run the Cross-Platform Test Suite
+```bash
+# Validates 203 tests across all 52 test suites
 npm test
+```
 
-# 5. Launch the desktop application daemon
+### 3. Run Hardware Camera Diagnostics
+```bash
+npm run camera:diagnose
+```
+
+### 4. Start the Desktop Daemon & Web HUD
+```bash
 npm run desktop
 ```
+Navigate to `http://localhost:41793` to view the live HUD, camera feed canvas, and settings.
 
-### Build & Package Standalone macOS App
-
+### 5. Link Global CLI Tool (Optional)
 ```bash
-# Compile native AVFoundation helper, Swift launcher, and assemble OpenFaceID.app
-npm run build:mac
-
-# Package into distribution DMG and ZIP archives
-npm run package:mac
+npm link
+openfaceid status
+openfaceid --help
 ```
-Output artifacts are placed in `dist/macos/`:
-* `dist/macos/OpenFaceID.app` (Standalone Application Bundle)
-* `dist/macos/OpenFaceID-0.2.1-rc.1-arm64.dmg` (Installer Disk Image)
-* `dist/macos/OpenFaceID-0.2.1-rc.1-macos.zip` (Zip Archive)
 
 ---
 
-## Hardware Camera Diagnostics
+## Troubleshooting & FAQ
 
-OpenFaceID provides an automated physical camera diagnostic test harness:
+### Camera Permission Issues
+* **macOS**: Go to *System Settings &rarr; Privacy & Security &rarr; Camera* and verify that OpenFaceID (or your terminal application) is toggled **On**.
+* **Linux**: If `/dev/video0` cannot be accessed, ensure your user belongs to the `video` group (`sudo usermod -a -G video $USER`) and re-login.
+* **Windows**: Go to *Settings &rarr; Privacy & Security &rarr; Camera* and ensure *"Let desktop apps access your camera"* is enabled.
 
+### macOS: "App is damaged" or "Unidentified Developer"
+Current release candidate binaries are ad-hoc signed. Remove the quarantine attribute with:
 ```bash
-npm run camera:diagnose
+xattr -cr /Applications/OpenFaceID.app
 ```
 
-Example output on physical host:
-```text
-============================================================
-             OPENFACEID CAMERA DIAGNOSTICS                  
-============================================================
-
-Permission:       PASS (AVAuthorizationStatusAuthorized)
-Camera:           MacBook Air Camera
-Discovery:        PASS (Device enumerated via AVFoundation)
-Initialization:   PASS (AVCaptureSession created)
-Frames:           PASS (Real optical frames streamed)
-FPS:              15.0
-Face Detection:   PASS (BlazeFace detected face bounding box)
-Embedding:        PASS (512D unit vector generated; L2 norm: 1.0000)
-Liveness:         READY (Optical flow initialized)
-Recognition:      READY (Cosine similarity matching active)
-------------------------------------------------------------
-Overall:          PASS
+### Node.js: `TypeError: unknown file extension` or `--experimental-strip-types`
+OpenFaceID requires **Node.js 22.6.0 or newer** to run TypeScript directly without compilation overhead. Verify your node version:
+```bash
+node -v # Must be >= v22.6.0
+# Using NVM:
+nvm install 22 && nvm use 22
 ```
 
-If your camera is not detected or permission is denied:
-1. Open **System Settings &rarr; Privacy & Security &rarr; Camera**.
-2. Ensure **OpenFaceID** (or your terminal) is toggled on.
-3. Rerun `npm run camera:diagnose`.
+### Why does presence drop to `PRESENCE_AMBIGUOUS`?
+OpenFaceID enforces a strict **fail-closed security invariant**: if 2 or more faces are detected in the webcam view simultaneously, the system immediately suspends presence authorization to protect your workstation against shoulder-surfing and unauthorized observers.
+
+### Are my facial images ever saved to disk or sent to the cloud?
+**Never.** OpenFaceID adheres to a strict Zero Cloud Guarantee. Frames exist in volatile RAM for less than 15 milliseconds during inference and are zeroized using `MemorySanitizer`. Only mathematical 512D spatial harmonic vectors are encrypted in your local OS keystore.
 
 ---
 
@@ -463,9 +486,9 @@ npm test
 
 Current test status:
 ```text
-ℹ tests 179
-ℹ suites 44
-ℹ pass 179
+ℹ tests 203
+ℹ suites 52
+ℹ pass 203
 ℹ fail 0
 ```
 
