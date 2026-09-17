@@ -209,7 +209,8 @@
         </div>
 
         <p style="color: #f0f6fc; font-size: 0.95rem; margin: 0; line-height: 1.6;">
-          Open the <code style="background: rgba(110, 118, 129, 0.4); padding: 3px 6px; border-radius: 6px; color: #e6edf3; font-size: 0.85rem; font-family: ui-monospace, SFMono-Regular, monospace;">.dmg</code> file and drag <strong>OpenFaceID</strong> to <code style="background: rgba(110, 118, 129, 0.4); padding: 3px 6px; border-radius: 6px; color: #e6edf3; font-size: 0.85rem; font-family: ui-monospace, SFMono-Regular, monospace;">/Applications</code> , then open it.
+          Open the <code style="background: rgba(110, 118, 129, 0.4); padding: 3px 6px; border-radius: 6px; color: #e6edf3; font-size: 0.85rem; font-family: ui-monospace, SFMono-Regular, monospace;">.dmg</code> file and drag <strong>OpenFaceID</strong> to <code style="background: rgba(110, 118, 129, 0.4); padding: 3px 6px; border-radius: 6px; color: #e6edf3; font-size: 0.85rem; font-family: ui-monospace, SFMono-Regular, monospace;">/Applications</code>.<br />
+          <span style="font-size: 0.85rem; color: #8b949e; display: inline-block; margin-top: 6px;"><em>First launch: Right-click &rarr; Open (or run <code style="color: #79c0ff;">xattr -cr /Applications/OpenFaceID.app</code> in Terminal) to clear macOS quarantine.</em></span>
         </p>
       </div>
 
@@ -219,6 +220,7 @@
         <ul style="margin: 0 0 24px 20px; padding: 0; color: #e6edf3; font-size: 0.95rem; line-height: 1.8;">
           <li>Windows 10 or Windows 11 (64-bit)</li>
           <li>DirectShow or MediaFoundation compatible webcam</li>
+          <li>Includes native C++ Windows Credential Provider (<code style="color: #79c0ff;">OpenFaceIDCredentialProvider.dll</code>)</li>
         </ul>
 
         <div style="margin: 20px 0 20px;">
@@ -238,6 +240,7 @@
         <ul style="margin: 0 0 24px 20px; padding: 0; color: #e6edf3; font-size: 0.95rem; line-height: 1.8;">
           <li>Ubuntu 22.04+, Debian 12+, Fedora 38+, or Arch Linux</li>
           <li>V4L2-compatible video capture device (<code style="color: #79c0ff;">/dev/video0</code>)</li>
+          <li>Includes native C PAM module (<code style="color: #79c0ff;">pam_openfaceid.so</code>) for login and lock screen auth</li>
         </ul>
 
         <div style="margin: 20px 0 20px;">
@@ -247,7 +250,7 @@
         </div>
 
         <p style="color: #f0f6fc; font-size: 0.95rem; margin: 0; line-height: 1.6;">
-          Open the <code style="background: rgba(110, 118, 129, 0.4); padding: 3px 6px; border-radius: 6px; color: #e6edf3; font-size: 0.85rem; font-family: ui-monospace, SFMono-Regular, monospace;">.deb</code> file and install with <code style="background: rgba(110, 118, 129, 0.4); padding: 3px 6px; border-radius: 6px; color: #e6edf3; font-size: 0.85rem; font-family: ui-monospace, SFMono-Regular, monospace;">sudo dpkg -i</code> , then open it from your app launcher.
+          Open the <code style="background: rgba(110, 118, 129, 0.4); padding: 3px 6px; border-radius: 6px; color: #e6edf3; font-size: 0.85rem; font-family: ui-monospace, SFMono-Regular, monospace;">.deb</code> file and install with <code style="background: rgba(110, 118, 129, 0.4); padding: 3px 6px; border-radius: 6px; color: #e6edf3; font-size: 0.85rem; font-family: ui-monospace, SFMono-Regular, monospace;">sudo dpkg -i</code>, then open it from your app launcher.
         </p>
       </div>
     </div>
