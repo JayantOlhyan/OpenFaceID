@@ -1,5 +1,7 @@
 import os from 'os';
-import { execFile } from 'child_process';
+import net from 'net';
+import fs from 'fs';
+import { execFile, spawn } from 'child_process';
 import { promisify } from 'util';
 import { PlatformAdapter, type PlatformInfo, type DisplayInfo } from './PlatformAdapter.ts';
 import { Logger } from '../../core/src/index.ts';
@@ -216,8 +218,107 @@ export class MacOSAdapter extends PlatformAdapter {
     this.sessionEventListener = null;
   }
 
+  private pamServer: net.Server | null = null;
+  private activePamSocketPath: string | null = null;
+  public static readonly PAM_SOCKET_PATH = '/var/run/openfaceid/auth.sock';
+  public static readonly DEV_PAM_SOCKET_PATH = '/tmp/openfaceid_auth.sock';
+
+  public startPamSocketServer(authHandler: (username: string) => Promise<boolean>, customSocketPath?: string): void {
+    this.stopPamSocketServer();
+    const socketPath = customSocketPath || (process.getuid && process.getuid() === 0
+      ? MacOSAdapter.PAM_SOCKET_PATH
+      : (fs.existsSync('/var/run/openfaceid') ? MacOSAdapter.PAM_SOCKET_PATH : MacOSAdapter.DEV_PAM_SOCKET_PATH));
+
+    this.activePamSocketPath = socketPath;
+
+    try {
+      if (fs.existsSync(socketPath)) {
+        fs.unlinkSync(socketPath);
+      }
+    } catch {}
+
+    try {
+      this.pamServer = net.createServer((socket) => {
+        let buffer = '';
+        socket.on('data', async (chunk) => {
+          buffer += chunk.toString();
+          if (buffer.includes('\n')) {
+            try {
+              const req = JSON.parse(buffer.trim());
+              const user = req.user || os.userInfo().username;
+              Logger.info('platform', `Received macOS PAM auth challenge for user: ${user}`);
+              const verified = await authHandler(user);
+              if (verified) {
+                socket.write(JSON.stringify({ status: 'AUTHORIZED', user }) + '\n');
+              } else {
+                socket.write(JSON.stringify({ status: 'DENIED', reason: 'Biometric mismatch or liveness failure' }) + '\n');
+              }
+            } catch (err) {
+              socket.write(JSON.stringify({ status: 'DENIED', error: String(err) }) + '\n');
+            }
+            socket.end();
+          }
+        });
+      });
+
+      this.pamServer.on('error', (err: any) => {
+        Logger.warn('platform', 'macOS PAM socket server error', { error: String(err) });
+      });
+
+      this.pamServer.listen(socketPath, () => {
+        Logger.info('platform', `macOS PAM authentication socket listening on ${socketPath}`);
+        try {
+          fs.chmodSync(socketPath, 0o666);
+        } catch {}
+      });
+      this.pamServer.unref();
+    } catch (err) {
+      Logger.warn('platform', 'Failed to bind macOS PAM Unix domain socket', { error: String(err) });
+    }
+  }
+
+  public stopPamSocketServer(): void {
+    if (this.pamServer) {
+      try {
+        this.pamServer.close();
+      } catch {}
+      this.pamServer = null;
+    }
+    if (this.activePamSocketPath) {
+      try {
+        if (fs.existsSync(this.activePamSocketPath)) {
+          fs.unlinkSync(this.activePamSocketPath);
+        }
+      } catch {}
+      this.activePamSocketPath = null;
+    }
+  }
+
+  public override async checkAccessibilityPermission(): Promise<boolean> {
+    try {
+      const script = 'tell application "System Events" to return UI elements enabled';
+      const { stdout } = await execFileAsync('/usr/bin/osascript', ['-e', script]);
+      return stdout.trim() === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  public override async requestAccessibilityPermission(): Promise<void> {
+    try {
+      await execFileAsync('/usr/bin/open', ['x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility']);
+    } catch (err) {
+      Logger.warn('platform', 'Could not open Accessibility preferences', { error: String(err) });
+    }
+  }
+
   public override async unlockScreen(secret?: string): Promise<boolean> {
-    if (process.env.OPENFACEID_MOCK_UNLOCK === '1' || process.env.NODE_ENV === 'test') {
+    if (!secret || secret.length === 0) {
+      Logger.warn('platform', 'No unlock secret provided; unable to complete keystroke unlock. Please configure password in OpenFaceID Settings.');
+      return false;
+    }
+
+    if (process.env.OPENFACEID_MOCK_UNLOCK === '1') {
       Logger.debug('platform', 'Mock screen unlock executed (test environment)');
       return true;
     }
@@ -229,37 +330,70 @@ export class MacOSAdapter extends PlatformAdapter {
         return true;
       }
 
-      // 1. Wake display from sleep
+      // 1. Verify macOS Accessibility permission
+      const hasAccessibility = await this.checkAccessibilityPermission();
+      if (!hasAccessibility) {
+        Logger.error('platform', 'macOS Accessibility permission not granted. OpenFaceID cannot type unlock credentials.');
+        return false;
+      }
+
+      // 2. Wake display from sleep
       try {
         await execFileAsync('/usr/bin/caffeinate', ['-u', '-t', '2']);
       } catch {
         // Caffeinate failure is non-fatal
       }
 
-      // 2. Inject unlock credentials via System Events
-      if (secret && secret.length > 0) {
-        Logger.info('platform', 'Dispatching macOS lockscreen keystroke unlock via System Events');
-        const script = `
-on run argv
-  set pass to item 1 of argv
-  tell application "System Events"
-    delay 0.2
-    keystroke pass
-    delay 0.1
-    key code 36
-  end tell
-end run
-`.trim();
-        await execFileAsync('/usr/bin/osascript', ['-e', script, '--', secret]);
-        return true;
-      }
-
-      Logger.warn('platform', 'No unlock secret provided; unable to complete keystroke unlock');
-      return false;
+      // 3. Dispatch secure keystroke via standard input (NEVER pass secret in CLI arguments)
+      Logger.info('platform', 'Dispatching secure macOS lockscreen keystroke unlock via stdin');
+      return await this.executeSecureKeystroke(secret);
     } catch (err) {
-      Logger.error('platform', 'Failed to unlock macOS screen via keystroke injection', { error: String(err) });
+      Logger.error('platform', 'Failed to unlock macOS screen via secure keystroke injection', { error: String(err) });
       return false;
     }
+  }
+
+  private executeSecureKeystroke(secret: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      // AppleScript that reads password from stdin, preventing CLI argument exposure in ps aux
+      const script = `
+        set pass to do shell script "cat"
+        tell application "System Events"
+          delay 0.3
+          keystroke pass
+          delay 0.1
+          key code 36
+        end tell
+      `;
+
+      const child = spawn('/usr/bin/osascript', ['-e', script], {
+        stdio: ['pipe', 'ignore', 'pipe'],
+      });
+
+      let errOutput = '';
+      child.stderr?.on('data', (d) => {
+        errOutput += d.toString();
+      });
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          Logger.info('platform', 'macOS lock screen keystroke executed successfully');
+          resolve(true);
+        } else {
+          Logger.error('platform', `Keystroke injection failed with code ${code}`, { error: errOutput.trim() });
+          resolve(false);
+        }
+      });
+
+      child.on('error', (err) => {
+        Logger.error('platform', 'Failed to spawn osascript for keystroke', { error: String(err) });
+        resolve(false);
+      });
+
+      // Write secret directly to stdin and close the stream
+      child.stdin?.write(secret);
+      child.stdin?.end();
+    });
   }
 }
 
