@@ -1,6 +1,6 @@
 cask "openfaceid" do
   version "0.2.1-rc.1"
-  sha256 "9bd8bed00fa4dbd6a7795ff299eb954bfd68711bb8acb34d3b56870acdc2996c"
+  sha256 "4bd94915d876f566c4cc007dc834c6f41fc89fd1527a3bf8a7a108fcb5ed4b27"
 
   url "https://github.com/JayantOlhyan/OpenFaceID/releases/download/v#{version}/OpenFaceID-#{version}-arm64.dmg"
   name "OpenFaceID"
