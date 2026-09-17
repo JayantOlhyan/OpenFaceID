@@ -1,0 +1,92 @@
+name: Build Cross-Platform Release Distributables
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Download MobileFaceNet ONNX Weights
+        run: |
+          mkdir -p models packages/vision/models
+          curl -L "https://huggingface.co/WePrompt/buffalo_sc/resolve/main/w600k_mbf.onnx" -o models/arcface-mobilefacenet.onnx
+          cp models/arcface-mobilefacenet.onnx packages/vision/models/
+
+      - name: Run Test Suite
+        run: npm test
+
+      - name: Build and Package macOS Application Bundle & DMG
+        run: |
+          ./scripts/build-macos.sh
+          ./scripts/package-macos.sh
+
+      - name: Upload macOS Release Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release-arm64
+          path: |
+            dist/macos/*.dmg
+            dist/macos/*.zip
+            dist/SHA256SUMS
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC Environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Compile Windows Credential Provider DLL
+        run: |
+          cmd.exe /c packages\platform\native\windows\build-windows.bat
+
+      - name: Upload Windows Credential Provider DLL
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-credential-provider-dll
+          path: dist/windows/OpenFaceIDCredentialProvider.dll
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpam0g-dev gcc make
+
+      - name: Compile Linux PAM Module
+        run: |
+          make -C packages/platform/native/linux
+
+      - name: Package Linux Release Tarball
+        run: |
+          ./scripts/package-linux.sh
+
+      - name: Upload Linux Release Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release-x86_64
+          path: |
+            dist/*.tar.gz
+            packages/platform/native/linux/pam_openfaceid.so
