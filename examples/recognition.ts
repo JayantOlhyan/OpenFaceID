@@ -26,7 +26,8 @@ import { createSyntheticFrame, createSyntheticLandmarks } from './demo/fixtures.
 async function run() {
   console.log('=== OpenFaceID Example: Face Recognition & Cosine Similarity ===\n');
 
-  const embedder = new ArcFaceEmbedder();
+  // Use explicit analytical provider for developer fixture demonstration with synthetic landmarks
+  const embedder = new ArcFaceEmbedder('analytical');
   // Configure recognizer with windowSize = 1, requiredMatches = 1 for single-frame match
   const recognizer = new FaceRecognizer({ threshold: 0.70, windowSize: 1, requiredMatches: 1 });
 
