@@ -1,4 +1,5 @@
 import os from 'os';
+import net from 'net';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { PlatformAdapter, type PlatformInfo, type DisplayInfo } from './PlatformAdapter.ts';
@@ -187,7 +188,8 @@ if ([Win32]::GetLastInputInfo([ref]$lii)) {
       const b64Secret = Buffer.from(secret, 'utf8').toString('base64');
       const script = `
 Add-Type -AssemblyName System.Security
-$bytes = [System.Convert]::FromBase64String('${b64Secret}')
+$b64 = [System.Console]::In.ReadLine()
+$bytes = [System.Convert]::FromBase64String($b64)
 $protected = [System.Security.Cryptography.ProtectedData]::Protect($bytes, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
 $out = [System.Convert]::ToBase64String($protected)
 $dir = "$env:LOCALAPPDATA\\OpenFaceID"
@@ -195,8 +197,20 @@ if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Ou
 Set-Content -Path "$dir\\${key}.secret" -Value $out -Force
 `.trim();
 
-      await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { timeout: 2500, windowsHide: true });
-      return true;
+      return await new Promise<boolean>((resolve) => {
+        const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
+          stdio: ['pipe', 'ignore', 'pipe'],
+          windowsHide: true,
+        });
+
+        child.on('close', (code) => resolve(code === 0));
+        child.on('error', () => resolve(false));
+
+        if (child.stdin) {
+          child.stdin.write(b64Secret + '\n');
+          child.stdin.end();
+        }
+      });
     } catch {
       return false;
     }
@@ -279,6 +293,48 @@ $unprotected = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, $
     this.sessionEventListener = null;
   }
 
+  private pipeServer: net.Server | null = null;
+  public static readonly NAMED_PIPE_PATH = '\\\\.\\pipe\\OpenFaceIDAuth';
+
+  public startNamedPipeServer(authHandler: () => Promise<boolean>): void {
+    this.stopNamedPipeServer();
+    try {
+      this.pipeServer = net.createServer((socket) => {
+        let buffer = '';
+        socket.on('data', async (chunk) => {
+          buffer += chunk.toString();
+          if (buffer.includes('\n')) {
+            try {
+              Logger.info('platform', 'Received Windows Credential Provider unlock challenge');
+              const verified = await authHandler();
+              if (verified) {
+                socket.write(JSON.stringify({ status: 'AUTH_SUCCESS' }) + '\n');
+              } else {
+                socket.write(JSON.stringify({ status: 'AUTH_FAILED', reason: 'Biometric mismatch or liveness failure' }) + '\n');
+              }
+            } catch (err) {
+              socket.write(JSON.stringify({ status: 'AUTH_ERROR', error: String(err) }) + '\n');
+            }
+            socket.end();
+          }
+        });
+      });
+
+      this.pipeServer.listen(WindowsAdapter.NAMED_PIPE_PATH, () => {
+        Logger.info('platform', `Windows Credential Provider Named Pipe listening on ${WindowsAdapter.NAMED_PIPE_PATH}`);
+      });
+    } catch (err) {
+      Logger.warn('platform', 'Failed to bind Windows Named Pipe', { error: String(err) });
+    }
+  }
+
+  public stopNamedPipeServer(): void {
+    if (this.pipeServer) {
+      this.pipeServer.close();
+      this.pipeServer = null;
+    }
+  }
+
   public override async unlockScreen(secret?: string): Promise<boolean> {
     if (process.env.OPENFACEID_MOCK_UNLOCK === '1' || process.env.NODE_ENV === 'test') {
       Logger.debug('platform', 'Mock screen unlock executed (test environment)');
@@ -292,7 +348,7 @@ $unprotected = [System.Security.Cryptography.ProtectedData]::Unprotect($bytes, $
         return true;
       }
 
-      Logger.info('platform', 'Dispatching Windows lockscreen unlock');
+      Logger.info('platform', 'Windows lock screen managed by OpenFaceID Credential Provider; awaiting LogonUI Named Pipe handshake');
       return true;
     } catch (err) {
       Logger.error('platform', 'Failed to unlock Windows session', { error: String(err) });
