@@ -25,6 +25,7 @@ export class ArcFaceEmbedder implements IFaceEmbedder {
   private analyticalFallback: AnalyticalEmbedderProvider;
   private preferredType: EmbedderProviderType;
   private resolutionVersion = 0;
+  private resolutionPromise: Promise<IEmbedderProvider> | null = null;
 
   constructor(preferredType: EmbedderProviderType = 'auto') {
     this.preferredType = preferredType;
@@ -33,10 +34,11 @@ export class ArcFaceEmbedder implements IFaceEmbedder {
 
     // Asynchronously resolve preferred provider
     const currentVer = ++this.resolutionVersion;
-    resolveEmbedderProvider(preferredType).then((provider) => {
+    this.resolutionPromise = resolveEmbedderProvider(preferredType).then((provider) => {
       if (this.resolutionVersion === currentVer) {
         this.activeProvider = provider;
       }
+      return provider;
     });
   }
 
@@ -51,10 +53,13 @@ export class ArcFaceEmbedder implements IFaceEmbedder {
   public async setProvider(providerType: EmbedderProviderType): Promise<void> {
     this.preferredType = providerType;
     const currentVer = ++this.resolutionVersion;
-    const provider = await resolveEmbedderProvider(providerType);
-    if (this.resolutionVersion === currentVer) {
-      this.activeProvider = provider;
-    }
+    this.resolutionPromise = resolveEmbedderProvider(providerType).then((provider) => {
+      if (this.resolutionVersion === currentVer) {
+        this.activeProvider = provider;
+      }
+      return provider;
+    });
+    await this.resolutionPromise;
   }
 
   public async getCapabilities(): Promise<{
@@ -75,6 +80,9 @@ export class ArcFaceEmbedder implements IFaceEmbedder {
   }
 
   public async embed(frame: CameraFrame, landmarks: FaceLandmarks): Promise<Float32Array> {
+    if (this.resolutionPromise) {
+      await this.resolutionPromise;
+    }
     return this.activeProvider.embed(frame, landmarks);
   }
 
