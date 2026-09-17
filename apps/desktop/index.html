@@ -2535,6 +2535,7 @@
         <div style="max-width: 820px; margin: 0 auto;">
           <div class="subtabs-bar">
             <button class="subtab-btn active" onclick="switchSettingsSubtab('general')">General</button>
+            <button class="subtab-btn" onclick="switchSettingsSubtab('lockscreen')">Lock Screen & Vault</button>
             <button class="subtab-btn" onclick="switchSettingsSubtab('camera')">Camera</button>
             <button class="subtab-btn" onclick="switchSettingsSubtab('recognition')">Recognition</button>
             <button class="subtab-btn" onclick="switchSettingsSubtab('liveness')">Liveness</button>
@@ -2644,6 +2645,66 @@
                 </label>
                 <button class="btn btn-sm" onclick="alert('Checking for updates... You are running the latest version: v0.2.1.')">Check Now</button>
               </div>
+            </div>
+          </div>
+
+          <!-- Lock Screen Face Unlock & Hardware Vault (Phase 12) -->
+          <div class="content-card" id="cardLockScreenVault" style="margin-top: 20px; border: 1px solid rgba(99, 102, 241, 0.35); background: linear-gradient(180deg, rgba(30, 35, 55, 0.4) 0%, rgba(15, 18, 28, 0.4) 100%);">
+            <div class="content-card-title" style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="display: flex; align-items: center; gap: 8px;">
+                <span>🔐</span> Lock Screen Face Unlock & Hardware Vault
+              </span>
+              <span id="vaultStatusBadge" class="diag-badge" style="background: rgba(234, 179, 8, 0.15); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.3);">Checking Vault...</span>
+            </div>
+            <div class="content-card-desc">
+              OpenFaceID automatically verifies your identity and unlocks your workstation upon display wake. Your credentials are encrypted in your local OS Keystore (macOS Keychain) and never leave this device.
+            </div>
+
+            <!-- Auto-Unlock Switch -->
+            <div class="settings-row">
+              <div class="settings-label-group">
+                <span class="settings-label">Auto-Unlock on Display Wake</span>
+                <span class="settings-sublabel">Verify face and dispatch secure unlock keystroke when display powers on.</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="settingAutoUnlock" checked onchange="toggleAutoUnlock(this.checked)">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- Accessibility Status -->
+            <div class="settings-row">
+              <div class="settings-label-group">
+                <span class="settings-label">macOS Accessibility Permission</span>
+                <span class="settings-sublabel" id="accessibilityStatusText">Required by macOS to dispatch unlock keystrokes securely via stdin.</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span id="accessibilityStatusBadge" class="diag-badge">Checking...</span>
+                <button class="btn btn-sm" id="btnRequestAccessibility" onclick="requestAccessibilityPermission()" style="display: none;">Grant Permission</button>
+              </div>
+            </div>
+
+            <!-- Password Enrollment in Vault -->
+            <div class="settings-row" style="flex-direction: column; align-items: flex-start; gap: 10px;">
+              <div class="settings-label-group">
+                <span class="settings-label">Enroll Lock Screen Password into OS Keystore</span>
+                <span class="settings-sublabel">Password is stored exclusively in your local encrypted Keychain. Zero cloud sync. Never passed through CLI arguments.</span>
+              </div>
+              <div style="display: flex; gap: 10px; width: 100%; max-width: 520px;">
+                <input type="password" id="vaultPasswordInput" class="mac-input" placeholder="Enter your Mac login password" style="flex: 1; padding: 7px 12px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; color: #fff; font-size: 13px;" />
+                <button class="btn btn-primary" onclick="enrollVaultPassword()">Save Password</button>
+                <button class="btn btn-danger" id="btnClearPassword" onclick="clearVaultPassword()" style="display: none;">Purge</button>
+              </div>
+              <div id="vaultEnrollMsg" style="font-size: 11.5px; margin-top: 2px;"></div>
+            </div>
+
+            <!-- Active Vision Engine Diagnostic -->
+            <div class="settings-row">
+              <div class="settings-label-group">
+                <span class="settings-label">Active Vision Embedder</span>
+                <span class="settings-sublabel" id="activeEmbedderDesc">In-Tree Analytical Hypersphere Embedder (512D)</span>
+              </div>
+              <span class="diag-badge diag-badge-pass" id="embedderBadge">Analytical (CPU)</span>
             </div>
           </div>
 
@@ -3349,12 +3410,139 @@
         runDiagnosticsDoctor();
       } else if (tabName === 'camera') {
         refreshCameraDevices();
+      } else if (tabName === 'settings') {
+        checkVaultAndAccessibility();
       }
     }
 
     function switchSettingsSubtab(subtab) {
       document.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('active'));
-      event.target.classList.add('active');
+      if (event && event.target) event.target.classList.add('active');
+      if (subtab === 'lockscreen') {
+        const card = document.getElementById('cardLockScreenVault');
+        if (card) card.scrollIntoView({ behavior: 'smooth' });
+        checkVaultAndAccessibility();
+      }
+    }
+
+    async function checkVaultAndAccessibility() {
+      try {
+        // 1. Query Credential Status in OS Vault
+        const credRes = await apiFetch('/api/v1/credentials/status');
+        if (credRes.ok) {
+          const credData = await credRes.json();
+          const badge = document.getElementById('vaultStatusBadge');
+          const clearBtn = document.getElementById('btnClearPassword');
+          if (credData.enrolled) {
+            if (badge) {
+              badge.textContent = `Enrolled (${credData.keystore})`;
+              badge.style.background = 'rgba(16, 185, 129, 0.15)';
+              badge.style.color = '#10b981';
+              badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+            }
+            if (clearBtn) clearBtn.style.display = 'inline-block';
+          } else {
+            if (badge) {
+              badge.textContent = 'Not Enrolled (Unlock Disabled)';
+              badge.style.background = 'rgba(239, 68, 68, 0.15)';
+              badge.style.color = '#ef4444';
+              badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+            }
+            if (clearBtn) clearBtn.style.display = 'none';
+          }
+        }
+
+        // 2. Query Accessibility Permission
+        const accRes = await apiFetch('/api/v1/platform/accessibility');
+        if (accRes.ok) {
+          const accData = await accRes.json();
+          const badge = document.getElementById('accessibilityStatusBadge');
+          const reqBtn = document.getElementById('btnRequestAccessibility');
+          const statusText = document.getElementById('accessibilityStatusText');
+          if (accData.accessibilityGranted) {
+            if (badge) {
+              badge.textContent = 'Granted';
+              badge.className = 'diag-badge diag-badge-pass';
+            }
+            if (reqBtn) reqBtn.style.display = 'none';
+            if (statusText) statusText.textContent = 'Accessibility granted. Keystroke unlock is operational.';
+          } else {
+            if (badge) {
+              badge.textContent = 'Permission Required';
+              badge.className = 'diag-badge diag-badge-warn';
+            }
+            if (reqBtn) reqBtn.style.display = 'inline-block';
+            if (statusText) statusText.textContent = 'Required by macOS to dispatch unlock keystrokes securely via stdin.';
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function enrollVaultPassword() {
+      const input = document.getElementById('vaultPasswordInput');
+      const msg = document.getElementById('vaultEnrollMsg');
+      const password = input ? input.value : '';
+      if (!password) {
+        if (msg) {
+          msg.textContent = 'Please enter your password first.';
+          msg.style.color = '#ef4444';
+        }
+        return;
+      }
+
+      try {
+        const res = await apiFetch('/api/v1/credentials/enroll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: 'default_user', secret: password })
+        });
+        if (res.ok) {
+          if (msg) {
+            msg.textContent = '✓ Password securely saved in local OS Keychain.';
+            msg.style.color = '#10b981';
+          }
+          if (input) input.value = '';
+          checkVaultAndAccessibility();
+        } else {
+          const err = await res.json();
+          if (msg) {
+            msg.textContent = `Error: ${err.error || 'Failed to enroll password'}`;
+            msg.style.color = '#ef4444';
+          }
+        }
+      } catch (e) {
+        if (msg) {
+          msg.textContent = `Error: ${e.message}`;
+          msg.style.color = '#ef4444';
+        }
+      }
+    }
+
+    async function clearVaultPassword() {
+      if (!confirm('Remove lock screen password from OS Keychain? Automatic face unlock will be disabled.')) return;
+      try {
+        const res = await apiFetch('/api/v1/credentials?userId=default_user', { method: 'DELETE' });
+        if (res.ok) {
+          checkVaultAndAccessibility();
+          const msg = document.getElementById('vaultEnrollMsg');
+          if (msg) {
+            msg.textContent = 'Password purged from Keychain.';
+            msg.style.color = '#94a3b8';
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function requestAccessibilityPermission() {
+      try {
+        await apiFetch('/api/v1/platform/accessibility/request', { method: 'POST' });
+        alert('System Settings has been opened. Please grant Accessibility permissions to OpenFaceID (or Terminal), then return here.');
+        setTimeout(checkVaultAndAccessibility, 3000);
+      } catch (e) {}
+    }
+
+    function toggleAutoUnlock(enabled) {
+      localStorage.setItem('ofid_auto_unlock', enabled ? 'true' : 'false');
     }
 
     // =========================================================================
