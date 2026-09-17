@@ -33,9 +33,12 @@ echo "  ✓ Created $ZIP_PATH ($(du -h "$ZIP_PATH" | cut -f1))"
 echo "[2/3] Packaging DMG disk image with Finder layout..."
 TEMP_DMG="$DIST_DIR/temp_rw.dmg"
 rm -f "$TEMP_DMG" "$DMG_PATH"
+# Calculate required staging size dynamically with padding
+BUNDLE_MB=$(du -sm "$APP_DIR" | cut -f1 | tr -d ' ')
+STAGING_MB=$((BUNDLE_MB + 40))
 
-# Create 150MB writable staging disk
-hdiutil create -size 150m -fs HFS+ -volname "OpenFaceID" "$TEMP_DMG" >/dev/null
+# Create writable staging disk
+hdiutil create -size "${STAGING_MB}m" -fs HFS+ -volname "OpenFaceID" "$TEMP_DMG" >/dev/null
 
 # Mount staging disk
 MOUNT_DIR="/Volumes/OpenFaceID"
