@@ -1,0 +1,15 @@
+Windows Registry Editor Version 5.00
+
+; ==============================================================================
+; OpenFaceID Windows Credential Provider Registration
+; ==============================================================================
+
+[HKEY_CLASSES_ROOT\CLSID\{7B8F9A12-3D4E-4A5F-8C9B-0E1F2A3B4C5D}]
+@="OpenFaceID Credential Provider"
+
+[HKEY_CLASSES_ROOT\CLSID\{7B8F9A12-3D4E-4A5F-8C9B-0E1F2A3B4C5D}\InprocServer32]
+@="C:\\Program Files\\OpenFaceID\\OpenFaceIDCredentialProvider.dll"
+"ThreadingModel"="Apartment"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\Credential Providers\{7B8F9A12-3D4E-4A5F-8C9B-0E1F2A3B4C5D}]
+@="OpenFaceIDCredentialProvider"
