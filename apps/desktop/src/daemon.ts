@@ -199,6 +199,13 @@ export class DesktopEngine {
       // 4. Start platform wake and lock session event listener
       this.adapter.startWakeAndLockListener((event) => this.handleSessionEvent(event));
 
+      // 4b. Start PAM socket server if supported on host platform (macOS and Linux)
+      if ('startPamSocketServer' in this.adapter && typeof (this.adapter as any).startPamSocketServer === 'function') {
+        (this.adapter as any).startPamSocketServer(async (username: string) => {
+          return await this.handlePamAuthChallenge(username);
+        });
+      }
+
       // 5. Start background power monitor (sleep/wake)
       this.startPowerMonitor();
 
@@ -638,6 +645,45 @@ export class DesktopEngine {
     return this.activeUnlockPromise;
   }
 
+  public async handlePamAuthChallenge(username: string): Promise<boolean> {
+    if (this.isLockoutActive()) {
+      Logger.warn('unlock', 'PAM auth challenge rejected: Lockout is active (rate limit)');
+      return false;
+    }
+
+    // 1. Check if an authorized presence match occurred within the last 3000ms
+    const now = Date.now();
+    if (this.lastMatchTimestamp && now - this.lastMatchTimestamp < 3000) {
+      if (
+        !username ||
+        username === 'root' ||
+        username === 'default_user' ||
+        (this.activeIdentityName && this.activeIdentityName.toLowerCase() === username.toLowerCase())
+      ) {
+        Logger.info('unlock', `PAM auth approved: Recently verified user matches (${this.activeIdentityName})`);
+        return true;
+      }
+    }
+
+    // 2. Trigger on-demand face verification burst
+    Logger.info('unlock', `Triggering on-demand face verification burst for PAM user: ${username}`);
+    const result = await this.triggerUnlockSession('pam_challenge');
+    if (result.success && result.identityName) {
+      if (
+        !username ||
+        username === 'root' ||
+        username === 'default_user' ||
+        result.identityName.toLowerCase() === username.toLowerCase()
+      ) {
+        Logger.info('unlock', `PAM auth approved: Face verified for ${result.identityName}`);
+        return true;
+      }
+    }
+
+    Logger.warn('unlock', `PAM auth rejected for user: ${username}`);
+    return false;
+  }
+
   private async processUnlockBurstFrame(frame: CameraFrame): Promise<void> {
     this.unlockFsm.setAnalyzing();
 
@@ -706,17 +752,28 @@ export class DesktopEngine {
     this.burstFrames = [];
     this.burstLandmarks = [];
 
-    // Phase 4: Platform Native Credential Vault & Screen Unlock Dispatch
+    // Phase 4 & Phase 12: Platform Native Credential Vault & Screen Unlock Dispatch
     if (result.success && result.identityId) {
       this.consecutiveUnlockFailures = 0;
       this.lastLockoutTimestamp = 0;
       try {
         const secret = await this.adapter.retrieveCredential(result.identityId);
+        if (!secret) {
+          Logger.warn('unlock', `Biometric match succeeded for ${result.identityName}, but no lock screen credential is enrolled in OS Vault. Configure password in OpenFaceID Settings.`);
+          this.activityLog.logEvent('UNLOCK_SKIPPED_NO_CREDENTIAL', {
+            identityId: result.identityId,
+            identityName: result.identityName,
+          });
+        }
         const unlocked = await this.adapter.unlockScreen(secret ?? undefined);
         if (unlocked) {
           Logger.info('unlock', `Native OS lockscreen unlocked successfully for ${result.identityName}`);
+          this.activityLog.logEvent('UNLOCK_SUCCESS', {
+            identityId: result.identityId,
+            identityName: result.identityName,
+          });
         } else {
-          Logger.warn('unlock', `Native OS lockscreen unlock skipped or unhandled`);
+          Logger.warn('unlock', `Native OS lockscreen unlock skipped or unhandled (unlocked=false)`);
         }
       } catch (err) {
         Logger.error('unlock', 'Failed to dispatch native OS screen unlock', { error: String(err) });
@@ -1085,6 +1142,11 @@ export class DesktopEngine {
     Logger.info('core', `Gracefully shutting down ${BRANDING.name} Desktop Engine`);
 
     this.adapter.stopWakeAndLockListener();
+    if ('stopPamSocketServer' in this.adapter && typeof (this.adapter as any).stopPamSocketServer === 'function') {
+      try {
+        (this.adapter as any).stopPamSocketServer();
+      } catch {}
+    }
 
     if (this.powerCheckInterval) {
       clearInterval(this.powerCheckInterval);
