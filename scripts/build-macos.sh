@@ -37,6 +37,17 @@ chmod +x "$DIR/packages/camera/bin/openfaceid-camera-avf"
 cp "$DIR/packages/camera/bin/openfaceid-camera-avf" "$BIN_DIR/openfaceid-camera-avf"
 echo "  ✓ Bundled openfaceid-camera-avf binary"
 
+# 2b. Build Native macOS PAM Module
+echo "[1b/6] Building native macOS PAM authentication module..."
+mkdir -p "$BIN_DIR"
+clang -O3 -shared -fPIC -lpam \
+  "$DIR/packages/platform/native/macos/pam_openfaceid_mac.c" \
+  -o "$BIN_DIR/pam_openfaceid_mac.so"
+chmod 755 "$BIN_DIR/pam_openfaceid_mac.so"
+cp "$DIR/scripts/install-macos-auth.sh" "$BIN_DIR/install-macos-auth.sh"
+chmod +x "$BIN_DIR/install-macos-auth.sh"
+echo "  ✓ Bundled pam_openfaceid_mac.so and install-macos-auth.sh"
+
 # 3. Generate App Icons if missing
 if [ ! -f "$DIR/apps/desktop/packaging/macos/OpenFaceID.icns" ]; then
   echo "[2/6] Generating OpenFaceID.icns..."
@@ -92,6 +103,25 @@ if [ -f "$DIR/tsconfig.json" ]; then
   cp "$DIR/tsconfig.json" "$APP_PAYLOAD_DIR/"
 fi
 
+# Bundle Neural Network Model Weights
+if [ -d "$DIR/models" ]; then
+  mkdir -p "$APP_PAYLOAD_DIR/models"
+  cp -R "$DIR/models/"* "$APP_PAYLOAD_DIR/models/"
+  echo "  ✓ Bundled pretrained ArcFace neural network weights (models/)"
+fi
+
+# Bundle ONNX Runtime Node native dependencies
+if [ -d "$DIR/node_modules/onnxruntime-node" ]; then
+  mkdir -p "$APP_PAYLOAD_DIR/node_modules"
+  cp -R "$DIR/node_modules/onnxruntime-common" "$APP_PAYLOAD_DIR/node_modules/"
+  cp -R "$DIR/node_modules/onnxruntime-node" "$APP_PAYLOAD_DIR/node_modules/"
+  # Prune non-darwin platforms to optimize bundle footprint
+  rm -rf "$APP_PAYLOAD_DIR/node_modules/onnxruntime-node/bin/napi-v6/linux"
+  rm -rf "$APP_PAYLOAD_DIR/node_modules/onnxruntime-node/bin/napi-v6/win32"
+  rm -rf "$APP_PAYLOAD_DIR/node_modules/onnxruntime-node/bin/napi-v6/darwin/x64"
+  echo "  ✓ Bundled ONNX Runtime (Apple Neural Engine CoreML acceleration for arm64)"
+fi
+
 # Verify canonical frontend existence immediately
 if [ ! -f "$APP_PAYLOAD_DIR/apps/desktop/index.html" ]; then
   echo "Error: Canonical index.html not found in $APP_PAYLOAD_DIR/apps/desktop/index.html!"
@@ -99,10 +129,16 @@ if [ ! -f "$APP_PAYLOAD_DIR/apps/desktop/index.html" ]; then
 fi
 echo "  ✓ Bundled application payload (apps/desktop, packages, configurations)"
 
-# 7. Ad-Hoc Code Signing (Nested binaries first, then outer bundle)
+# 7. Ad-Hoc Code Signing (Nested binaries and shared libraries first, then outer bundle)
 echo "[6/6] Applying ad-hoc codesign to bundle..."
 codesign --force --sign - "$BIN_DIR/openfaceid-camera-avf"
 codesign --force --sign - "$BIN_DIR/node"
+if [ -f "$BIN_DIR/pam_openfaceid_mac.so" ]; then
+  codesign --force --sign - "$BIN_DIR/pam_openfaceid_mac.so"
+fi
+find "$APP_PAYLOAD_DIR" \( -name "*.node" -o -name "*.dylib" \) | while read -r lib; do
+  codesign --force --sign - "$lib" 2>/dev/null || true
+done
 codesign --force --sign - "$MACOS_DIR/OpenFaceID"
 codesign --force --deep --sign - "$APP_DIR"
 echo "  ✓ Verifying bundle signature:"
