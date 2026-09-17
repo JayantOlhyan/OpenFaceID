@@ -517,6 +517,34 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 8c-7. Platform Accessibility Status & Request (Phase 12)
+  if (url.pathname === '/api/v1/platform/accessibility' && method === 'GET') {
+    try {
+      const trusted = await engine.adapter.checkAccessibilityPermission();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        os: engine.adapter.getPlatformInfo().os,
+        accessibilityGranted: trusted,
+      }));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
+    }
+    return;
+  }
+
+  if (url.pathname === '/api/v1/platform/accessibility/request' && method === 'POST') {
+    try {
+      await engine.adapter.requestAccessibilityPermission();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ requested: true }));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
+    }
+    return;
+  }
+
 
   // 8d. Camera Live Preview On-Demand Start (for Enrollment & Camera Settings)
   if (url.pathname === '/api/v1/camera/preview/start' && method === 'POST') {
