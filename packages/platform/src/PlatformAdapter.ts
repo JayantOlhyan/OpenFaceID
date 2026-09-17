@@ -68,6 +68,12 @@ export abstract class PlatformAdapter {
     return false;
   }
 
+  public async checkAccessibilityPermission(): Promise<boolean> {
+    return true;
+  }
+
+  public async requestAccessibilityPermission(): Promise<void> {}
+
   public async storeCredential(user: string, secret: string): Promise<boolean> {
     const safeUser = user.replace(/[^a-zA-Z0-9_-]/g, '_');
     return this.storeSecret(`cred_${safeUser}`, secret);
