@@ -207,13 +207,15 @@ export class AnalyticalEmbedderProvider implements IEmbedderProvider {
 
 /**
  * CoreML Embedder Provider (macOS Apple Neural Engine / GPU)
- * Interfaces with Apple Vision & CoreML ArcFace MobileFaceNet model on macOS 14/15+.
+ * Executes real ArcFace MobileFaceNet neural inference via CoreML on macOS.
  */
 export class CoreMLEmbedderProvider implements IEmbedderProvider {
   public readonly type: EmbedderProviderType = 'coreml';
   public readonly name: string = 'CoreML ArcFace (Apple Neural Engine / GPU)';
-  private fallback = new AnalyticalEmbedderProvider();
   private modelPath: string | null = null;
+  private session: any = null;
+  private sessionPromise: Promise<any> | null = null;
+  private aligner = new AnalyticalEmbedderProvider();
 
   constructor() {
     this.modelPath = this.locateModel();
@@ -221,10 +223,10 @@ export class CoreMLEmbedderProvider implements IEmbedderProvider {
 
   private locateModel(): string | null {
     const candidates = [
+      path.join(process.cwd(), 'models/arcface-mobilefacenet.onnx'),
       path.join(process.cwd(), 'models/ArcFace.mlmodelc'),
-      path.join(process.cwd(), 'models/arcface.mlmodel'),
-      path.join(os.homedir(), '.openfaceid/models/ArcFace.mlmodelc'),
-      path.join(os.homedir(), '.openfaceid/models/arcface.mlmodel'),
+      path.join(process.cwd(), 'models/arcface.onnx'),
+      path.join(os.homedir(), '.openfaceid/models/arcface-mobilefacenet.onnx'),
     ];
     for (const cand of candidates) {
       try {
@@ -236,32 +238,68 @@ export class CoreMLEmbedderProvider implements IEmbedderProvider {
 
   public async isAvailable(): Promise<boolean> {
     if (process.platform !== 'darwin') return false;
-    // On macOS 14/15+, Apple Vision & CoreML frameworks are natively available
-    return true;
+    return this.modelPath !== null && fs.existsSync(this.modelPath);
+  }
+
+  private async getSession(): Promise<any> {
+    if (this.session) return this.session;
+    if (!this.sessionPromise) {
+      this.sessionPromise = (async () => {
+        if (!this.modelPath || !fs.existsSync(this.modelPath)) {
+          throw new Error(`CoreML ArcFace model weight file not found at: ${this.modelPath ?? 'models/arcface-mobilefacenet.onnx'}`);
+        }
+        const ort = await import('onnxruntime-node');
+        this.session = await ort.InferenceSession.create(this.modelPath, {
+          executionProviders: ['coreml', 'cpu'],
+        });
+        return this.session;
+      })();
+    }
+    return this.sessionPromise;
   }
 
   public async embed(frame: CameraFrame, landmarks: FaceLandmarks): Promise<Float32Array> {
-    // If native CoreML model is available on macOS, it executes via ANE;
-    // otherwise falls back smoothly to the in-tree analytical representation.
-    if (!this.modelPath) {
-      Logger.debug('vision', 'CoreML model binary not installed; using analytical representation');
-      return this.fallback.embed(frame, landmarks);
+    const session = await this.getSession();
+    const patch = this.aligner.alignFacePatch(frame, landmarks); // 112x112x3 RGB uint8
+
+    const floatData = new Float32Array(1 * 3 * 112 * 112);
+    for (let y = 0; y < 112; y++) {
+      for (let x = 0; x < 112; x++) {
+        const srcIdx = (y * 112 + x) * 3;
+        floatData[0 * 112 * 112 + y * 112 + x] = (patch[srcIdx] - 127.5) / 128.0;
+        floatData[1 * 112 * 112 + y * 112 + x] = (patch[srcIdx + 1] - 127.5) / 128.0;
+        floatData[2 * 112 * 112 + y * 112 + x] = (patch[srcIdx + 2] - 127.5) / 128.0;
+      }
     }
 
-    // High-performance fallback / execution
-    return this.fallback.embed(frame, landmarks);
+    const ort = await import('onnxruntime-node');
+    const inputTensor = new ort.Tensor('float32', floatData, [1, 3, 112, 112]);
+    const feeds = { [session.inputNames[0]]: inputTensor };
+    const results = await session.run(feeds);
+    const rawOut = results[session.outputNames[0]].data as Float32Array;
+
+    // Unit L2-normalization
+    let sumSq = 0;
+    for (let i = 0; i < rawOut.length; i++) sumSq += rawOut[i] * rawOut[i];
+    const norm = Math.sqrt(sumSq);
+    const normalized = new Float32Array(512);
+    for (let i = 0; i < 512; i++) normalized[i] = rawOut[i] / (norm || 1.0);
+
+    return normalized;
   }
 }
 
 /**
  * ONNX Runtime Embedder Provider (Windows DirectML & Linux CPU/CUDA)
- * Interfaces with ArcFace MobileFaceNet / ResNet ONNX models.
+ * Executes real ArcFace MobileFaceNet neural inference via ONNX Runtime.
  */
 export class OnnxEmbedderProvider implements IEmbedderProvider {
   public readonly type: EmbedderProviderType = 'onnx';
   public readonly name: string = 'ONNX Runtime ArcFace (DirectML / CPU / CUDA)';
-  private fallback = new AnalyticalEmbedderProvider();
   private modelPath: string | null = null;
+  private session: any = null;
+  private sessionPromise: Promise<any> | null = null;
+  private aligner = new AnalyticalEmbedderProvider();
 
   constructor() {
     this.modelPath = this.locateModel();
@@ -272,7 +310,6 @@ export class OnnxEmbedderProvider implements IEmbedderProvider {
       path.join(process.cwd(), 'models/arcface-mobilefacenet.onnx'),
       path.join(process.cwd(), 'models/arcface.onnx'),
       path.join(os.homedir(), '.openfaceid/models/arcface-mobilefacenet.onnx'),
-      path.join(os.homedir(), '.openfaceid/models/arcface.onnx'),
     ];
     for (const cand of candidates) {
       try {
@@ -283,19 +320,55 @@ export class OnnxEmbedderProvider implements IEmbedderProvider {
   }
 
   public async isAvailable(): Promise<boolean> {
-    if (process.platform === 'linux' || process.platform === 'win32') {
-      return true;
+    return this.modelPath !== null && fs.existsSync(this.modelPath);
+  }
+
+  private async getSession(): Promise<any> {
+    if (this.session) return this.session;
+    if (!this.sessionPromise) {
+      this.sessionPromise = (async () => {
+        if (!this.modelPath || !fs.existsSync(this.modelPath)) {
+          throw new Error(`ONNX ArcFace model weight file not found at: ${this.modelPath ?? 'models/arcface-mobilefacenet.onnx'}`);
+        }
+        const ort = await import('onnxruntime-node');
+        const providers = process.platform === 'win32' ? ['directml', 'cpu'] : ['cpu'];
+        this.session = await ort.InferenceSession.create(this.modelPath, {
+          executionProviders: providers,
+        });
+        return this.session;
+      })();
     }
-    return this.modelPath !== null;
+    return this.sessionPromise;
   }
 
   public async embed(frame: CameraFrame, landmarks: FaceLandmarks): Promise<Float32Array> {
-    if (!this.modelPath) {
-      Logger.debug('vision', 'ONNX model binary not installed; using analytical representation');
-      return this.fallback.embed(frame, landmarks);
+    const session = await this.getSession();
+    const patch = this.aligner.alignFacePatch(frame, landmarks);
+
+    const floatData = new Float32Array(1 * 3 * 112 * 112);
+    for (let y = 0; y < 112; y++) {
+      for (let x = 0; x < 112; x++) {
+        const srcIdx = (y * 112 + x) * 3;
+        floatData[0 * 112 * 112 + y * 112 + x] = (patch[srcIdx] - 127.5) / 128.0;
+        floatData[1 * 112 * 112 + y * 112 + x] = (patch[srcIdx + 1] - 127.5) / 128.0;
+        floatData[2 * 112 * 112 + y * 112 + x] = (patch[srcIdx + 2] - 127.5) / 128.0;
+      }
     }
 
-    return this.fallback.embed(frame, landmarks);
+    const ort = await import('onnxruntime-node');
+    const inputTensor = new ort.Tensor('float32', floatData, [1, 3, 112, 112]);
+    const feeds = { [session.inputNames[0]]: inputTensor };
+    const results = await session.run(feeds);
+    const rawOut = results[session.outputNames[0]].data as Float32Array;
+
+    // Unit L2-normalization
+    let sumSq = 0;
+    for (let i = 0; i < rawOut.length; i++) sumSq += rawOut[i] * rawOut[i];
+    const norm = Math.sqrt(sumSq);
+    const normalized = new Float32Array(512);
+    for (let i = 0; i < 512; i++) normalized[i] = rawOut[i] / (norm || 1.0);
+
+    return normalized;
   }
 }
 
@@ -308,25 +381,31 @@ export async function resolveEmbedderProvider(preferred: EmbedderProviderType = 
   const onnx = new OnnxEmbedderProvider();
 
   if (preferred === 'coreml') {
-    return (await coreml.isAvailable()) ? coreml : analytical;
-  }
-
-  if (preferred === 'onnx') {
-    return (await onnx.isAvailable()) ? onnx : analytical;
-  }
-
-  if (preferred === 'analytical') {
+    if (await coreml.isAvailable()) return coreml;
+    Logger.warn('vision', 'CoreML requested but weights missing; falling back to development analytical embedder');
     return analytical;
   }
 
-  // 'auto' mode: best platform selection
+  if (preferred === 'onnx') {
+    if (await onnx.isAvailable()) return onnx;
+    Logger.warn('vision', 'ONNX requested but weights missing; falling back to development analytical embedder');
+    return analytical;
+  }
+
+  if (preferred === 'analytical') {
+    Logger.info('vision', 'Analytical embedder explicitly selected (development/testing mode)');
+    return analytical;
+  }
+
+  // 'auto' mode: prefer verified neural execution providers if weights are present
   if (process.platform === 'darwin' && (await coreml.isAvailable())) {
     return coreml;
   }
 
-  if ((process.platform === 'win32' || process.platform === 'linux') && (await onnx.isAvailable())) {
+  if (await onnx.isAvailable()) {
     return onnx;
   }
 
+  Logger.warn('vision', 'Neural model weights not found; using development analytical embedder fallback');
   return analytical;
 }
