@@ -16,4 +16,10 @@ packages/camera/bin/
 *.iconset/
 .cache/
 website/downloads/
+*.so
+*.dylib
+*.dll
+*.o
+*.obj
+tests/native/test_pam_macos
 
