@@ -271,7 +271,7 @@ export class LinuxAdapter extends PlatformAdapter {
       this.pamServer.listen(socketPath, () => {
         Logger.info('platform', `Linux PAM authentication socket listening on ${socketPath}`);
         try {
-          fs.chmodSync(socketPath, 0o666);
+          fs.chmodSync(socketPath, 0o600);
         } catch {}
       });
     } catch (err) {

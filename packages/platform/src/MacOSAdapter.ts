@@ -268,7 +268,7 @@ export class MacOSAdapter extends PlatformAdapter {
       this.pamServer.listen(socketPath, () => {
         Logger.info('platform', `macOS PAM authentication socket listening on ${socketPath}`);
         try {
-          fs.chmodSync(socketPath, 0o666);
+          fs.chmodSync(socketPath, 0o600);
         } catch {}
       });
       this.pamServer.unref();

@@ -16,7 +16,8 @@ export interface ActiveChallenge {
 }
 
 /**
- * Glance-Style 5-Cue Presentation Attack Detector (ISO/IEC 30107-3 PAD)
+ * Multi-Cue Heuristic Presentation Attack Detector (Anti-Spoofing)
+ * Note: Heuristic multi-cue PAD architecture; benchmarking metrics inspired by ISO/IEC 30107-3 methodology (uncertified).
  *
  * Cues:
  * 1. Dynamic Screen Glare Reflection (ScreenGlareTracker: specular spectral correlation)

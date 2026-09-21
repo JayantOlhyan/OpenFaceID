@@ -16,6 +16,18 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+if [ "$1" == "--uninstall" ]; then
+  echo "Uninstalling OpenFaceID Linux PAM module..."
+  rm -f /lib/x86_64-linux-gnu/security/pam_openfaceid.so \
+        /lib/aarch64-linux-gnu/security/pam_openfaceid.so \
+        /lib64/security/pam_openfaceid.so \
+        /lib/security/pam_openfaceid.so
+  rm -rf /run/openfaceid
+  echo "✓ pam_openfaceid.so removed from system."
+  echo "Remember to remove 'auth sufficient pam_openfaceid.so' lines from /etc/pam.d/ configurations."
+  exit 0
+fi
+
 # Check build prerequisites
 if ! command -v gcc >/dev/null 2>&1; then
   echo "Error: gcc is required. Install build essentials:"

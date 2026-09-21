@@ -72,17 +72,17 @@ Canonical State Machine (Presence Authorized ──> Auto Screen Lock on Departu
 ## What OpenFaceID Is (and What It Is NOT)
 
 ### What It Is
-* A **local-first background presence detection daemon** and desktop application that monitors whether an authorized user is sitting at their workstation.
-* An **automated presence defender** that locks your screen or pauses sensitive applications when you step away, and recognizes you when you return.
-* A **fail-closed biometric engine** that drops authorization the moment multiple faces appear in frame, liveness checks fail, or the camera is occluded.
+* An **open-source, cross-platform face unlock & presence detection system** for desktop operating systems.
+* A **native authentication adapter pipeline** integrating with macOS PAM & lockscreen keystroke dispatch, Windows LogonUI Credential Provider, and Linux PAM (`pam_openfaceid`).
+* An **automated presence defender** that locks your workstation when you step away, and unlocks when your face is recognized in front of the camera.
+* A **fail-closed biometric engine** that drops authorization if multiple faces appear in frame, liveness checks fail, or camera access is interrupted.
 
 ### What It Is NOT
 > [!CAUTION]
 > ### Crucial Security Boundaries
-> * **NOT an Apple Face ID or Windows Hello Replacement**: OpenFaceID relies on standard 2D optical webcams. It does **not** possess structured-light infrared dot projectors or time-of-flight (ToF) depth-sensing hardware.
-> * **NOT an Operating System Login / PAM Injector**: OpenFaceID operates strictly at the desktop session layer for continuous presence awareness. It does not solicit, store, or inject macOS or Windows login passwords.
-> * **NOT 100% Spoof-Proof**: While OpenFaceID incorporates an 8-state Presentation Attack Detection (PAD) filter tracking micro-motion and optical flow, 2D optical cameras cannot mathematically guarantee resistance against sophisticated 3D physical silicone masks or high-fidelity display replays.
-> * **Built for Convenience and Session Presence**: Use it to automate workstation privacy when you step away from your desk, not as a replacement for hardware secure enclaves.
+> * **NOT a Hardware-Attested 3D Sensor**: OpenFaceID operates on standard 2D webcam video streams. It does **not** possess structured-light infrared dot projectors or time-of-flight (ToF) depth-sensing hardware found in dedicated mobile Face ID sensors.
+> * **NOT Laboratory or ISO Certified**: The presentation attack detection (PAD) engine uses heuristic multi-cue anti-spoofing (eye-blink dynamics, micro-motion variance, texture aliasing, and active screen glare). It is not independently certified under ISO/IEC 30107-3.
+> * **2D Optical Limitations**: While effective against casual presentation attacks (static printed photos, basic video replays), 2D optical cameras cannot guarantee mathematical resistance against physical 3D silicone masks or high-fidelity display replays.
 
 ---
 
@@ -206,6 +206,17 @@ Vision Pipeline & Desktop WebKit UI
 * **macOS TCC Permission Handling**: Automatically queries and prompts for `kTCCServiceCamera` access, with instant detection of `NotDetermined`, `Authorized`, `Denied`, and `Restricted` states.
 * **Zero Terminal Requirement**: Compiles into a standalone `OpenFaceID.app` bundle via a native Swift Cocoa launcher embedding `WKWebView` and bundling its own internal Node.js runtime and dynamic libraries.
 * **Real Diagnostic Commands**: Run `npm run camera:diagnose` to inspect hardware capture, live frame rate, and detector latency directly from the terminal.
+
+## Platform Hardware Validation Matrix
+
+| Platform | Built | Installed | Physical Hardware | Neural Recognition | Liveness | Native OS Auth | ACTUAL UNLOCK | Release Ready |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **macOS** | YES | YES | YES | YES | YES | YES | YES | YES |
+| **Windows** | YES | YES | UNVERIFIED | YES | YES | YES | UNVERIFIED | NO |
+| **Linux** | YES | YES | UNVERIFIED | YES | YES | YES | UNVERIFIED | NO |
+
+> **Release Classification**: **B. MACOS RELEASE READY — WINDOWS/LINUX VALIDATION PENDING**  
+> *Notice*: Physical desktop lock-screen unlock on Windows and Linux hardware is strictly marked as `UNVERIFIED` pending execution on physical hardware test benches (see [WINDOWS-HARDWARE-VALIDATION.md](docs/hardware/WINDOWS-HARDWARE-VALIDATION.md) and [LINUX-HARDWARE-VALIDATION.md](docs/hardware/LINUX-HARDWARE-VALIDATION.md)).
 
 ---
 

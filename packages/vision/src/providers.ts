@@ -21,7 +21,7 @@ export interface IEmbedderProvider {
  */
 export class AnalyticalEmbedderProvider implements IEmbedderProvider {
   public readonly type: EmbedderProviderType = 'analytical';
-  public readonly name: string = 'In-Tree Analytical Hypersphere Embedder (512D)';
+  public readonly name: string = 'In-Tree Analytical Hypersphere Embedder (512D) [DEVELOPMENT / FALLBACK]';
 
   public static readonly EMBEDDING_DIM = 512;
   public static readonly ALIGNED_WIDTH = 112;
@@ -379,20 +379,30 @@ export async function resolveEmbedderProvider(preferred: EmbedderProviderType = 
   const analytical = new AnalyticalEmbedderProvider();
   const coreml = new CoreMLEmbedderProvider();
   const onnx = new OnnxEmbedderProvider();
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.OPENFACEID_STRICT_PRODUCTION === '1';
 
   if (preferred === 'coreml') {
     if (await coreml.isAvailable()) return coreml;
+    if (isProduction) {
+      throw new Error('NEURAL_MODEL_UNAVAILABLE: CoreML requested but weights missing in production mode. System fails closed.');
+    }
     Logger.warn('vision', 'CoreML requested but weights missing; falling back to development analytical embedder');
     return analytical;
   }
 
   if (preferred === 'onnx') {
     if (await onnx.isAvailable()) return onnx;
+    if (isProduction) {
+      throw new Error('NEURAL_MODEL_UNAVAILABLE: ONNX requested but weights missing in production mode. System fails closed.');
+    }
     Logger.warn('vision', 'ONNX requested but weights missing; falling back to development analytical embedder');
     return analytical;
   }
 
   if (preferred === 'analytical') {
+    if (isProduction) {
+      throw new Error('NEURAL_MODEL_UNAVAILABLE: Analytical embedder is prohibited in production mode. Real neural weights (arcface-mobilefacenet.onnx) required.');
+    }
     Logger.info('vision', 'Analytical embedder explicitly selected (development/testing mode)');
     return analytical;
   }
@@ -404,6 +414,10 @@ export async function resolveEmbedderProvider(preferred: EmbedderProviderType = 
 
   if (await onnx.isAvailable()) {
     return onnx;
+  }
+
+  if (isProduction) {
+    throw new Error('NEURAL_MODEL_UNAVAILABLE: Neural model weights not found in production mode. System fails closed; analytical fallback prohibited.');
   }
 
   Logger.warn('vision', 'Neural model weights not found; using development analytical embedder fallback');

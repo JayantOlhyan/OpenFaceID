@@ -6,7 +6,7 @@
 #define MyAppPublisher "OpenFaceID Contributors"
 #define MyAppURL "https://github.com/JayantOlhyan/OpenFaceID"
 #define MyAppExeName "OpenFaceID.exe"
-#define MyCLSID "{8E9A3471-968B-4B52-8724-4B9F5D88A112}"
+#define MyCLSID "{7B8F9A12-3D4E-4A5F-8C9B-0E1F2A3B4C5D}"
 
 [Setup]
 AppId={{C6418E29-2E3F-4F9A-A376-880FD26B4D72}

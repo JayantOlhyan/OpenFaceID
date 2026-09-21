@@ -45,7 +45,7 @@ export const REGISTERED_MODELS: Record<string, ModelMetadata> = {
     expectedArchitecture: 'Deep Hyperspherical Embedding (112x112 canonical aligned face -> 512D unit vector)',
     expectedInput: '112x112x3 RGB aligned and normalized',
     expectedOutput: 'Strictly L2-normalized 512-dimensional float vector (||v|| = 1.0)',
-    sha256: 'c9effd5cedc2463625fe9cfb1e373a549c0e948ee4a9bc78f77dc94b48714d81',
+    sha256: '43b8160649ad6f51f5e05ac045fd812c3d233bf52070dfab362f3b8c0f106430',
   },
   'arcface-coreml-mobilefacenet': {
     name: 'ArcFace MobileFaceNet CoreML (macOS ANE)',
@@ -83,7 +83,7 @@ export const REGISTERED_MODELS: Record<string, ModelMetadata> = {
     expectedArchitecture: 'Temporal EAR Blink Tracker + Spatial Micro-Motion Variance + Active Challenge FSM',
     expectedInput: 'Temporal sequence of facial landmarks, Laplacian sharpness, and bounding boxes',
     expectedOutput: 'LivenessResult (passed: boolean, state: LivenessState, score: 0.0-1.0)',
-    sha256: 'd955bde44a1ea875d31024e5dfc2142216c33d6802171fee11521f502beb5bde',
+    sha256: '75c6c7f1d88f70d3cdd28188387b0714ef5ad76a348477e069c8d7b3b1647f7a',
   },
 };
 

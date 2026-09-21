@@ -83,6 +83,10 @@ export class ArcFaceEmbedder implements IFaceEmbedder {
     if (this.resolutionPromise) {
       await this.resolutionPromise;
     }
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.OPENFACEID_STRICT_PRODUCTION === '1';
+    if (isProduction && this.activeProvider.type === 'analytical' && this.preferredType !== 'analytical') {
+      throw new Error('NEURAL_MODEL_UNAVAILABLE: Analytical fallback is prohibited in production mode. Real neural weights (arcface-mobilefacenet.onnx) required.');
+    }
     return this.activeProvider.embed(frame, landmarks);
   }
 

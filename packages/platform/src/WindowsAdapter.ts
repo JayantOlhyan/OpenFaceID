@@ -1,6 +1,6 @@
 import os from 'os';
 import net from 'net';
-import { execFile } from 'child_process';
+import { execFile, spawn } from 'child_process';
 import { promisify } from 'util';
 import { PlatformAdapter, type PlatformInfo, type DisplayInfo } from './PlatformAdapter.ts';
 import { Logger } from '../../core/src/index.ts';

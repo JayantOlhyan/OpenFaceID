@@ -49,20 +49,20 @@ OpenFaceID retains its own distinct, standalone architecture. The following core
 
 ---
 
-## Critical Security Model Distinction
+## Architectural Comparison & Differentiation
 
-> [!IMPORTANT]
-> **OpenFaceID deliberately DOES NOT copy Glance's authentication or password-entry mechanism.**
->
-> Glance utilizes macOS Accessibility APIs and stored user passwords to type credentials into the macOS lock screen.
-> 
-> OpenFaceID treats this as an unacceptable security risk and **strictly maintains the boundary**:
-> $$\text{Face} + \text{Liveness} + \text{Policy} + \text{Presence} = \textbf{Authorized Workstation Presence}$$
-> 
-> OpenFaceID will never:
-> - Request, capture, or store your macOS user password.
-> - Simulate keyboard strokes to log into macOS.
-> - Bypass macOS security controls or pretend to be Secure Enclave Touch ID / Face ID.
+The primary product differentiation is architectural:
+
+* **OpenFaceID**:
+  - Open source (Apache-2.0).
+  - Intended cross-platform architecture (macOS, Windows, and Linux).
+  - Platform-specific native authentication adapters (macOS PAM + keystroke dispatch, Windows LogonUI Credential Provider, Linux PAM module).
+  - Local biometric processing and multi-cue presentation attack detection.
+  - Common biometric and authentication engine across platforms.
+
+* **Glance**:
+  - macOS-focused face-unlock utility.
+  - Native Swift implementation tailored specifically for Apple Silicon macOS user experience.
 
 ---
 
