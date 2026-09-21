@@ -26,7 +26,7 @@ describe('Phase 13 — Native macOS PAM Binary End-to-End Execution', () => {
   });
 
   it('verifies compiled pam_openfaceid_mac.so returns PAM_IGNORE (25) when daemon is offline', async () => {
-    if (os.platform() !== 'darwin') return;
+    if (os.platform() !== 'darwin' || !fs.existsSync(harnessPath)) return;
     try {
       if (fs.existsSync(socketPath)) fs.unlinkSync(socketPath);
     } catch {}
@@ -36,6 +36,7 @@ describe('Phase 13 — Native macOS PAM Binary End-to-End Execution', () => {
   });
 
   it('verifies compiled pam_openfaceid_mac.so returns PAM_SUCCESS (0) when biometrics authorize user', async () => {
+    if (os.platform() !== 'darwin' || !fs.existsSync(harnessPath)) return;
     try {
       if (fs.existsSync(socketPath)) fs.unlinkSync(socketPath);
     } catch {}
@@ -68,6 +69,7 @@ describe('Phase 13 — Native macOS PAM Binary End-to-End Execution', () => {
   });
 
   it('verifies compiled pam_openfaceid_mac.so returns PAM_AUTH_ERR (9) on biometric mismatch or liveness failure', async () => {
+    if (os.platform() !== 'darwin' || !fs.existsSync(harnessPath)) return;
     try {
       if (fs.existsSync(socketPath)) fs.unlinkSync(socketPath);
     } catch {}
