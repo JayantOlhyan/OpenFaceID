@@ -959,6 +959,7 @@
       cursor: pointer;
       transition: all 0.38s cubic-bezier(0.16, 1, 0.3, 1);
       user-select: none;
+      animation: hudDropFromTop 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
     .mac-hud-pill-container:hover {
@@ -979,6 +980,60 @@
       padding-top: 7px;
       padding-bottom: 8px;
       box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85);
+      animation: hudDropFromNotch 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Wake / Unlock burst animation: drops smoothly from top center with subtle blue glow */
+    .mac-hud-pill-container.hud-pulse-wake {
+      animation: hudWakeFromTop 0.58s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes hudDropFromTop {
+      0% {
+        transform: translate(-50%, -100%) scale(0.85);
+        opacity: 0;
+      }
+      65% {
+        transform: translate(-50%, 4px) scale(1.02);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(-50%, 0) scale(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes hudDropFromNotch {
+      0% {
+        transform: translate(-50%, -100%);
+        opacity: 0;
+      }
+      65% {
+        transform: translate(-50%, 2px);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(-50%, 0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes hudWakeFromTop {
+      0% {
+        transform: translate(-50%, -100%) scale(0.88);
+        opacity: 0;
+        box-shadow: 0 0 28px rgba(0, 113, 227, 0.7);
+      }
+      60% {
+        transform: translate(-50%, 4px) scale(1.03);
+        opacity: 1;
+        box-shadow: 0 0 18px rgba(0, 113, 227, 0.45);
+      }
+      100% {
+        transform: translate(-50%, 0) scale(1);
+        opacity: 1;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.04);
+      }
     }
 
     /* Left Element: Apple Animated Padlock Glyph */
@@ -1204,54 +1259,7 @@
       transition: transform 0.2s ease;
     }
 
-    /* In-Camera Viewport Scanning Reticle */
-    .camera-scan-reticle {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 140px;
-      height: 140px;
-      pointer-events: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.38s cubic-bezier(0.16, 1, 0.3, 1);
-      z-index: 12;
-      opacity: 0;
-    }
 
-    .camera-scan-reticle.active {
-      opacity: 1;
-    }
-
-    .camera-scan-reticle svg {
-      width: 100%;
-      height: 100%;
-      stroke: rgba(0, 113, 227, 0.85);
-      stroke-width: 2.2;
-      fill: none;
-    }
-
-    .camera-scan-reticle.scanning {
-      opacity: 1;
-      animation: cameraReticlePulse 1.8s ease-in-out infinite alternate;
-    }
-
-    @keyframes cameraReticlePulse {
-      0% { transform: translate(-50%, -50%) scale(0.96); filter: drop-shadow(0 0 4px rgba(0, 113, 227, 0.4)); }
-      100% { transform: translate(-50%, -50%) scale(1.04); filter: drop-shadow(0 0 12px rgba(0, 113, 227, 0.85)); }
-    }
-
-    .camera-scan-reticle.success {
-      opacity: 1;
-      transform: translate(-50%, -50%) scale(1.08);
-    }
-
-    .camera-scan-reticle.success svg {
-      stroke: var(--accent-green, #30d158);
-      filter: drop-shadow(0 0 14px rgba(48, 209, 88, 0.9));
-    }
 
     /* HUD Expanded Overlay (Ref 3 Screen 5) */
     #notchHudExpanded {
@@ -2103,26 +2111,7 @@
                   <div class="face-corner-mark" style="bottom: -2px; right: -2px; border-bottom: 3px solid inherit; border-right: 3px solid inherit;"></div>
                 </div>
 
-                <!-- Apple Face ID In-Camera Scanning Reticle Overlay -->
-                <div id="cameraScanReticle" class="camera-scan-reticle scanning">
-                  <svg viewBox="0 0 48 48">
-                    <!-- Corner Reticle Brackets -->
-                    <path d="M6 16V10a4 4 0 0 1 4-4h6" />
-                    <path d="M32 6h6a4 4 0 0 1 4 4v6" />
-                    <path d="M6 32v6a4 4 0 0 0 4 4h6" />
-                    <path d="M32 42h6a4 4 0 0 0 4-4v-6" />
-                    
-                    <!-- Center Smiley Features -->
-                    <g id="camReticleFeatures">
-                      <line x1="18" y1="16" x2="18" y2="21" stroke-width="2.5" stroke-linecap="round" />
-                      <line x1="30" y1="16" x2="30" y2="21" stroke-width="2.5" stroke-linecap="round" />
-                      <path d="M26 18l-2 11h3" stroke-width="2" stroke-linejoin="round" />
-                      <path d="M16 32c2.4 4.2 13.6 4.2 16 0" stroke-width="2.5" stroke-linecap="round" />
-                    </g>
-                    <!-- Checkmark (Revealed on Unlock) -->
-                    <path id="camReticleCheckmark" d="M15 24l6 6 12-12" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="display: none;" />
-                  </svg>
-                </div>
+
 
                 <!-- Absent Placeholder -->
                 <div id="absentPlaceholder" class="absent-placeholder">
@@ -3658,9 +3647,18 @@
       } catch (err) {}
     }
 
+    function triggerTopUnlockAnimation() {
+      const pill = document.getElementById('macHudPill');
+      if (!pill || pill.style.display === 'none') return;
+      pill.classList.remove('hud-pulse-wake');
+      void pill.offsetWidth; // Trigger DOM reflow to restart CSS animation
+      pill.classList.add('hud-pulse-wake');
+    }
+
     function setHudAnimationState(state, force = false) {
       if (!force && currentHudState === state && previewStateTimeout === null) return;
       if (previewStateTimeout !== null && !force) return;
+      const prevState = currentHudState;
       currentHudState = state;
 
       const container = document.getElementById('hudFaceIdContainer');
@@ -3668,26 +3666,19 @@
       const video = document.getElementById('hudScanVideo');
       const faceFeatures = document.getElementById('faceIdFeatures');
       const checkmark = document.getElementById('faceIdCheckmark');
-      const camReticle = document.getElementById('cameraScanReticle');
-      const camFeatures = document.getElementById('camReticleFeatures');
-      const camCheckmark = document.getElementById('camReticleCheckmark');
 
       if (!container) return;
 
       container.classList.remove('scanning', 'success', 'failure', 'paused');
-      if (camReticle) camReticle.classList.remove('scanning', 'success', 'failure', 'paused');
 
       if (state === 'scanning') {
+        if (prevState !== 'scanning') {
+          triggerTopUnlockAnimation();
+        }
         container.classList.add('scanning');
         if (lockGlyph) lockGlyph.classList.remove('unlocked');
         if (faceFeatures) faceFeatures.style.display = 'block';
         if (checkmark) checkmark.style.display = 'none';
-
-        if (camReticle) {
-          camReticle.classList.add('scanning');
-          if (camFeatures) camFeatures.style.display = 'block';
-          if (camCheckmark) camCheckmark.style.display = 'none';
-        }
 
         if (hudAnimEngine === 'video' && video) {
           if (!video.src.includes('idleanimation.mp4')) {
@@ -3702,12 +3693,6 @@
         if (faceFeatures) faceFeatures.style.display = 'none';
         if (checkmark) checkmark.style.display = 'block';
 
-        if (camReticle) {
-          camReticle.classList.add('success');
-          if (camFeatures) camFeatures.style.display = 'none';
-          if (camCheckmark) camCheckmark.style.display = 'block';
-        }
-
         playAppleHapticFeedback('unlock');
 
         if (hudAnimEngine === 'video' && video) {
@@ -3721,12 +3706,6 @@
         if (faceFeatures) faceFeatures.style.display = 'block';
         if (checkmark) checkmark.style.display = 'none';
 
-        if (camReticle) {
-          camReticle.classList.add('failure');
-          if (camFeatures) camFeatures.style.display = 'block';
-          if (camCheckmark) camCheckmark.style.display = 'none';
-        }
-
         playAppleHapticFeedback('fail');
 
         if (hudAnimEngine === 'video' && video) {
@@ -3737,7 +3716,6 @@
       } else if (state === 'paused') {
         container.classList.add('paused');
         if (lockGlyph) lockGlyph.classList.remove('unlocked');
-        if (camReticle) camReticle.classList.add('paused');
         if (hudAnimEngine === 'video' && video) {
           video.pause();
         }
@@ -3750,6 +3728,7 @@
         clearTimeout(previewStateTimeout);
         previewStateTimeout = null;
       }
+      triggerTopUnlockAnimation();
       setHudAnimationState(state, true);
 
       // Revert back to live polling state after 4 seconds
@@ -4023,6 +4002,7 @@
     async function startCameraLoop() {
       if (isCameraStreaming) return;
       isCameraStreaming = true;
+      triggerTopUnlockAnimation();
 
       const canvas = document.getElementById('cameraCanvas');
       const ctx = canvas ? canvas.getContext('2d') : null;
