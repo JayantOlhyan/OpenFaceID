@@ -38,7 +38,7 @@ if %errorlevel% neq 0 (
 set SCRIPT_DIR=%~dp0
 set SRC=%SCRIPT_DIR%OpenFaceIDCredentialProvider.cpp
 set DEF=%SCRIPT_DIR%OpenFaceIDCredentialProvider.def
-set OUT_DIR=%SCRIPT_DIR%..\..\..\dist\windows
+set OUT_DIR=%SCRIPT_DIR%..\..\..\..\dist\windows
 if not exist "%OUT_DIR%" mkdir "%OUT_DIR%"
 set OUT_DLL=%OUT_DIR%\OpenFaceIDCredentialProvider.dll
 
@@ -48,7 +48,7 @@ cl.exe /nologo /O2 /W4 /WX- /std:c++17 /EHsc /LD ^
   "%SRC%" ^
   /Fe"%OUT_DLL%" ^
   /link /DEF:"%DEF%" ^
-  kernel32.lib user32.lib advapi32.lib ole32.lib secur32.lib shlwapi.lib
+  kernel32.lib user32.lib advapi32.lib ole32.lib oleaut32.lib secur32.lib shlwapi.lib
 
 if %errorlevel% neq 0 (
   echo Compilation FAILED!
