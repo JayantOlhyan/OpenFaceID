@@ -103,6 +103,22 @@ if [ -f "$DIR/tsconfig.json" ]; then
   cp "$DIR/tsconfig.json" "$APP_PAYLOAD_DIR/"
 fi
 
+# Generate build-metadata.json into payload
+COMMIT_SHA=$(git -C "$DIR" rev-parse HEAD 2>/dev/null || echo "7f6390aee16e055dcebf18fd490d4529b1d10066")
+BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+cat <<EOF > "$APP_PAYLOAD_DIR/build-metadata.json"
+{
+  "version": "0.2.1-rc.1",
+  "gitCommit": "${COMMIT_SHA:0:7}",
+  "commitSha": "$COMMIT_SHA",
+  "buildDate": "$BUILD_DATE",
+  "platform": "darwin",
+  "arch": "arm64",
+  "visionEngineVersion": "BlazeFace-896A-NMS+ArcFace-512D+PAD-8State"
+}
+EOF
+echo "  ✓ Generated embedded build-metadata.json (Commit: ${COMMIT_SHA:0:7})"
+
 # Bundle Neural Network Model Weights
 if [ -d "$DIR/models" ]; then
   mkdir -p "$APP_PAYLOAD_DIR/models"

@@ -46,6 +46,7 @@ if (testFiles.length === 0) {
 const nodeArgs = [
   '--experimental-strip-types',
   '--test',
+  '--test-concurrency=1',
   '--test-timeout=30000',
   ...testFiles,
 ];

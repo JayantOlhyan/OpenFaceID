@@ -85,21 +85,23 @@ function run() {
     platforms: {
       macos: {
         supported: true,
-        verificationStatus: 'VERIFIED',
+        verificationStatus: 'PHYSICALLY VERIFIED',
         minOsVersion: 'macOS 13.0 (Ventura)',
         testedArchitectures: ['arm64 (Apple Silicon)'],
       },
       windows: {
-        supported: true,
-        verificationStatus: 'CODE_IMPLEMENTED',
+        supported: false,
+        verificationStatus: 'UNVERIFIED (PHYSICAL HARDWARE TEST PENDING)',
+        codeStatus: 'IMPLEMENTED',
         minOsVersion: 'Windows 10 Build 19041+',
-        testedArchitectures: ['x64'],
+        targetArchitectures: ['x64'],
       },
       linux: {
-        supported: true,
-        verificationStatus: 'CODE_IMPLEMENTED',
+        supported: false,
+        verificationStatus: 'UNVERIFIED (PHYSICAL HARDWARE TEST PENDING)',
+        codeStatus: 'IMPLEMENTED',
         minOsVersion: 'Ubuntu 22.04 LTS / Debian 12 / Fedora 38',
-        testedArchitectures: ['x86_64'],
+        targetArchitectures: ['x86_64'],
       },
     },
     security: {

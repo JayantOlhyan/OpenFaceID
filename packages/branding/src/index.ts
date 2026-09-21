@@ -5,6 +5,12 @@
  */
 
 import { execFileSync } from 'child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export interface ProductBranding {
   name: string;
@@ -94,12 +100,41 @@ export interface BuildMetadata {
 }
 
 export function getBuildMetadata(): BuildMetadata {
+  // Check candidate locations for bundled build-metadata.json
+  const candidatePaths = [
+    path.join(__dirname, '..', '..', '..', 'build-metadata.json'),
+    path.join(__dirname, 'build-metadata.json'),
+    path.join(process.cwd(), 'build-metadata.json'),
+  ];
+  for (const candidate of candidatePaths) {
+    try {
+      if (fs.existsSync(candidate)) {
+        const raw = fs.readFileSync(candidate, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.commitSha) {
+          return {
+            version: parsed.version || BRANDING.version,
+            gitCommit: parsed.gitCommit || (parsed.commitSha ? parsed.commitSha.slice(0, 7) : 'unknown'),
+            commitSha: parsed.commitSha,
+            buildDate: parsed.buildDate || new Date().toISOString(),
+            nodeVersion: parsed.nodeVersion || process.version,
+            platform: parsed.platform || process.platform,
+            arch: parsed.arch || process.arch,
+            visionEngineVersion: parsed.visionEngineVersion || 'BlazeFace-896A-NMS+ArcFace-512D+PAD-8State',
+          };
+        }
+      }
+    } catch {
+      // Fall through to environment or git detection
+    }
+  }
+
   let commit = process.env.GIT_COMMIT || '';
   if (!commit) {
     try {
       commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', timeout: 1000, stdio: ['pipe', 'pipe', 'ignore'] }).trim();
     } catch {
-      commit = '2bbe16710c389ff378d1686207431599b502d352';
+      commit = '7f6390aee16e055dcebf18fd490d4529b1d10066';
     }
   }
 
