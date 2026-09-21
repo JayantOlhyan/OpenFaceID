@@ -12,8 +12,15 @@
 #include "OpenFaceIDCredentialProvider.h"
 #include <shlwapi.h>
 #include <strsafe.h>
+#include <olectl.h>
 
 #define OPENFACEID_NAMED_PIPE L"\\\\.\\pipe\\OpenFaceIDAuth"
+
+static LONG g_cRefDll = 0;
+static HINSTANCE g_hinst = nullptr;
+
+static const WCHAR s_szCLSID[] = L"{7B8F9A12-3D4E-4A5F-8C9B-0E1F2A3B4C5D}";
+static const WCHAR s_szProviderName[] = L"OpenFaceID Credential Provider";
 
 enum OPENFACEID_FIELD_ID {
     OFFI_LOGO = 0,
@@ -29,6 +36,36 @@ static const CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR s_rgFieldDescriptors[] = {
     { OFFI_STATUS, CPFT_SMALL_TEXT, L"Looking for your face..." },
     { OFFI_SUBMIT_BUTTON, CPFT_SUBMIT_BUTTON, L"Unlock" }
 };
+
+static HRESULT FieldDescriptorCopy(
+    const CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR* pcpfdSource,
+    CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR** ppcpfdTarget
+) {
+    if (!pcpfdSource || !ppcpfdTarget) return E_INVALIDARG;
+    *ppcpfdTarget = nullptr;
+
+    CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR* pcpfd = 
+        (CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR*)CoTaskMemAlloc(sizeof(CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR));
+    if (!pcpfd) return E_OUTOFMEMORY;
+
+    pcpfd->dwFieldID = pcpfdSource->dwFieldID;
+    pcpfd->cpft = pcpfdSource->cpft;
+
+    if (pcpfdSource->pszLabel) {
+        size_t len = wcslen(pcpfdSource->pszLabel) + 1;
+        pcpfd->pszLabel = (PWSTR)CoTaskMemAlloc(len * sizeof(WCHAR));
+        if (!pcpfd->pszLabel) {
+            CoTaskMemFree(pcpfd);
+            return E_OUTOFMEMORY;
+        }
+        StringCchCopyW(pcpfd->pszLabel, len, pcpfdSource->pszLabel);
+    } else {
+        pcpfd->pszLabel = nullptr;
+    }
+
+    *ppcpfdTarget = pcpfd;
+    return S_OK;
+}
 
 // =============================================================================
 // COpenFaceIDCredential Implementation
@@ -46,10 +83,12 @@ public:
     }
 
     IFACEMETHODIMP_(ULONG) AddRef() {
+        InterlockedIncrement(&g_cRefDll);
         return InterlockedIncrement(&_cRef);
     }
 
     IFACEMETHODIMP_(ULONG) Release() {
+        InterlockedDecrement(&g_cRefDll);
         LONG cRef = InterlockedDecrement(&_cRef);
         if (cRef == 0) delete this;
         return cRef;
@@ -146,6 +185,7 @@ public:
     }
 
     COpenFaceIDCredential() : _cRef(1), _pcpce(nullptr), _bAuthenticated(FALSE) {
+        InterlockedIncrement(&g_cRefDll);
         StringCchCopyW(_szStatus, ARRAYSIZE(_szStatus), L"Ready for face verification");
     }
 
@@ -196,6 +236,7 @@ COpenFaceIDCredentialProvider::COpenFaceIDCredentialProvider() :
     _cRef(1), 
     _cpus(CPUS_INVALID), 
     _pCredential(nullptr) {
+    InterlockedIncrement(&g_cRefDll);
 }
 
 COpenFaceIDCredentialProvider::~COpenFaceIDCredentialProvider() {
@@ -203,6 +244,7 @@ COpenFaceIDCredentialProvider::~COpenFaceIDCredentialProvider() {
         _pCredential->Release();
         _pCredential = nullptr;
     }
+    InterlockedDecrement(&g_cRefDll);
 }
 
 HRESULT COpenFaceIDCredentialProvider::QueryInterface(REFIID riid, void** ppv) {
@@ -214,10 +256,12 @@ HRESULT COpenFaceIDCredentialProvider::QueryInterface(REFIID riid, void** ppv) {
 }
 
 ULONG COpenFaceIDCredentialProvider::AddRef() {
+    InterlockedIncrement(&g_cRefDll);
     return InterlockedIncrement(&_cRef);
 }
 
 ULONG COpenFaceIDCredentialProvider::Release() {
+    InterlockedDecrement(&g_cRefDll);
     LONG cRef = InterlockedDecrement(&_cRef);
     if (cRef == 0) delete this;
     return cRef;
@@ -270,4 +314,125 @@ HRESULT COpenFaceIDCredentialProvider::GetCredentialAt(DWORD dwIndex, ICredentia
         return _pCredential->QueryInterface(IID_PPV_ARGS(ppcpc));
     }
     return E_INVALIDARG;
+}
+
+// =============================================================================
+// COM Class Factory & DLL Entrypoints
+// =============================================================================
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID) {
+    if (fdwReason == DLL_PROCESS_ATTACH) {
+        g_hinst = hinstDLL;
+        DisableThreadLibraryCalls(hinstDLL);
+    }
+    return TRUE;
+}
+
+STDAPI DllCanUnloadNow(void) {
+    return (g_cRefDll == 0) ? S_OK : S_FALSE;
+}
+
+class COpenFaceIDClassFactory : public IClassFactory {
+public:
+    IFACEMETHODIMP QueryInterface(REFIID riid, void** ppv) {
+        static const QITAB qit[] = {
+            QITABENT(COpenFaceIDClassFactory, IClassFactory),
+            { 0 },
+        };
+        return QISearch(this, qit, riid, ppv);
+    }
+
+    IFACEMETHODIMP_(ULONG) AddRef() {
+        InterlockedIncrement(&g_cRefDll);
+        return InterlockedIncrement(&_cRef);
+    }
+
+    IFACEMETHODIMP_(ULONG) Release() {
+        InterlockedDecrement(&g_cRefDll);
+        LONG cRef = InterlockedDecrement(&_cRef);
+        if (cRef == 0) delete this;
+        return cRef;
+    }
+
+    IFACEMETHODIMP CreateInstance(IUnknown* pUnkOuter, REFIID riid, void** ppv) {
+        if (pUnkOuter) return CLASS_E_NOAGGREGATION;
+        COpenFaceIDCredentialProvider* pProvider = new COpenFaceIDCredentialProvider();
+        if (!pProvider) return E_OUTOFMEMORY;
+        HRESULT hr = pProvider->QueryInterface(riid, ppv);
+        pProvider->Release();
+        return hr;
+    }
+
+    IFACEMETHODIMP LockServer(BOOL fLock) {
+        if (fLock) InterlockedIncrement(&g_cRefDll);
+        else InterlockedDecrement(&g_cRefDll);
+        return S_OK;
+    }
+
+    COpenFaceIDClassFactory() : _cRef(1) {
+        InterlockedIncrement(&g_cRefDll);
+    }
+
+    virtual ~COpenFaceIDClassFactory() {}
+
+private:
+    LONG _cRef;
+};
+
+STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void** ppv) {
+    if (IsEqualCLSID(rclsid, CLSID_OpenFaceIDCredentialProvider)) {
+        COpenFaceIDClassFactory* pFactory = new COpenFaceIDClassFactory();
+        if (!pFactory) return E_OUTOFMEMORY;
+        HRESULT hr = pFactory->QueryInterface(riid, ppv);
+        pFactory->Release();
+        return hr;
+    }
+    return CLASS_E_CLASSNOTAVAILABLE;
+}
+
+STDAPI DllRegisterServer(void) {
+    WCHAR szModule[MAX_PATH];
+    if (!GetModuleFileNameW(g_hinst, szModule, ARRAYSIZE(szModule))) {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    // Register CLSID under HKCR\CLSID\{GUID}
+    WCHAR szKey[MAX_PATH];
+    StringCchPrintfW(szKey, ARRAYSIZE(szKey), L"CLSID\\%s", s_szCLSID);
+    HKEY hKey;
+    if (RegCreateKeyExW(HKEY_CLASSES_ROOT, szKey, 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &hKey, nullptr) == ERROR_SUCCESS) {
+        RegSetValueExW(hKey, nullptr, 0, REG_SZ, (const BYTE*)s_szProviderName, (DWORD)((wcslen(s_szProviderName) + 1) * sizeof(WCHAR)));
+        
+        HKEY hSubKey;
+        if (RegCreateKeyExW(hKey, L"InprocServer32", 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &hSubKey, nullptr) == ERROR_SUCCESS) {
+            RegSetValueExW(hSubKey, nullptr, 0, REG_SZ, (const BYTE*)szModule, (DWORD)((wcslen(szModule) + 1) * sizeof(WCHAR)));
+            const WCHAR szModel[] = L"Apartment";
+            RegSetValueExW(hSubKey, L"ThreadingModel", 0, REG_SZ, (const BYTE*)szModel, (DWORD)((wcslen(szModel) + 1) * sizeof(WCHAR)));
+            RegCloseKey(hSubKey);
+        }
+        RegCloseKey(hKey);
+    }
+
+    // Register as a Credential Provider under HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\Credential Providers\{GUID}
+    StringCchPrintfW(szKey, ARRAYSIZE(szKey), L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Providers\\%s", s_szCLSID);
+    if (RegCreateKeyExW(HKEY_LOCAL_MACHINE, szKey, 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &hKey, nullptr) == ERROR_SUCCESS) {
+        RegSetValueExW(hKey, nullptr, 0, REG_SZ, (const BYTE*)s_szProviderName, (DWORD)((wcslen(s_szProviderName) + 1) * sizeof(WCHAR)));
+        RegCloseKey(hKey);
+    }
+
+    return S_OK;
+}
+
+STDAPI DllUnregisterServer(void) {
+    WCHAR szKey[MAX_PATH];
+    StringCchPrintfW(szKey, ARRAYSIZE(szKey), L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Providers\\%s", s_szCLSID);
+    RegDeleteKeyW(HKEY_LOCAL_MACHINE, szKey);
+
+    StringCchPrintfW(szKey, ARRAYSIZE(szKey), L"CLSID\\%s\\InprocServer32", s_szCLSID);
+    RegDeleteKeyW(HKEY_CLASSES_ROOT, szKey);
+
+    StringCchPrintfW(szKey, ARRAYSIZE(szKey), L"CLSID\\%s", s_szCLSID);
+    RegDeleteKeyW(HKEY_CLASSES_ROOT, szKey);
+
+    return S_OK;
 }
