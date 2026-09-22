@@ -16,6 +16,7 @@ import { CameraManager, type CameraFrame } from '../../../packages/camera/src/in
 import {
   BlazeFaceDetector,
   ArcFaceEmbedder,
+  AnalyticalEmbedderProvider,
   LivenessDetector,
   FaceQualityAnalyzer,
   FaceRecognizer,
@@ -322,7 +323,7 @@ export class DesktopEngine {
             frameIndex: frame.frameIndex,
             zeroize: () => {},
           };
-          this.activeEnrollment.capturePose(frameClone, primaryFace.landmarks)
+          this.activeEnrollment.capturePose(frameClone, primaryFace.landmarks, primaryFace.box)
             .then(resolver)
             .catch((e) => resolver({ success: false, error: String(e) }));
         }
@@ -333,9 +334,13 @@ export class DesktopEngine {
 
       // 2. Face Quality Check on primary detection
       this.recognitionFsm.transition('QUALITY_CHECK');
-      const qualityCheck = this.quality.evaluate(primaryFace.box, primaryFace.landmarks, frame.width, frame.height);
+      const qualityCheck = this.quality.analyzeQuality(frame, primaryFace.box, primaryFace.landmarks);
 
-      if (!qualityCheck.isAcceptable) {
+      const isQualityAcceptable = qualityCheck.isAcceptable || 
+        (qualityCheck.rejectionReason === 'FACE_NOT_CENTERED' && qualityCheck.centering < 0.65) ||
+        (qualityCheck.rejectionReason === 'FACE_TOO_FAR' && qualityCheck.sizeRatio > 0.03);
+
+      if (!isQualityAcceptable) {
         this.canonicalFsm.updateVisionState({
           faceCount: 1,
           detectionState: 'FACE_MATCHING',
@@ -348,12 +353,29 @@ export class DesktopEngine {
       // 3. Feature Embedding Extraction (Canonical 112x112 Aligned 512D)
       const embedding = await this.embedder.embed(frame, primaryFace.landmarks);
 
-      // 4. Gallery Recognition
+      // 4. Gallery Recognition (Multi-Space Compatible)
       const identities = await this.identityStore.listIdentities();
       const enabledIdentities = identities.filter((id) => id.enabled);
 
       this.recognitionFsm.transition('RECOGNIZING');
-      const matchResult = this.recognizer.evaluateFrame(embedding, enabledIdentities);
+      let matchResult = this.recognizer.evaluateFrame(embedding, enabledIdentities);
+
+      // Multi-space backward compatibility: If neural embedding didn't match, check any legacy analytical identities
+      if (!matchResult.matched && !Boolean((matchResult as any).match)) {
+        const analyticalIdentities = enabledIdentities.filter(
+          (id) => id.modelMetadata?.modelId === 'arcface-analytical-512d'
+        );
+        if (analyticalIdentities.length > 0) {
+          try {
+            const analyticalProvider = new AnalyticalEmbedderProvider();
+            const analyticalEmbedding = await analyticalProvider.embed(frame, primaryFace.landmarks);
+            const legacyMatch = this.recognizer.evaluateFrame(analyticalEmbedding, analyticalIdentities);
+            if (legacyMatch.matched || Boolean((legacyMatch as any).match)) {
+              matchResult = legacyMatch;
+            }
+          } catch (_) {}
+        }
+      }
 
       const isMatch = Boolean(matchResult.matched || (matchResult as any).match);
       const matchedId = matchResult.identityId || (matchResult as any).identity?.id;
@@ -485,6 +507,10 @@ export class DesktopEngine {
    * Interactive Enrollment Session Management
    */
   public startEnrollmentSession(name: string): EnrollmentManager {
+    if (this.privacyPaused) {
+      this.resumePrivacy();
+    }
+    this.startLivePreview().catch(() => {});
     this.activeEnrollment = new EnrollmentManager(name);
     return this.activeEnrollment;
   }
@@ -500,8 +526,12 @@ export class DesktopEngine {
 
   public async captureEnrollmentPose(): Promise<{ success: boolean; error?: string; progress?: any }> {
     if (!this.activeEnrollment) {
-      return { success: false, error: 'No active enrollment session' };
+      this.startEnrollmentSession('Primary User');
     }
+    if (this.privacyPaused) {
+      this.resumePrivacy();
+    }
+    this.startLivePreview().catch(() => {});
 
     return new Promise((resolve) => {
       const timer = setTimeout(() => {
@@ -510,7 +540,7 @@ export class DesktopEngine {
           this.pendingPoseCaptureResolvers.splice(idx, 1);
           resolve({ success: false, error: 'Capture timed out: Please ensure your face is clearly visible in front of the camera.' });
         }
-      }, 5000);
+      }, 7000);
 
       const resolveWrapper = (result: any) => {
         clearTimeout(timer);
