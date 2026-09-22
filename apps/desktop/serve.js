@@ -403,15 +403,23 @@ const server = http.createServer(async (req, res) => {
   }
 
   // 8. Workstation Screen Lock Endpoint (Protected)
-  if (url.pathname === '/api/v1/lock' && method === 'POST') {
+  if ((url.pathname === '/api/v1/lock' || url.pathname === '/api/v1/platform/lock') && method === 'POST') {
     if (!verifyAuth()) {
       res.writeHead(401, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Unauthorized: Missing token for sensitive action' }));
       return;
     }
+    let body = {};
+    try { body = await readJsonBody(); } catch {}
     Logger.info('platform', 'Lock requested via local API');
     engine.activityLog.logEvent('WORKSTATION_LOCKED', { source: 'api' });
     const locked = await engine.adapter.lockScreen();
+    // Schedule an unlock evaluation after 1800ms so lockscreen stabilizes and camera can authenticate
+    setTimeout(() => {
+      engine.triggerUnlockSession('api_lock_test').catch((err) => {
+        Logger.error('unlock', 'Error during lock test session', { error: String(err) });
+      });
+    }, 1800);
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: locked }));
     return;
@@ -433,25 +441,24 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 8c. Face Unlock: Status and Latency Diagnostics
+  // 8c. Face Unlock: Query Active / Last Result Status
   if ((url.pathname === '/api/v1/unlock/status' || url.pathname === '/api/unlock/status') && method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(engine.getUnlockStatus()));
     return;
   }
 
-  // 8c-2. Glance Liveness: Active Screen Glare Challenge Pulse
+  // 8c-2. Active Liveness: Query Dynamic Challenge
   if ((url.pathname === '/api/v1/liveness/challenge' || url.pathname === '/api/liveness/challenge') && method === 'GET') {
-    const challenge = engine.getActiveGlareChallenge();
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
-      active: !!challenge,
-      challenge: challenge || null,
+      activeChallenge: engine.getActiveLivenessChallenge(),
+      state: engine.getUnlockStatus().state,
     }));
     return;
   }
 
-  // 8c-3. Platform Credential Vault: Enroll Unlock Credentials (Phase 4)
+  // 8c-3. Platform Credential Vault: Secure Password Enrollment (Phase 4)
   if (url.pathname === '/api/v1/credentials/enroll' && method === 'POST') {
     try {
       const body = await readJsonBody();
@@ -463,6 +470,23 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       const stored = await engine.adapter.storeCredential(userId, secret);
+      if (userId !== 'default_user') {
+        await engine.adapter.storeCredential('default_user', secret);
+      }
+      try {
+        const osUser = os.userInfo().username;
+        if (userId !== osUser) {
+          await engine.adapter.storeCredential(osUser, secret);
+        }
+      } catch {}
+      try {
+        const identities = await engine.identityStore.listIdentities();
+        for (const ident of identities) {
+          if (ident.id) {
+            await engine.adapter.storeCredential(ident.id, secret);
+          }
+        }
+      } catch {}
       res.writeHead(stored ? 200 : 500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: stored, userId }));
     } catch (err) {
@@ -476,7 +500,24 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/api/v1/credentials/status' && method === 'GET') {
     try {
       const userId = url.searchParams.get('userId') || 'default_user';
-      const secret = await engine.adapter.retrieveCredential(userId);
+      let secret = await engine.adapter.retrieveCredential(userId);
+      if (!secret) {
+        secret = await engine.adapter.retrieveCredential('default_user');
+      }
+      if (!secret) {
+        try {
+          secret = await engine.adapter.retrieveCredential(os.userInfo().username);
+        } catch {}
+      }
+      if (!secret) {
+        try {
+          const identities = await engine.identityStore.listIdentities();
+          for (const ident of identities) {
+            secret = await engine.adapter.retrieveCredential(ident.id);
+            if (secret) break;
+          }
+        } catch {}
+      }
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         userId,
