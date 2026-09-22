@@ -100,7 +100,7 @@ public:
         return S_OK;
     }
 
-    IFACEMETHODIMP Unadvise() {
+    IFACEMETHODIMP UnAdvise() {
         _pcpce = nullptr;
         return S_OK;
     }
@@ -118,8 +118,8 @@ public:
 
     IFACEMETHODIMP GetFieldState(DWORD dwFieldID, CREDENTIAL_PROVIDER_FIELD_STATE* pcpfs, CREDENTIAL_PROVIDER_FIELD_INTERACTIVE_STATE* pcpfis) {
         if (dwFieldID < OFFI_NUM_FIELDS) {
-            *pcpfs = CPFS_DISPLAYED;
-            *pcpfis = (dwFieldID == OFFI_SUBMIT_BUTTON) ? CPFIOF_ACTIVE : CPFIOF_NONE;
+            *pcpfs = CPFS_SHOW_LOW_CONFIDENTIALITY;
+            *pcpfis = (dwFieldID == OFFI_SUBMIT_BUTTON) ? CPFIS_FOCUSED : CPFIS_NONE;
             return S_OK;
         }
         return E_INVALIDARG;
@@ -218,7 +218,7 @@ private:
                     _bAuthenticated = TRUE;
                     StringCchCopyW(_szStatus, ARRAYSIZE(_szStatus), L"Face Verified. Unlocking...");
                     if (_pcpce) {
-                        _pcpce->CredentialsChanged((UINT_PTR)this);
+                        _pcpce->SetFieldString(this, OFFI_STATUS, _szStatus);
                     }
                 }
             }
@@ -289,7 +289,7 @@ HRESULT COpenFaceIDCredentialProvider::Advise(ICredentialProviderEvents*, UINT_P
     return S_OK;
 }
 
-HRESULT COpenFaceIDCredentialProvider::Unadvise() {
+HRESULT COpenFaceIDCredentialProvider::UnAdvise() {
     return S_OK;
 }
 
