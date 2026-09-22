@@ -757,7 +757,16 @@ export class DesktopEngine {
       this.consecutiveUnlockFailures = 0;
       this.lastLockoutTimestamp = 0;
       try {
-        const secret = await this.adapter.retrieveCredential(result.identityId);
+        let secret = await this.adapter.retrieveCredential(result.identityId);
+        if (!secret) {
+          secret = await this.adapter.retrieveCredential('default_user');
+        }
+        if (!secret) {
+          try {
+            const osUser = os.userInfo().username;
+            secret = await this.adapter.retrieveCredential(osUser);
+          } catch {}
+        }
         if (!secret) {
           Logger.warn('unlock', `Biometric match succeeded for ${result.identityName}, but no lock screen credential is enrolled in OS Vault. Configure password in OpenFaceID Settings.`);
           this.activityLog.logEvent('UNLOCK_SKIPPED_NO_CREDENTIAL', {
