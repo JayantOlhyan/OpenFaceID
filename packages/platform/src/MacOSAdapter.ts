@@ -176,11 +176,13 @@ export class MacOSAdapter extends PlatformAdapter {
   private sessionMonitorTimer: NodeJS.Timeout | null = null;
   private lastSessionLockedState: boolean = false;
   private lastSessionMonitorTick: number = Date.now();
+  private lastLockScreenWakeTime: number = 0;
 
   public startWakeAndLockListener(listener: (event: 'wake' | 'lock' | 'unlock') => void): void {
     this.stopWakeAndLockListener();
     this.sessionEventListener = listener;
     this.lastSessionMonitorTick = Date.now();
+    this.lastLockScreenWakeTime = 0;
 
     this.sessionMonitorTimer = setInterval(async () => {
       const now = Date.now();
@@ -200,9 +202,27 @@ export class MacOSAdapter extends PlatformAdapter {
         if (isLocked) {
           Logger.info('platform', 'macOS session locked');
           this.sessionEventListener?.('lock');
+          // Trigger biometric scan shortly after lock screen activates in case user remains in view
+          setTimeout(() => {
+            if (this.lastSessionLockedState) {
+              Logger.info('platform', 'Evaluating biometric unlock for freshly locked session');
+              this.sessionEventListener?.('wake');
+            }
+          }, 1500);
         } else {
           Logger.info('platform', 'macOS session unlocked');
           this.sessionEventListener?.('unlock');
+        }
+      }
+
+      // 3. User Interaction on Locked Screen (Trackpad/keyboard activity while locked)
+      if (isLocked) {
+        const idleMs = await this.getSystemIdleTimeMs();
+        // If user touched input (< 2500ms idle) and cooldown has passed (> 6000ms)
+        if (idleMs < 2500 && (now - this.lastLockScreenWakeTime > 6000)) {
+          this.lastLockScreenWakeTime = now;
+          Logger.info('platform', `User interaction detected on lock screen (idle: ${idleMs}ms); triggering biometric wake`);
+          this.sessionEventListener?.('wake');
         }
       }
     }, 1000);
@@ -359,9 +379,10 @@ export class MacOSAdapter extends PlatformAdapter {
       const script = `
         set pass to do shell script "cat"
         tell application "System Events"
-          delay 0.3
+          key code 53
+          delay 0.35
           keystroke pass
-          delay 0.1
+          delay 0.15
           key code 36
         end tell
       `;
