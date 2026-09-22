@@ -648,6 +648,16 @@ const server = http.createServer(async (req, res) => {
         posesCount: id.embeddings?.length || 1,
         enabled: id.enabled,
         createdAt: id.createdAt,
+        updatedAt: id.updatedAt,
+        variants: id.variants && id.variants.length > 0 ? id.variants : [
+          {
+            id: 'var_default',
+            name: 'Normal',
+            type: 'normal',
+            createdAt: id.createdAt,
+            embeddingsCount: id.embeddings?.length || 1,
+          },
+        ],
         recognitionStats: id.recognitionStats,
       }));
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -866,6 +876,101 @@ const server = http.createServer(async (req, res) => {
       const code = err.message === 'PAYLOAD_TOO_LARGE' ? 413 : err.message === 'INVALID_JSON' ? 400 : 500;
       res.writeHead(code, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: String(err.message || err) }));
+    }
+    return;
+  }
+
+  // 13b. Identity Toggle Status (Protected)
+  const toggleMatch = url.pathname.match(/^\/api\/v1\/identities\/([^\/]+)\/toggle$/);
+  if (toggleMatch && method === 'POST') {
+    if (!verifyAuth(true)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized: Missing bearer token' }));
+      return;
+    }
+    const id = toggleMatch[1];
+    try {
+      const identity = await engine.identityStore.getIdentity(id);
+      if (!identity) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Identity not found' }));
+        return;
+      }
+      identity.enabled = !identity.enabled;
+      identity.updatedAt = Date.now();
+      await engine.identityStore.saveIdentity(identity);
+      engine.activityLog.logEvent('IDENTITY_STATUS_TOGGLED', { identityId: id, enabled: identity.enabled });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, enabled: identity.enabled }));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
+    }
+    return;
+  }
+
+  // 13c. Identity Add Variant (Protected)
+  const variantsMatch = url.pathname.match(/^\/api\/v1\/identities\/([^\/]+)\/variants$/);
+  if (variantsMatch && method === 'POST') {
+    if (!verifyAuth(true)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized: Missing bearer token' }));
+      return;
+    }
+    const id = variantsMatch[1];
+    try {
+      const body = await readJsonBody();
+      const variantName = body.name ? String(body.name).trim() : 'Variant';
+      const variantType = ['normal', 'glasses', 'beard', 'lighting', 'custom'].includes(body.type)
+        ? body.type
+        : 'custom';
+      const variantId = 'var_' + crypto.randomBytes(6).toString('hex');
+      const newVariant = {
+        id: variantId,
+        name: variantName,
+        type: variantType,
+        createdAt: Date.now(),
+        embeddingsCount: 1,
+      };
+      const ok = await engine.identityStore.addVariant(id, newVariant);
+      if (ok) {
+        engine.activityLog.logEvent('VARIANT_ADDED', { identityId: id, variantId, name: variantName });
+        res.writeHead(201, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, variant: newVariant }));
+      } else {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Identity not found' }));
+      }
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
+    }
+    return;
+  }
+
+  // 13d. Identity Delete Variant (Protected)
+  const deleteVariantMatch = url.pathname.match(/^\/api\/v1\/identities\/([^\/]+)\/variants\/([^\/]+)$/);
+  if (deleteVariantMatch && method === 'DELETE') {
+    if (!verifyAuth(true)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized: Missing bearer token' }));
+      return;
+    }
+    const id = deleteVariantMatch[1];
+    const variantId = deleteVariantMatch[2];
+    try {
+      const ok = await engine.identityStore.deleteVariant(id, variantId);
+      if (ok) {
+        engine.activityLog.logEvent('VARIANT_DELETED', { identityId: id, variantId });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true }));
+      } else {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Cannot delete primary or non-existent variant' }));
+      }
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
     }
     return;
   }
