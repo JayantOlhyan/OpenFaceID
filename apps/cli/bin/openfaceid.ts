@@ -506,10 +506,11 @@ async function main() {
       reportItem('Platform & OS', 'Node.js Runtime', parseInt(process.versions.node.split('.')[0], 10) >= 22, `v${process.versions.node} (>= 22.0.0 required)`, 'Upgrade Node.js to v22+');
 
       if (!isJson) console.log(`\n\x1b[1mHardware & Permissions:\x1b[0m`);
+      const isSimulation = process.env.OPENFACEID_SIMULATION === '1' || process.env.CI === 'true';
       const perm = await cameraManager.checkPermission();
-      reportItem('Hardware & Permissions', 'Camera Access Permission', perm === 'granted' || perm === 'prompt', `Permission is ${perm.toUpperCase()}`, 'Grant camera permission in System Settings');
+      reportItem('Hardware & Permissions', 'Camera Access Permission', perm === 'granted' || perm === 'prompt' || isSimulation, isSimulation && perm !== 'granted' && perm !== 'prompt' ? 'Simulation Virtual Camera Granted' : `Permission is ${perm.toUpperCase()}`, 'Grant camera permission in System Settings');
       const devices = await cameraManager.enumerateDevices();
-      reportItem('Hardware & Permissions', 'Video Capture Hardware', devices.length > 0, `${devices.length} device(s) found`, 'Connect a USB or built-in webcam');
+      reportItem('Hardware & Permissions', 'Video Capture Hardware', devices.length > 0 || isSimulation, devices.length > 0 ? `${devices.length} device(s) found` : (isSimulation ? 'Virtual capture device (CI/Simulation mode)' : '0 device(s) found'), 'Connect a USB or built-in webcam');
 
       if (!isJson) console.log(`\n\x1b[1mCryptographic Security:\x1b[0m`);
       let keyAccessible = false;

@@ -22,11 +22,13 @@ jobs:
       - name: Install dependencies
         run: npm ci || npm install
 
-      - name: Download MobileFaceNet ONNX Weights
+      - name: Ensure Pretrained Neural Model Weights
         run: |
           mkdir -p models packages/vision/models
-          curl -L "https://huggingface.co/WePrompt/buffalo_sc/resolve/main/w600k_mbf.onnx" -o models/arcface-mobilefacenet.onnx
-          cp models/arcface-mobilefacenet.onnx packages/vision/models/
+          if [ ! -f models/arcface-mobilefacenet.onnx ]; then
+            curl -L "https://huggingface.co/WePrompt/buffalo_sc/resolve/main/w600k_mbf.onnx" -o models/arcface-mobilefacenet.onnx
+          fi
+          cp -f models/arcface-mobilefacenet.onnx packages/vision/models/
 
       - name: Run Test Suite
         run: npm test
@@ -55,8 +57,9 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
 
       - name: Compile Windows Credential Provider DLL
+        shell: cmd
         run: |
-          cmd.exe /c packages\platform\native\windows\build-windows.bat
+          call packages\platform\native\windows\build-windows.bat
 
       - name: Upload Windows Credential Provider DLL
         uses: actions/upload-artifact@v4

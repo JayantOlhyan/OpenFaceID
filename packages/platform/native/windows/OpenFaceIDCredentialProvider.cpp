@@ -146,6 +146,9 @@ public:
     IFACEMETHODIMP SetCheckboxValue(DWORD, BOOL) { return E_NOTIMPL; }
     IFACEMETHODIMP SetStringValue(DWORD, PCWSTR) { return E_NOTIMPL; }
     IFACEMETHODIMP CommandLinkClicked(DWORD) { return E_NOTIMPL; }
+    IFACEMETHODIMP GetComboBoxValueCount(DWORD, DWORD*, DWORD*) { return E_NOTIMPL; }
+    IFACEMETHODIMP GetComboBoxValueAt(DWORD, DWORD, PWSTR*) { return E_NOTIMPL; }
+    IFACEMETHODIMP SetComboBoxSelectedValue(DWORD, DWORD) { return E_NOTIMPL; }
 
     IFACEMETHODIMP GetSubmitButtonValue(DWORD dwFieldID, DWORD* pdwAdjacentTo) {
         if (dwFieldID == OFFI_SUBMIT_BUTTON) {

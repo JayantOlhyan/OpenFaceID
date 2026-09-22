@@ -6,7 +6,11 @@ echo  Compiling OpenFaceID Windows Credential Provider DLL
 echo  Compiler: Microsoft Visual C++ (MSVC)
 echo ============================================================
 
-REM 1. Locate Visual Studio / MSVC Build Tools if vcvarsall has not been run
+REM 1. Check if cl.exe is already available on PATH (e.g. CI or Developer Command Prompt)
+where cl.exe >nul 2>&1
+if %errorlevel% equ 0 goto :found_vcvars
+
+REM 2. Locate Visual Studio / MSVC Build Tools if not already on PATH
 if "%VCINSTALLDIR%"=="" (
   for %%p in (
     "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
@@ -38,7 +42,7 @@ if %errorlevel% neq 0 (
 set SCRIPT_DIR=%~dp0
 set SRC=%SCRIPT_DIR%OpenFaceIDCredentialProvider.cpp
 set DEF=%SCRIPT_DIR%OpenFaceIDCredentialProvider.def
-set OUT_DIR=%SCRIPT_DIR%..\..\..\..\dist\windows
+for %%i in ("%SCRIPT_DIR%..\..\..\..\dist\windows") do set OUT_DIR=%%~fi
 if not exist "%OUT_DIR%" mkdir "%OUT_DIR%"
 set OUT_DLL=%OUT_DIR%\OpenFaceIDCredentialProvider.dll
 
