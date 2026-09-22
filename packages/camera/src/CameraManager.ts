@@ -102,7 +102,18 @@ export class CameraManager {
     };
   }
 
+  private cachedPermission: CameraPermissionStatus | null = null;
+  private lastPermissionCheckTime: number = 0;
+
   public async checkPermission(): Promise<CameraPermissionStatus> {
+    if (this.nativeProcess && !this.nativeProcess.killed) {
+      this.cachedPermission = 'granted';
+      return 'granted';
+    }
+    const now = Date.now();
+    if (this.cachedPermission && (now - this.lastPermissionCheckTime < 5000)) {
+      return this.cachedPermission;
+    }
     const platform = process.platform;
     try {
       if (platform === 'darwin') {
@@ -110,14 +121,17 @@ export class CameraManager {
         if (avf) {
           try {
             const out = execFileSync(avf, ['permission'], {
-              timeout: 3000,
+              timeout: 1000,
               encoding: 'utf8',
               stdio: ['ignore', 'pipe', 'ignore'],
             });
             const parsed = JSON.parse(out.trim());
-            return (parsed.permission as CameraPermissionStatus) || 'prompt';
+            const perm = (parsed.permission as CameraPermissionStatus) || 'prompt';
+            this.cachedPermission = perm;
+            this.lastPermissionCheckTime = now;
+            return perm;
           } catch {
-            return 'prompt';
+            return this.cachedPermission || 'prompt';
           }
         }
         return 'prompt';
@@ -126,8 +140,12 @@ export class CameraManager {
         if (videoNodes.length === 0) return 'unavailable';
         try {
           fs.accessSync(`/dev/${videoNodes[0]}`, fs.constants.R_OK);
+          this.cachedPermission = 'granted';
+          this.lastPermissionCheckTime = now;
           return 'granted';
         } catch {
+          this.cachedPermission = 'denied';
+          this.lastPermissionCheckTime = now;
           return 'denied';
         }
       } else if (platform === 'win32') {
