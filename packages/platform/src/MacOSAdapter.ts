@@ -44,28 +44,46 @@ export class MacOSAdapter extends PlatformAdapter {
     }
   }
 
+  private cachedLockedState: boolean = false;
+  private lastLockedCheckTime: number = 0;
+
   public async isScreenLocked(): Promise<boolean> {
+    const now = Date.now();
+    if (now - this.lastLockedCheckTime < 2000) {
+      return this.cachedLockedState;
+    }
     try {
-      const { stdout } = await execFileAsync('/usr/sbin/ioreg', ['-n', 'Root', '-d1', '-a']);
-      return stdout.includes('CGSSessionScreenIsLocked') || stdout.includes('"CGSSessionScreenIsLocked" = 1');
+      const { stdout } = await execFileAsync('/usr/sbin/ioreg', ['-n', 'Root', '-d1', '-a'], { maxBuffer: 2 * 1024 * 1024 });
+      this.cachedLockedState = stdout.includes('CGSSessionScreenIsLocked') || stdout.includes('"CGSSessionScreenIsLocked" = 1');
+      this.lastLockedCheckTime = now;
+      return this.cachedLockedState;
     } catch (err) {
       Logger.debug('platform', 'Error checking macOS screen lock state', { error: String(err) });
-      return false;
+      return this.cachedLockedState;
     }
   }
 
+  private cachedIdleTimeMs: number = 0;
+  private lastIdleCheckTime: number = 0;
+
   public async getSystemIdleTimeMs(): Promise<number> {
+    const now = Date.now();
+    if (now - this.lastIdleCheckTime < 2000) {
+      return this.cachedIdleTimeMs;
+    }
     try {
-      const { stdout } = await execFileAsync('/usr/sbin/ioreg', ['-c', 'IOHIDSystem']);
+      const { stdout } = await execFileAsync('/usr/sbin/ioreg', ['-c', 'IOHIDSystem'], { maxBuffer: 1024 * 1024 });
       const match = stdout.match(/"HIDIdleTime"\s*=\s*(\d+)/i);
       if (match && match[1]) {
         const nano = BigInt(match[1]);
-        return Number(nano / 1_000_000n);
+        this.cachedIdleTimeMs = Number(nano / 1_000_000n);
+        this.lastIdleCheckTime = now;
+        return this.cachedIdleTimeMs;
       }
-      return 0;
+      return this.cachedIdleTimeMs;
     } catch (err) {
       Logger.debug('platform', 'Failed to query IOHIDSystem idle time', { error: String(err) });
-      return 0;
+      return this.cachedIdleTimeMs;
     }
   }
 
@@ -184,48 +202,57 @@ export class MacOSAdapter extends PlatformAdapter {
     this.lastSessionMonitorTick = Date.now();
     this.lastLockScreenWakeTime = 0;
 
+    let isChecking = false;
     this.sessionMonitorTimer = setInterval(async () => {
-      const now = Date.now();
-      const elapsed = now - this.lastSessionMonitorTick;
-      this.lastSessionMonitorTick = now;
+      if (isChecking) return;
+      isChecking = true;
+      try {
+        const now = Date.now();
+        const elapsed = now - this.lastSessionMonitorTick;
+        this.lastSessionMonitorTick = now;
 
-      // 1. Hardware sleep/wake delta check (>3000ms delta indicates suspension)
-      if (elapsed > 3000) {
-        Logger.info('platform', `Hardware sleep/wake detected (slept for ~${Math.round(elapsed / 1000)}s)`);
-        this.sessionEventListener?.('wake');
-      }
-
-      // 2. Screen Lock State Transition Detection
-      const isLocked = await this.isScreenLocked();
-      if (isLocked !== this.lastSessionLockedState) {
-        this.lastSessionLockedState = isLocked;
-        if (isLocked) {
-          Logger.info('platform', 'macOS session locked');
-          this.sessionEventListener?.('lock');
-          // Trigger biometric scan shortly after lock screen activates in case user remains in view
-          setTimeout(() => {
-            if (this.lastSessionLockedState) {
-              Logger.info('platform', 'Evaluating biometric unlock for freshly locked session');
-              this.sessionEventListener?.('wake');
-            }
-          }, 1500);
-        } else {
-          Logger.info('platform', 'macOS session unlocked');
-          this.sessionEventListener?.('unlock');
-        }
-      }
-
-      // 3. User Interaction on Locked Screen (Trackpad/keyboard activity while locked)
-      if (isLocked) {
-        const idleMs = await this.getSystemIdleTimeMs();
-        // If user touched input (< 2500ms idle) and cooldown has passed (> 6000ms)
-        if (idleMs < 2500 && (now - this.lastLockScreenWakeTime > 6000)) {
-          this.lastLockScreenWakeTime = now;
-          Logger.info('platform', `User interaction detected on lock screen (idle: ${idleMs}ms); triggering biometric wake`);
+        // 1. Hardware sleep/wake delta check (>3000ms delta indicates suspension)
+        if (elapsed > 3000) {
+          Logger.info('platform', `Hardware sleep/wake detected (slept for ~${Math.round(elapsed / 1000)}s)`);
           this.sessionEventListener?.('wake');
         }
+
+        // 2. Screen Lock State Transition Detection
+        const isLocked = await this.isScreenLocked();
+        if (isLocked !== this.lastSessionLockedState) {
+          this.lastSessionLockedState = isLocked;
+          if (isLocked) {
+            Logger.info('platform', 'macOS session locked');
+            this.sessionEventListener?.('lock');
+            // Trigger biometric scan shortly after lock screen activates in case user remains in view
+            setTimeout(() => {
+              if (this.lastSessionLockedState) {
+                Logger.info('platform', 'Evaluating biometric unlock for freshly locked session');
+                this.sessionEventListener?.('wake');
+              }
+            }, 1500);
+          } else {
+            Logger.info('platform', 'macOS session unlocked');
+            this.sessionEventListener?.('unlock');
+          }
+        }
+
+        // 3. User Interaction on Locked Screen (Trackpad/keyboard activity while locked)
+        if (isLocked) {
+          const idleMs = await this.getSystemIdleTimeMs();
+          // If user touched input (< 2500ms idle) and cooldown has passed (> 6000ms)
+          if (idleMs < 2500 && (now - this.lastLockScreenWakeTime > 6000)) {
+            this.lastLockScreenWakeTime = now;
+            Logger.info('platform', `User interaction detected on lock screen (idle: ${idleMs}ms); triggering biometric wake`);
+            this.sessionEventListener?.('wake');
+          }
+        }
+      } catch (err) {
+        Logger.debug('platform', 'Session monitor tick error', { error: String(err) });
+      } finally {
+        isChecking = false;
       }
-    }, 1000);
+    }, 1500);
 
     this.sessionMonitorTimer.unref();
   }
