@@ -118,7 +118,7 @@ public:
 
     IFACEMETHODIMP GetFieldState(DWORD dwFieldID, CREDENTIAL_PROVIDER_FIELD_STATE* pcpfs, CREDENTIAL_PROVIDER_FIELD_INTERACTIVE_STATE* pcpfis) {
         if (dwFieldID < OFFI_NUM_FIELDS) {
-            *pcpfs = CPFS_SHOW_LOW_CONFIDENTIALITY;
+            *pcpfs = CPFS_DISPLAY_IN_BOTH;
             *pcpfis = (dwFieldID == OFFI_SUBMIT_BUTTON) ? CPFIS_FOCUSED : CPFIS_NONE;
             return S_OK;
         }
