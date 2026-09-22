@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
-import type { EnrolledIdentity } from '../../vision/src/index.ts';
+import type { EnrolledIdentity, IdentityVariant } from '../../vision/src/index.ts';
 import { CryptoManager, KeyringManager, MemorySanitizer } from '../../security/src/index.ts';
 import { Logger } from '../../core/src/index.ts';
 
@@ -14,6 +14,7 @@ interface SerializedIdentity {
   updatedAt: number;
   embeddingsBase64: string[];
   averageEmbeddingBase64: string;
+  variants?: IdentityVariant[];
   recognitionStats: {
     matchCount: number;
     lastRecognizedAt?: number;
@@ -100,6 +101,15 @@ export class IdentityStore {
           identity.averageEmbedding.byteOffset,
           identity.averageEmbedding.byteLength
         ).toString('base64'),
+        variants: identity.variants || [
+          {
+            id: 'var_default',
+            name: 'Normal',
+            type: 'normal',
+            createdAt: identity.createdAt,
+            embeddingsCount: identity.embeddings.length,
+          },
+        ],
         recognitionStats: identity.recognitionStats,
         modelMetadata: identity.modelMetadata || {
           modelId: 'arcface-analytical-512d',
@@ -156,6 +166,18 @@ export class IdentityStore {
         avgBuf.byteLength / Float32Array.BYTES_PER_ELEMENT
       );
 
+      const variants = serialized.variants && serialized.variants.length > 0
+        ? serialized.variants
+        : [
+            {
+              id: 'var_default',
+              name: 'Normal',
+              type: 'normal' as const,
+              createdAt: serialized.createdAt,
+              embeddingsCount: embeddings.length,
+            },
+          ];
+
       return {
         id: serialized.id,
         name: serialized.name,
@@ -164,6 +186,7 @@ export class IdentityStore {
         updatedAt: serialized.updatedAt,
         embeddings,
         averageEmbedding,
+        variants,
         recognitionStats: serialized.recognitionStats,
         modelMetadata: serialized.modelMetadata,
       };
@@ -171,6 +194,68 @@ export class IdentityStore {
       Logger.error('storage', `Failed to load identity ${id}`, { error: String(err) });
       return null;
     }
+  }
+
+  public async addVariant(
+    identityId: string,
+    variant: IdentityVariant,
+    newEmbeddings?: Float32Array[]
+  ): Promise<boolean> {
+    const identity = await this.getIdentity(identityId);
+    if (!identity) return false;
+
+    if (!identity.variants) {
+      identity.variants = [
+        {
+          id: 'var_default',
+          name: 'Normal',
+          type: 'normal',
+          createdAt: identity.createdAt,
+          embeddingsCount: identity.embeddings.length,
+        },
+      ];
+    }
+
+    identity.variants.push(variant);
+
+    if (newEmbeddings && newEmbeddings.length > 0) {
+      identity.embeddings.push(...newEmbeddings);
+
+      // Recompute average embedding
+      const dim = 512;
+      const avgVector = new Float32Array(dim);
+      for (const emb of identity.embeddings) {
+        for (let i = 0; i < dim; i++) {
+          avgVector[i] += emb[i];
+        }
+      }
+      let norm = 0;
+      for (let i = 0; i < dim; i++) {
+        norm += avgVector[i] * avgVector[i];
+      }
+      norm = Math.sqrt(norm);
+      if (norm > 0) {
+        for (let i = 0; i < dim; i++) {
+          avgVector[i] /= norm;
+        }
+      }
+      identity.averageEmbedding = avgVector;
+    }
+
+    identity.updatedAt = Date.now();
+    return this.saveIdentity(identity);
+  }
+
+  public async deleteVariant(identityId: string, variantId: string): Promise<boolean> {
+    const identity = await this.getIdentity(identityId);
+    if (!identity || !identity.variants) return false;
+
+    // Do not delete last remaining variant
+    if (identity.variants.length <= 1) return false;
+
+    identity.variants = identity.variants.filter((v) => v.id !== variantId);
+    identity.updatedAt = Date.now();
+    return this.saveIdentity(identity);
   }
 
   public async listIdentities(): Promise<EnrolledIdentity[]> {
