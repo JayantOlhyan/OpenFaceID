@@ -12,6 +12,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var window: NSWindow!
     var webView: WKWebView!
     var daemonProcess: Process?
+    var daemonStdinPipe: Pipe?
 
     var statusItem: NSStatusItem?
     var statusMenuItem: NSMenuItem?
@@ -70,10 +71,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             env["OFID_RESOURCES_DIR"] = resourcesUrl.path
             env["OFID_APP_DIR"] = appDir.path
             env["OFID_CAMERA_BIN"] = cameraBin
-            env["PATH"] = "\(resourcesUrl.appendingPathComponent("bin").path):/usr/bin:/bin:/usr/sbin:/sbin"
+            env["PATH"] = "\(resourcesUrl.appendingPathComponent("bin").path):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
             process.environment = env
 
             let stdinPipe = Pipe()
+            self.daemonStdinPipe = stdinPipe
             process.standardInput = stdinPipe
 
             do {
