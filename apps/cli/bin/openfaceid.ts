@@ -724,7 +724,7 @@ async function main() {
           frame.zeroize();
         });
 
-        await new Promise((r) => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 1200));
         cameraManager.stopCapture();
 
         const elapsedSec = (Date.now() - startTime) / 1000;
