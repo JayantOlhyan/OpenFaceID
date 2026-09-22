@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import net from 'node:net';
 import { MacOSAdapter } from '../../packages/platform/src/MacOSAdapter.ts';
 
-describe('Phase 13 — macOS Native PAM Socket Authentication Protocol', () => {
+describe('Phase 13 — macOS Native PAM Socket Authentication Protocol', { skip: process.platform === 'win32' }, () => {
   it('handles PAM challenge and responds with AUTHORIZED when verified', async () => {
     const adapter = new MacOSAdapter();
     let authCalled = false;

@@ -245,8 +245,11 @@ export class CoreMLEmbedderProvider implements IEmbedderProvider {
     if (this.session) return this.session;
     if (!this.sessionPromise) {
       this.sessionPromise = (async () => {
+        if (process.platform !== 'darwin') {
+          throw new Error('CoreML ArcFace model weight file not installed (CoreML is only supported on macOS darwin)');
+        }
         if (!this.modelPath || !fs.existsSync(this.modelPath)) {
-          throw new Error(`CoreML ArcFace model weight file not found at: ${this.modelPath ?? 'models/arcface-mobilefacenet.onnx'}`);
+          throw new Error(`CoreML ArcFace model weight file not installed at: ${this.modelPath ?? 'models/arcface-mobilefacenet.onnx'}`);
         }
         const ort = await import('onnxruntime-node');
         this.session = await ort.InferenceSession.create(this.modelPath, {
@@ -328,7 +331,7 @@ export class OnnxEmbedderProvider implements IEmbedderProvider {
     if (!this.sessionPromise) {
       this.sessionPromise = (async () => {
         if (!this.modelPath || !fs.existsSync(this.modelPath)) {
-          throw new Error(`ONNX ArcFace model weight file not found at: ${this.modelPath ?? 'models/arcface-mobilefacenet.onnx'}`);
+          throw new Error(`ONNX ArcFace model weight file not installed at: ${this.modelPath ?? 'models/arcface-mobilefacenet.onnx'}`);
         }
         const ort = await import('onnxruntime-node');
         const providers = process.platform === 'win32' ? ['directml', 'cpu'] : ['cpu'];

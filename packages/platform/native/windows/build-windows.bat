@@ -8,10 +8,10 @@ echo ============================================================
 
 REM 1. Check if cl.exe is already available on PATH (e.g. CI or Developer Command Prompt)
 where cl.exe >nul 2>&1
-if %errorlevel% equ 0 goto :found_vcvars
+if %errorlevel% equ 0 goto :compile
 
 REM 2. Locate Visual Studio / MSVC Build Tools if not already on PATH
-if "%VCINSTALLDIR%"=="" (
+if not defined VCINSTALLDIR (
   for %%p in (
     "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
     "%ProgramFiles%\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat"
@@ -25,12 +25,12 @@ if "%VCINSTALLDIR%"=="" (
     if exist %%p (
       echo Found MSVC Environment at %%p
       call %%p
-      goto :found_vcvars
+      goto :compile
     )
   )
 )
 
-:found_vcvars
+:compile
 
 where cl.exe >nul 2>&1
 if %errorlevel% neq 0 (
@@ -43,10 +43,11 @@ set SCRIPT_DIR=%~dp0
 set SRC=%SCRIPT_DIR%OpenFaceIDCredentialProvider.cpp
 set DEF=%SCRIPT_DIR%OpenFaceIDCredentialProvider.def
 for %%i in ("%SCRIPT_DIR%..\..\..\..\dist\windows") do set OUT_DIR=%%~fi
+
 if not exist "%OUT_DIR%" mkdir "%OUT_DIR%"
 set OUT_DLL=%OUT_DIR%\OpenFaceIDCredentialProvider.dll
 
-echo Compiling %SRC% -> %OUT_DLL%...
+echo Compiling %SRC% -^> %OUT_DLL%...
 
 cl.exe /nologo /O2 /W4 /WX- /std:c++17 /EHsc /LD ^
   "%SRC%" ^
