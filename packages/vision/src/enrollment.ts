@@ -106,23 +106,59 @@ export class EnrollmentManager {
 
   public async capturePose(
     frame: CameraFrame,
-    landmarks: FaceLandmarks
+    landmarks: FaceLandmarks,
+    detectedBox?: { x: number; y: number; width: number; height: number }
   ): Promise<{ success: boolean; error?: string; progress: EnrollmentProgress }> {
     if (this.currentStepIndex >= ENROLLMENT_POSES.length) {
       return { success: true, progress: this.getProgress() };
     }
 
     try {
-      // 1. Analyze Quality
-      const box = {
-        x: Math.min(landmarks.leftEye.x, landmarks.leftMouth.x) - 40,
-        y: Math.min(landmarks.leftEye.y, landmarks.rightEye.y) - 60,
-        width: 180,
-        height: 220,
-      };
+      // 1. Analyze Quality with actual detected bounding box or accurate landmarks estimation
+      let box: { x: number; y: number; width: number; height: number };
+      if (detectedBox && detectedBox.width > 20 && detectedBox.height > 20) {
+        box = detectedBox;
+      } else {
+        const eyeDx = landmarks.rightEye.x - landmarks.leftEye.x;
+        const eyeDy = landmarks.rightEye.y - landmarks.leftEye.y;
+        const eyeDist = Math.hypot(eyeDx, eyeDy) || 50;
+        const faceW = eyeDist * 2.8;
+        const faceH = eyeDist * 3.4;
+        const eyeMidX = (landmarks.leftEye.x + landmarks.rightEye.x) / 2;
+        const eyeMidY = (landmarks.leftEye.y + landmarks.rightEye.y) / 2;
+        box = {
+          x: Math.max(0, eyeMidX - faceW / 2),
+          y: Math.max(0, eyeMidY - faceH * 0.4),
+          width: faceW,
+          height: faceH,
+        };
+      }
       const quality = this.qualityAnalyzer.analyzeQuality(frame, box, landmarks);
 
-      if (!quality.isAcceptable) {
+      // Guided enrollment leniency (Glance-inspired):
+      // Natural desk webcam distance (sizeRatio >= 0.02), natural centering (<= 0.85),
+      // and intentional rotation angles for TURN_LEFT, TURN_RIGHT, LOOK_UP, LOOK_DOWN.
+      const currentTarget = ENROLLMENT_POSES[this.currentStepIndex];
+      const isAngleExpectedForPose =
+        Boolean(currentTarget) &&
+        (currentTarget.pose === 'TURN_LEFT' ||
+          currentTarget.pose === 'TURN_RIGHT' ||
+          currentTarget.pose === 'LOOK_UP' ||
+          currentTarget.pose === 'LOOK_DOWN');
+
+      const isSizeAcceptable = quality.sizeRatio >= 0.02 && quality.sizeRatio <= 0.85;
+      const isCenteringAcceptable = quality.centering <= 0.85;
+      const isLightingAcceptable = quality.brightness >= 15 && quality.brightness <= 245;
+      const isSharpnessAcceptable = quality.sharpness >= 15;
+      const isAngleAcceptable = isAngleExpectedForPose
+        ? (Math.abs(quality.yawDeg) <= 65 && Math.abs(quality.pitchDeg) <= 55)
+        : (Math.abs(quality.yawDeg) <= 45 && Math.abs(quality.pitchDeg) <= 40);
+
+      const isAcceptableForEnrollment =
+        quality.isAcceptable ||
+        (isSizeAcceptable && isCenteringAcceptable && isLightingAcceptable && isSharpnessAcceptable && isAngleAcceptable);
+
+      if (!isAcceptableForEnrollment) {
         return {
           success: false,
           error: quality.userGuidance,
@@ -173,6 +209,7 @@ export class EnrollmentManager {
     }
 
     const now = Date.now();
+    const activeProv = this.embedder.getActiveProvider();
     return {
       id: this.identityId,
       name: this.identityName,
