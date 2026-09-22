@@ -1553,6 +1553,149 @@
       line-height: 1.3;
     }
 
+    /* Startup Biometric Radar Canvas & Guarantee Badge */
+    .startup-radar-container {
+      position: relative;
+      width: 170px;
+      height: 170px;
+      margin: 0 auto 12px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #startupRadarCanvas {
+      width: 170px;
+      height: 170px;
+      display: block;
+      filter: drop-shadow(0 0 16px rgba(0, 113, 227, 0.35));
+    }
+
+    .radar-center-glyph {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #38bdf8;
+      pointer-events: none;
+      animation: pulseGlyph 2.5s infinite ease-in-out;
+    }
+
+    @keyframes pulseGlyph {
+      0%, 100% { opacity: 0.85; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.08); filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.8)); }
+    }
+
+    .radar-guarantee-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 14px;
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.28);
+      border-radius: 999px;
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      color: #34d399;
+      margin-top: 10px;
+    }
+
+    /* Mac Face Unlock Onboarding & Setup Cards */
+    .mac-unlock-setup-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 520px;
+      margin: 12px auto;
+      width: 100%;
+    }
+
+    .mac-setup-card {
+      background: rgba(255, 255, 255, 0.035);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      transition: var(--transition-spring);
+    }
+
+    .mac-setup-card:hover {
+      border-color: rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .mac-setup-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .mac-setup-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(0, 113, 227, 0.2);
+      border: 1px solid rgba(0, 113, 227, 0.4);
+      color: #60a5fa;
+      font-size: 11.5px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .mac-setup-info {
+      flex: 1;
+    }
+
+    .mac-setup-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .mac-setup-desc {
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.35;
+      margin-top: 2px;
+    }
+
+    .mac-setup-body {
+      padding-left: 36px;
+    }
+
+    /* Home Dashboard Mac Face Unlock Notification Banner */
+    .mac-faceunlock-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 18px;
+      border-radius: var(--radius-md);
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .unlock-banner-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .unlock-banner-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     /* 4-Item Privacy Breakdown */
     .privacy-breakdown-list {
       display: flex;
@@ -2086,6 +2229,21 @@
             </div>
             <div id="presenceBannerRightAction">
               <button class="btn btn-sm" onclick="togglePrivacyPause()">Pause Camera</button>
+            </div>
+          </div>
+
+          <!-- Mac Face Unlock Hardware & Keystore Status Banner -->
+          <div id="macFaceUnlockBanner" class="mac-faceunlock-banner" style="display: flex;">
+            <div class="unlock-banner-left">
+              <div id="unlockBannerDot" class="status-dot" style="background: #f59e0b; box-shadow: 0 0 8px #f59e0b;"></div>
+              <div>
+                <div id="unlockBannerTitle" class="banner-text-title" style="font-size: 13.5px; font-weight: 600; color: #fff;">Checking Mac Face Unlock Status...</div>
+                <div id="unlockBannerDesc" class="banner-text-subtitle" style="font-size: 11.5px; color: var(--text-secondary);">Verifying macOS Keychain and Accessibility keystroke permissions...</div>
+              </div>
+            </div>
+            <div class="unlock-banner-actions">
+              <button class="btn btn-sm" id="unlockBannerSetupBtn" onclick="launchOnboardingToStep(13)" style="display: inline-block;">Configure Face Unlock</button>
+              <button class="btn btn-sm btn-primary" id="unlockBannerTestBtn" onclick="testLockScreenUnlock()" style="display: none; background: #059669; border-color: #10b981;">Lock & Test Unlock</button>
             </div>
           </div>
 
@@ -2846,40 +3004,56 @@
   <div id="onboardingModal" role="dialog" aria-modal="true" aria-labelledby="onboardingModalTitle">
     <div class="onboarding-window">
       
-      <!-- SCREEN 1: WELCOME -->
+      <!-- SCREEN 1: WELCOME & STARTUP RADAR -->
       <div id="step-1" class="onboarding-step active">
-        <div class="onboarding-step-hero">
-          <img src="assets/icon.png" class="onboarding-hero-logo" width="68" height="68" alt="OpenFaceID" />
-          <h1 id="onboardingModalTitle" class="onboarding-title">Welcome to OpenFaceID</h1>
-          <p class="onboarding-subtitle">Your Mac knows when you're there.</p>
+        <div class="onboarding-step-hero" style="padding-bottom: 6px;">
+          <!-- High-Tech Biometric Radar Scanner Canvas (60 FPS Vector Geometry) -->
+          <div class="startup-radar-container">
+            <canvas id="startupRadarCanvas" width="200" height="200"></canvas>
+            <div class="radar-center-glyph">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 3H5a2 2 0 0 0-2 2v2M17 3h2a2 2 0 0 1 2 2v2M7 21H5a2 2 0 0 1-2-2v-2M17 21h2a2 2 0 0 0 2-2v-2" />
+                <circle cx="12" cy="11" r="3" />
+                <path d="M9 16c1-1 5-1 6 0" />
+              </svg>
+            </div>
+          </div>
+
+          <h1 id="onboardingModalTitle" class="onboarding-title" style="font-size: 22px; margin-top: 2px;">Welcome to OpenFaceID</h1>
+          <p class="onboarding-subtitle" style="font-size: 13px;">Autonomous On-Device Biometric Unlock for your Mac</p>
+
+          <div class="radar-guarantee-badge">
+            <span class="live-badge-dot" style="background: #10b981; box-shadow: 0 0 8px #10b981;"></span>
+            <span>100% LOCALHOST • ZERO CLOUD • APPLE KEYCHAIN ENCRYPTED</span>
+          </div>
         </div>
 
-        <div class="onboarding-triad">
+        <div class="onboarding-triad" style="margin: 14px 0 18px 0;">
           <div class="triad-card">
             <div class="triad-icon">🔒</div>
-            <div class="triad-title">Private</div>
-            <div class="triad-desc">Your data stays on this Mac.</div>
+            <div class="triad-title">Zero Cloud Egress</div>
+            <div class="triad-desc">No accounts. No telemetry. Biometric vectors never leave this Mac.</div>
           </div>
           <div class="triad-card">
-            <div class="triad-icon">💻</div>
-            <div class="triad-title">Local</div>
-            <div class="triad-desc">Real-time processing. No cloud.</div>
+            <div class="triad-icon">⚡</div>
+            <div class="triad-title">Instant Unlock</div>
+            <div class="triad-desc">Unlocks your workstation display automatically upon presence match.</div>
           </div>
           <div class="triad-card">
             <div class="triad-icon">&lt;/&gt;</div>
-            <div class="triad-title">Open Source</div>
-            <div class="triad-desc">Built transparently.</div>
+            <div class="triad-title">Hardware Sealed</div>
+            <div class="triad-desc">Protected by macOS Keychain. Open-source & auditable.</div>
           </div>
         </div>
 
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 14px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px;">
           <div class="stepper-dots">
             <span class="stepper-dot active"></span>
             <span class="stepper-dot"></span>
             <span class="stepper-dot"></span>
             <span class="stepper-dot"></span>
           </div>
-          <button class="btn btn-primary" onclick="goToStep(2)">Get Started →</button>
+          <button class="btn btn-primary" style="padding: 8px 24px; font-weight: 600;" onclick="startJourneyFromWelcome()">Begin Local Setup →</button>
         </div>
       </div>
 
@@ -3055,6 +3229,12 @@
           </div>
           <div style="display: flex; align-items: center; gap: 10px;">
             <span style="color: var(--accent-green);">🔒</span> Secure local storage
+          </div>
+        <div style="width: 100%; max-width: 360px; margin: 10px auto 16px auto; text-align: left;">
+          <label style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600;">Local Profile Name</label>
+          <input type="text" id="onboardingProfileName" class="mac-input" placeholder="Primary User" value="Primary User" style="width: 100%; padding: 8px 12px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; color: #fff; font-size: 13px;" />
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 5px; display: flex; align-items: center; gap: 5px;">
+            <span>📁</span> <span>Stored locally in <code>~/.openfaceid/identities</code>. Zero cloud sync.</span>
           </div>
         </div>
 
@@ -3244,43 +3424,71 @@
         </div>
       </div>
 
-      <!-- SCREEN 13: PROFILE MANAGEMENT (OPTIONAL) -->
+      <!-- SCREEN 13: MAC FACE UNLOCK SETUP & ACTIVATION -->
       <div id="step-13" class="onboarding-step">
-        <div class="onboarding-step-hero" style="padding-bottom: 10px;">
-          <h2 class="onboarding-title">Manage your profile</h2>
-        </div>
-
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 16px; margin: 10px auto; max-width: 440px; display: flex; gap: 16px; align-items: center;">
-          <div style="width: 72px; height: 86px; border-radius: 10px; background: #1a1e28; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
-            <canvas id="profileThumbnailCanvas" width="100" height="120" style="width: 100%; height: 100%; object-fit: cover;"></canvas>
+        <div class="onboarding-step-hero" style="padding-bottom: 6px;">
+          <div class="onboarding-icon-box" style="background: linear-gradient(135deg, #4f46e5, #06b6d4); box-shadow: 0 8px 24px rgba(79, 70, 229, 0.4);">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
           </div>
-          <div style="flex: 1;">
-            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
-              <span style="color: var(--text-muted);">Status</span>
-              <span class="diag-badge">Enrolled</span>
+          <h2 class="onboarding-title" style="font-size: 21px;">Activate Mac Face Unlock</h2>
+          <p class="onboarding-subtitle">To enable automatic lock screen unlocking when your face is recognized, complete these two on-device steps:</p>
+        </div>
+
+        <div class="mac-unlock-setup-container">
+          <!-- Step 1: macOS Keychain Password -->
+          <div class="mac-setup-card">
+            <div class="mac-setup-header">
+              <div class="mac-setup-num">1</div>
+              <div class="mac-setup-info">
+                <div class="mac-setup-title">macOS Keychain Password</div>
+                <div class="mac-setup-desc">Encrypted into your macOS login Keychain (<code>org.openfaceid.desktop</code>). Never leaves your Mac.</div>
+              </div>
+              <span id="onboardingVaultBadge" class="diag-badge" style="background: rgba(234, 179, 8, 0.15); color: #eab308; border-color: rgba(234, 179, 8, 0.3);">Checking...</span>
             </div>
-            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
-              <span style="color: var(--text-muted);">Created</span>
-              <span style="color: #fff;" id="profileCreatedDate">Today</span>
+            <div class="mac-setup-body">
+              <div style="display: flex; gap: 8px; width: 100%;">
+                <input type="password" id="onboardingVaultPassword" class="mac-input" placeholder="Enter your Mac login password" style="flex: 1; padding: 7px 12px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; color: #fff; font-size: 13px;" />
+                <button class="btn btn-primary" onclick="saveOnboardingPassword()">Save to Keychain</button>
+              </div>
+              <div id="onboardingVaultMsg" style="font-size: 11px; margin-top: 5px;"></div>
             </div>
-            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 12px;">
-              <span style="color: var(--text-muted);">Profiles</span>
-              <span style="color: #fff;">1</span>
+          </div>
+
+          <!-- Step 2: Accessibility Permission -->
+          <div class="mac-setup-card">
+            <div class="mac-setup-header">
+              <div class="mac-setup-num">2</div>
+              <div class="mac-setup-info">
+                <div class="mac-setup-title">macOS Accessibility Permission</div>
+                <div class="mac-setup-desc">Allows OpenFaceID to securely type unlock keystrokes onto the lockscreen when your face matches.</div>
+              </div>
+              <span id="onboardingAccBadge" class="diag-badge" style="background: rgba(234, 179, 8, 0.15); color: #eab308; border-color: rgba(234, 179, 8, 0.3);">Checking...</span>
             </div>
-            <div style="display: flex; gap: 8px;">
-              <button class="btn btn-sm" onclick="goToStep(5)">Re-enroll</button>
-              <button class="btn btn-sm btn-danger" onclick="confirmDeleteBiometrics()">Delete Profile</button>
+            <div class="mac-setup-body" style="display: flex; align-items: center; justify-content: space-between;">
+              <span id="onboardingAccDesc" style="font-size: 11.5px; color: var(--text-secondary); max-width: 320px;">Open System Settings → Privacy & Security → Accessibility and toggle OpenFaceID to ON.</span>
+              <button class="btn btn-sm" id="onboardingBtnAcc" onclick="requestAccessibilityPermission()">Open Settings</button>
             </div>
+          </div>
+
+          <!-- Step 3: Immediate Live Unlock Test -->
+          <div class="mac-setup-card" style="background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.25);">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <div style="font-size: 13px; font-weight: 600; color: #fff;">Test Face Unlock Now</div>
+                <div style="font-size: 11px; color: var(--text-secondary);">Locks your screen and verifies automatic face recognition and unlock.</div>
+              </div>
+              <button class="btn btn-primary" id="btnTestLockUnlock" style="background: #059669; border-color: #10b981; font-weight: 600;" onclick="testLockScreenUnlock()">Lock & Test Face Unlock</button>
+            </div>
+            <div id="testUnlockMsg" style="font-size: 11.5px; margin-top: 8px; display: none;"></div>
           </div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 6px; justify-content: center; font-size: 11px; color: var(--text-muted); margin: 12px 0;">
-          <span>🔒</span>
-          <span>Your biometric data is encrypted and stored securely in your macOS Keychain.</span>
-        </div>
-
-        <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
-          <button class="btn btn-primary" onclick="goToStep(14)">Next Steps →</button>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 14px;">
+          <button class="btn" onclick="goToStep(12)">Back</button>
+          <button class="btn btn-primary" onclick="goToStep(14)">Complete Setup →</button>
         </div>
       </div>
 
@@ -3414,13 +3622,361 @@
       }
     }
 
+    // Apple-Grade Procedural Audio Feedback via Web Audio API (Zero External Files)
+    function playBiometricChime(type = 'success') {
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        const ctx = new AudioContextClass();
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+        const now = ctx.currentTime;
+        if (type === 'success') {
+          // Acoustic dual-tone confirmation chime (F#5 -> C#6)
+          const osc1 = ctx.createOscillator();
+          const osc2 = ctx.createOscillator();
+          const gain = ctx.createGain();
+
+          osc1.type = 'sine';
+          osc2.type = 'sine';
+
+          osc1.frequency.setValueAtTime(739.99, now); // F#5
+          osc2.frequency.setValueAtTime(1108.73, now + 0.08); // C#6
+
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+
+          osc1.connect(gain);
+          osc2.connect(gain);
+          gain.connect(ctx.destination);
+
+          osc1.start(now);
+          osc1.stop(now + 0.12);
+          osc2.start(now + 0.08);
+          osc2.stop(now + 0.42);
+        } else if (type === 'scan') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(840, now + 0.06);
+          gain.gain.setValueAtTime(0.06, now);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        }
+      } catch (e) {
+        // AudioContext ignored if blocked
+      }
+    }
+
+    // High-Tech Biometric Radar 60 FPS Canvas Controller
+    let radarCanvasAnimId = null;
+    function initStartupRadar() {
+      const canvas = document.getElementById('startupRadarCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const size = 170;
+      canvas.width = size * dpr;
+      canvas.height = size * dpr;
+      ctx.scale(dpr, dpr);
+
+      let angle1 = 0;
+      let angle2 = 0;
+      let scanY = size * 0.3;
+      let scanDir = 1;
+      let pulsePhase = 0;
+
+      function render() {
+        ctx.clearRect(0, 0, size, size);
+        const cx = size / 2;
+        const cy = size / 2;
+        const r = size * 0.44;
+
+        // 1. Subtle radial gradient backdrop glow
+        const bgGrad = ctx.createRadialGradient(cx, cy, 4, cx, cy, r);
+        bgGrad.addColorStop(0, 'rgba(0, 113, 227, 0.12)');
+        bgGrad.addColorStop(0.7, 'rgba(0, 113, 227, 0.03)');
+        bgGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = bgGrad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 2. 48 Compass precision angular ticks
+        const numTicks = 48;
+        for (let i = 0; i < numTicks; i++) {
+          const theta = (i * Math.PI * 2) / numTicks;
+          const isMajor = i % 4 === 0;
+          const tickLen = isMajor ? 6 : 3;
+          const x1 = cx + Math.cos(theta) * (r - tickLen);
+          const y1 = cy + Math.sin(theta) * (r - tickLen);
+          const x2 = cx + Math.cos(theta) * r;
+          const y2 = cy + Math.sin(theta) * r;
+
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.strokeStyle = isMajor ? 'rgba(0, 113, 227, 0.75)' : 'rgba(255, 255, 255, 0.14)';
+          ctx.lineWidth = isMajor ? 1.5 : 1;
+          ctx.stroke();
+        }
+
+        // 3. Counter-rotating concentric reticle arcs
+        angle1 += 0.012;
+        angle2 -= 0.009;
+
+        // Outer primary arc
+        ctx.beginPath();
+        ctx.arc(cx, cy, r - 10, angle1, angle1 + Math.PI * 0.65);
+        ctx.strokeStyle = '#0071e3';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.shadowColor = '#0071e3';
+        ctx.shadowBlur = 8;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, r - 10, angle1 + Math.PI, angle1 + Math.PI * 1.65);
+        ctx.strokeStyle = '#0071e3';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Inner counter arc
+        ctx.beginPath();
+        ctx.arc(cx, cy, r - 18, angle2, angle2 + Math.PI * 0.45);
+        ctx.strokeStyle = '#06b6d4';
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = '#06b6d4';
+        ctx.shadowBlur = 6;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, r - 18, angle2 + Math.PI, angle2 + Math.PI * 1.45);
+        ctx.strokeStyle = '#06b6d4';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // 4. Biometric Face Landmark Mesh (7 stylized nodes connected by micro-lines)
+        pulsePhase += 0.035;
+        const pulseScale = 1 + Math.sin(pulsePhase) * 0.03;
+        const meshPoints = [
+          { x: cx - 18 * pulseScale, y: cy - 12 }, // Left eye
+          { x: cx + 18 * pulseScale, y: cy - 12 }, // Right eye
+          { x: cx, y: cy + 1 * pulseScale },       // Nose bridge
+          { x: cx - 11 * pulseScale, y: cy + 16 }, // Left mouth corner
+          { x: cx + 11 * pulseScale, y: cy + 16 }, // Right mouth corner
+          { x: cx, y: cy + 24 * pulseScale },      // Chin
+          { x: cx, y: cy - 24 * pulseScale },      // Forehead
+        ];
+
+        // Connect mesh lines
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(0, 113, 227, 0.25)';
+        ctx.lineWidth = 1;
+        const connections = [
+          [0, 1], [0, 2], [1, 2], [2, 3], [2, 4], [3, 4], [3, 5], [4, 5], [6, 0], [6, 1]
+        ];
+        for (const [a, b] of connections) {
+          ctx.moveTo(meshPoints[a].x, meshPoints[a].y);
+          ctx.lineTo(meshPoints[b].x, meshPoints[b].y);
+        }
+        ctx.stroke();
+
+        // Draw landmark node dots
+        for (const pt of meshPoints) {
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 2, 0, Math.PI * 2);
+          ctx.fillStyle = '#38bdf8';
+          ctx.shadowColor = '#38bdf8';
+          ctx.shadowBlur = 4;
+          ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+
+        // 5. Harmonically oscillating Laser Scan Line
+        const scanMinY = cy - r + 14;
+        const scanMaxY = cy + r - 14;
+        scanY += 1.1 * scanDir;
+        if (scanY > scanMaxY) scanDir = -1;
+        if (scanY < scanMinY) scanDir = 1;
+
+        // Laser gradient wake
+        const laserGrad = ctx.createLinearGradient(0, scanY - (scanDir > 0 ? 14 : -14), 0, scanY);
+        laserGrad.addColorStop(0, 'rgba(0, 113, 227, 0)');
+        laserGrad.addColorStop(1, 'rgba(6, 182, 212, 0.22)');
+        ctx.fillStyle = laserGrad;
+        ctx.fillRect(cx - r + 14, Math.min(scanY, scanY - (scanDir > 0 ? 14 : -14)), (r - 14) * 2, 14);
+
+        // Laser beam line
+        ctx.beginPath();
+        ctx.moveTo(cx - r + 14, scanY);
+        ctx.lineTo(cx + r - 14, scanY);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 8;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // 6. Corner biometric brackets
+        const bracketSize = 12;
+        const bDist = r - 15;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.lineWidth = 1.5;
+
+        // Top-Left
+        ctx.beginPath();
+        ctx.moveTo(cx - bDist, cy - bDist + bracketSize);
+        ctx.lineTo(cx - bDist, cy - bDist);
+        ctx.lineTo(cx - bDist + bracketSize, cy - bDist);
+        ctx.stroke();
+
+        // Top-Right
+        ctx.beginPath();
+        ctx.moveTo(cx + bDist - bracketSize, cy - bDist);
+        ctx.lineTo(cx + bDist, cy - bDist);
+        ctx.lineTo(cx + bDist, cy - bDist + bracketSize);
+        ctx.stroke();
+
+        // Bottom-Left
+        ctx.beginPath();
+        ctx.moveTo(cx - bDist, cy + bDist - bracketSize);
+        ctx.lineTo(cx - bDist, cy + bDist);
+        ctx.lineTo(cx - bDist + bracketSize, cy + bDist);
+        ctx.stroke();
+
+        // Bottom-Right
+        ctx.beginPath();
+        ctx.moveTo(cx + bDist - bracketSize, cy + bDist);
+        ctx.lineTo(cx + bDist, cy + bDist);
+        ctx.lineTo(cx + bDist, cy + bDist - bracketSize);
+        ctx.stroke();
+
+        const step1 = document.getElementById('step-1');
+        if (step1 && step1.classList.contains('active')) {
+          radarCanvasAnimId = requestAnimationFrame(render);
+        }
+      }
+
+      if (radarCanvasAnimId) cancelAnimationFrame(radarCanvasAnimId);
+      radarCanvasAnimId = requestAnimationFrame(render);
+    }
+
+    function startJourneyFromWelcome() {
+      playBiometricChime('success');
+      goToStep(2);
+    }
+
+    function launchOnboardingToStep(stepNum) {
+      const modal = document.getElementById('onboardingModal');
+      if (!modal) return;
+      modal.style.display = 'flex';
+      goToStep(stepNum);
+    }
+
+    async function saveOnboardingPassword() {
+      const input = document.getElementById('onboardingVaultPassword');
+      const msg = document.getElementById('onboardingVaultMsg');
+      const password = input ? input.value : '';
+      if (!password) {
+        if (msg) {
+          msg.textContent = 'Please enter your Mac login password first.';
+          msg.style.color = '#ef4444';
+        }
+        return;
+      }
+
+      try {
+        const res = await apiFetch('/api/v1/credentials/enroll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: 'default_user', secret: password })
+        });
+        if (res.ok) {
+          playBiometricChime('success');
+          if (msg) {
+            msg.textContent = '✓ Password securely encrypted into local macOS Keychain.';
+            msg.style.color = '#10b981';
+          }
+          if (input) input.value = '';
+          checkVaultAndAccessibility();
+        } else {
+          const err = await res.json();
+          if (msg) {
+            msg.textContent = `Error: ${err.error || 'Failed to save password'}`;
+            msg.style.color = '#ef4444';
+          }
+        }
+      } catch (e) {
+        if (msg) {
+          msg.textContent = `Error: ${e.message}`;
+          msg.style.color = '#ef4444';
+        }
+      }
+    }
+
+    async function testLockScreenUnlock() {
+      const msgEl = document.getElementById('testUnlockMsg');
+      const btn = document.getElementById('btnTestLockUnlock');
+      const bannerBtn = document.getElementById('unlockBannerTestBtn');
+      if (msgEl) {
+        msgEl.style.display = 'block';
+        msgEl.style.color = '#38bdf8';
+        msgEl.textContent = 'Locking Mac in 2 seconds... Look straight at your camera!';
+      }
+      if (btn) btn.disabled = true;
+      if (bannerBtn) bannerBtn.disabled = true;
+
+      playBiometricChime('scan');
+
+      setTimeout(async () => {
+        try {
+          const res = await apiFetch('/api/v1/lock', { method: 'POST' });
+          if (res.ok) {
+            if (msgEl) {
+              msgEl.style.color = '#10b981';
+              msgEl.textContent = 'Screen locked. Camera is scanning for your face...';
+            }
+          } else {
+            const err = await res.json();
+            if (msgEl) {
+              msgEl.style.color = '#ef4444';
+              msgEl.textContent = `Lock failed: ${err.error || 'Check authorization'}`;
+            }
+          }
+        } catch (e) {
+          if (msgEl) {
+            msgEl.style.color = '#ef4444';
+            msgEl.textContent = `Error: ${e.message}`;
+          }
+        } finally {
+          setTimeout(() => {
+            if (btn) btn.disabled = false;
+            if (bannerBtn) bannerBtn.disabled = false;
+          }, 4000);
+        }
+      }, 1500);
+    }
+
     async function checkVaultAndAccessibility() {
       try {
+        let isVaultEnrolled = false;
+        let isAccGranted = false;
+
         // 1. Query Credential Status in OS Vault
         const credRes = await apiFetch('/api/v1/credentials/status');
         if (credRes.ok) {
           const credData = await credRes.json();
+          isVaultEnrolled = !!credData.enrolled;
           const badge = document.getElementById('vaultStatusBadge');
+          const obBadge = document.getElementById('onboardingVaultBadge');
           const clearBtn = document.getElementById('btnClearPassword');
           if (credData.enrolled) {
             if (badge) {
@@ -3428,6 +3984,12 @@
               badge.style.background = 'rgba(16, 185, 129, 0.15)';
               badge.style.color = '#10b981';
               badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+            }
+            if (obBadge) {
+              obBadge.textContent = '✓ Saved in Keychain';
+              obBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+              obBadge.style.color = '#10b981';
+              obBadge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
             }
             if (clearBtn) clearBtn.style.display = 'inline-block';
           } else {
@@ -3437,6 +3999,12 @@
               badge.style.color = '#ef4444';
               badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
             }
+            if (obBadge) {
+              obBadge.textContent = 'Password Required';
+              obBadge.style.background = 'rgba(239, 68, 68, 0.15)';
+              obBadge.style.color = '#ef4444';
+              obBadge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+            }
             if (clearBtn) clearBtn.style.display = 'none';
           }
         }
@@ -3445,13 +4013,19 @@
         const accRes = await apiFetch('/api/v1/platform/accessibility');
         if (accRes.ok) {
           const accData = await accRes.json();
+          isAccGranted = !!accData.accessibilityGranted;
           const badge = document.getElementById('accessibilityStatusBadge');
+          const obBadge = document.getElementById('onboardingAccBadge');
           const reqBtn = document.getElementById('btnRequestAccessibility');
           const statusText = document.getElementById('accessibilityStatusText');
           if (accData.accessibilityGranted) {
             if (badge) {
               badge.textContent = 'Granted';
               badge.className = 'diag-badge diag-badge-pass';
+            }
+            if (obBadge) {
+              obBadge.textContent = '✓ Granted';
+              obBadge.className = 'diag-badge diag-badge-pass';
             }
             if (reqBtn) reqBtn.style.display = 'none';
             if (statusText) statusText.textContent = 'Accessibility granted. Keystroke unlock is operational.';
@@ -3460,8 +4034,45 @@
               badge.textContent = 'Permission Required';
               badge.className = 'diag-badge diag-badge-warn';
             }
+            if (obBadge) {
+              obBadge.textContent = 'Permission Needed';
+              obBadge.className = 'diag-badge diag-badge-warn';
+            }
             if (reqBtn) reqBtn.style.display = 'inline-block';
             if (statusText) statusText.textContent = 'Required by macOS to dispatch unlock keystrokes securely via stdin.';
+          }
+        }
+
+        // 3. Update Dashboard Top Face Unlock Status Banner
+        const unlockBanner = document.getElementById('macFaceUnlockBanner');
+        const unlockDot = document.getElementById('unlockBannerDot');
+        const unlockTitle = document.getElementById('unlockBannerTitle');
+        const unlockDesc = document.getElementById('unlockBannerDesc');
+        const unlockSetupBtn = document.getElementById('unlockBannerSetupBtn');
+        const unlockTestBtn = document.getElementById('unlockBannerTestBtn');
+
+        if (unlockBanner) {
+          if (isVaultEnrolled && isAccGranted) {
+            if (unlockDot) {
+              unlockDot.style.background = '#10b981';
+              unlockDot.style.boxShadow = '0 0 10px #10b981';
+            }
+            if (unlockTitle) unlockTitle.textContent = '✓ Mac Face Unlock Ready';
+            if (unlockDesc) unlockDesc.textContent = 'Hardware Keystore Sealed · Auto-Unlock Active on Display Wake';
+            if (unlockSetupBtn) unlockSetupBtn.style.display = 'none';
+            if (unlockTestBtn) unlockTestBtn.style.display = 'inline-block';
+          } else {
+            if (unlockDot) {
+              unlockDot.style.background = '#f59e0b';
+              unlockDot.style.boxShadow = '0 0 10px #f59e0b';
+            }
+            if (unlockTitle) unlockTitle.textContent = '⚠️ Mac Face Unlock Setup Incomplete';
+            const missing = [];
+            if (!isVaultEnrolled) missing.push('Keychain Password');
+            if (!isAccGranted) missing.push('Accessibility Permission');
+            if (unlockDesc) unlockDesc.textContent = `Action Required: ${missing.join(' and ')} needed for automatic lockscreen unlock.`;
+            if (unlockSetupBtn) unlockSetupBtn.style.display = 'inline-block';
+            if (unlockTestBtn) unlockTestBtn.style.display = 'none';
           }
         }
       } catch (e) {}
@@ -3486,6 +4097,7 @@
           body: JSON.stringify({ userId: 'default_user', secret: password })
         });
         if (res.ok) {
+          playBiometricChime('success');
           if (msg) {
             msg.textContent = '✓ Password securely saved in local OS Keychain.';
             msg.style.color = '#10b981';
@@ -4124,6 +4736,12 @@
           if (profiles === 0 && localStorage.getItem('ofid_onboarding_completed') !== 'true') {
             launchOnboarding(false);
           }
+
+          // Periodic background check for OS vault and accessibility updates
+          if (!window._lastVaultPoll || Date.now() - window._lastVaultPoll > 2800) {
+            window._lastVaultPoll = Date.now();
+            checkVaultAndAccessibility();
+          }
         }
       } catch (e) {}
     }
@@ -4154,7 +4772,11 @@
       const activeBtn = document.getElementById(`qBtn-${stepNum}`);
       if (activeBtn) activeBtn.classList.add('active');
 
-      if (stepNum === 11) {
+      if (stepNum === 1) {
+        setTimeout(initStartupRadar, 40);
+      } else if (stepNum === 13) {
+        checkVaultAndAccessibility();
+      } else if (stepNum === 11) {
         // Auto-advance from Processing to Complete after 2.4 seconds
         setTimeout(() => {
           if (currentStep === 11) goToStep(12);
@@ -4179,11 +4801,12 @@
     }
 
     async function startGuidedEnrollment() {
+      const name = document.getElementById('onboardingProfileName')?.value?.trim() || 'Primary User';
       try {
         await apiFetch('/api/v1/enrollment/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: 'Primary User' })
+          body: JSON.stringify({ name })
         });
       } catch (e) {}
       goToStep(6);
@@ -4328,6 +4951,8 @@
       initHudPreferences();
       startCameraLoop();
       startWaveformLoop();
+      checkVaultAndAccessibility();
+      setTimeout(initStartupRadar, 150);
       pollAuthoritativeState();
       setInterval(pollAuthoritativeState, 1400);
 
