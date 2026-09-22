@@ -59,7 +59,8 @@ jobs:
       - name: Compile Windows Credential Provider DLL
         shell: cmd
         run: |
-          call packages\platform\native\windows\build-windows.bat
+          if not exist dist\windows mkdir dist\windows
+          cl.exe /nologo /O2 /W4 /WX- /std:c++17 /EHsc /LD packages\platform\native\windows\OpenFaceIDCredentialProvider.cpp /Fe:dist\windows\OpenFaceIDCredentialProvider.dll /link /DEF:packages\platform\native\windows\OpenFaceIDCredentialProvider.def kernel32.lib user32.lib advapi32.lib ole32.lib oleaut32.lib secur32.lib shlwapi.lib
 
       - name: Upload Windows Credential Provider DLL
         uses: actions/upload-artifact@v4
