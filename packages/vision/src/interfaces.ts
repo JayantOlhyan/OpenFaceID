@@ -44,6 +44,14 @@ export interface FaceDetectionResult {
   quality: FaceQualityScore;
 }
 
+export interface IdentityVariant {
+  id: string;
+  name: string;
+  type: 'normal' | 'glasses' | 'beard' | 'lighting' | 'custom';
+  createdAt: number;
+  embeddingsCount: number;
+}
+
 export interface EnrolledIdentity {
   id: string;
   name: string;
@@ -52,6 +60,7 @@ export interface EnrolledIdentity {
   updatedAt: number;
   embeddings: Float32Array[]; // Multiple 512D vectors for various poses
   averageEmbedding: Float32Array; // Mean L2-normalized 512D vector
+  variants?: IdentityVariant[]; // Biometric profile variants (glasses, beard, lighting, etc.)
   recognitionStats: {
     matchCount: number;
     lastRecognizedAt?: number;
