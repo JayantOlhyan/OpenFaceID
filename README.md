@@ -17,7 +17,7 @@
 [![Platform](https://img.shields.io/badge/platform-macOS%20(Certified)%20%7C%20Linux%20%7C%20Windows-brightgreen.svg)](#platform-support-matrix)
 [![Privacy](https://img.shields.io/badge/privacy-100%25%20Local%20%7C%20Zero%20Cloud-success.svg)](PRIVACY.md)
 [![Security](https://img.shields.io/badge/security-AES--256--GCM%20%7C%20OS%20Keystore-blueviolet.svg)](SECURITY.md)
-[![Tests](https://img.shields.io/badge/tests-203%20passed%20%7C%200%20failed-success.svg)](#testing--verification)
+[![Tests](https://img.shields.io/badge/tests-226%20passed%20%7C%200%20failed-success.svg)](#testing--verification)
 [![Node](https://img.shields.io/badge/node-%3E%3D22.6.0-informational.svg)](.nvmrc)
 
 <br />
@@ -220,150 +220,183 @@ Vision Pipeline & Desktop WebKit UI
 
 ---
 
-## Installation
+## <a id="quick-start"></a>Quick Start & User Guide
 
-Select your operating system:
+Choose your operating system for a complete, step-by-step walkthrough covering download, installation, face enrollment, lock screen setup, daily usage, and uninstallation:
 
-| Platform | Quick Install Method | Standalone Packages | System Requirements |
+| Platform | Recommended Package | Alternate Options | System Requirements |
 | :--- | :--- | :--- | :--- |
-| **macOS** | `brew install --cask ...` | [`.dmg` (Apple Silicon)](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-arm64.dmg) | macOS 14+ (Sonoma / Sequoia), Apple Silicon or Intel |
-| **Linux** | `sudo apt install ./openfaceid*.deb` | [`.deb`](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/openfaceid_0.2.1-rc.1_amd64.deb) • [`.tar.gz`](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/openfaceid-0.2.1-rc.1-linux-x86_64.tar.gz) | Ubuntu 22.04+, Debian 12+, Fedora 38+, Arch; `/dev/video*` |
-| **Windows** | Portable Run | [`.zip` (x64)](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-windows-x64.zip) | Windows 10 / 11 64-bit, compatible webcam |
+| **[macOS](#-macos-step-by-step-guide)** | **[`.dmg` (Apple Silicon)](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-arm64.dmg)** | [`.zip`](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-macos.zip) • Homebrew | macOS 14+ (Sonoma / Sequoia), Apple Silicon or Intel |
+| **[Windows](#-windows-step-by-step-guide)** | **[`.zip` (x64 Portable)](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-windows-x64.zip)** | Source build | Windows 10 (Build 19041+) / Windows 11 64-bit |
+| **[Linux](#-linux-step-by-step-guide)** | **[`.deb` (Ubuntu/Debian)](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/openfaceid_0.2.1-rc.1_amd64.deb)** | [`.tar.gz`](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/openfaceid-0.2.1-rc.1-linux-x86_64.tar.gz) • [`.rpm`](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/openfaceid-0.2.1-rc.1-1.x86_64.rpm) | Ubuntu 22.04+, Debian 12+, Fedora 38+, Arch; `/dev/video*` |
 
 ---
 
-### macOS Installation & Setup
+### 🍎 macOS Step-by-Step Guide
 
-#### Option 1: Homebrew Cask (Recommended)
-Install directly using Homebrew:
-```bash
-brew install --cask https://raw.githubusercontent.com/JayantOlhyan/OpenFaceID/main/packaging/homebrew/openfaceid.rb
-```
+#### 1. Download
+Download the latest standalone disk image for Apple Silicon (M1/M2/M3/M4):
+* **Direct Download**: **[OpenFaceID-0.2.1-rc.1-arm64.dmg](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-arm64.dmg)** (88 MB)
+* *Universal ZIP alternative*: [OpenFaceID-0.2.1-rc.1-macos.zip](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-macos.zip)
 
-#### Option 2: Standalone Disk Image (.dmg)
-1. Download **[OpenFaceID-0.2.1-rc.1-arm64.dmg](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-arm64.dmg)**.
-2. Double-click the `.dmg` and drag `OpenFaceID.app` into your `/Applications` folder.
-3. Open `OpenFaceID.app` from `/Applications` or Spotlight.
+#### 2. Install
+1. Open your Downloads folder and double-click **`OpenFaceID-0.2.1-rc.1-arm64.dmg`** to mount the disk image.
+2. In the Finder window that appears, drag **`OpenFaceID.app`** into your **`Applications`** folder.
+3. Eject the OpenFaceID disk image.
 
-> [!TIP]
-> **First-Launch Gatekeeper Note (RB-01)**: Current release candidate builds are ad-hoc signed locally while Apple Developer ID certification remains in progress.
-> If macOS alerts that the developer cannot be verified, simply **Right-Click (Control-Click)** `OpenFaceID.app` in `/Applications` and select **Open**, or run this one-liner in Terminal:
-> ```bash
-> xattr -cr /Applications/OpenFaceID.app
-> ```
-
-#### Camera Permissions
-On first launch, macOS prompts for Camera access (`kTCCServiceCamera`). Click **OK**.
-If you ever need to grant or re-check permissions:
-* Open **System Settings &rarr; Privacy & Security &rarr; Camera**.
-* Toggle **OpenFaceID** (or your Terminal) **ON**.
-
----
-
-### Linux Installation & Setup
-
-#### Requirements
-* Modern Linux distribution (Ubuntu 22.04+, Debian 12+, Fedora 38+, Arch Linux)
-* Webcam accessible under `/dev/video*`
-
-#### Option 1: Debian / Ubuntu (.deb)
-```bash
-# Download latest .deb release
-curl -LO https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/openfaceid_0.2.1-rc.1_amd64.deb
-
-# Install package
-sudo apt install ./openfaceid_0.2.1-rc.1_amd64.deb
-```
-
-#### Option 2: Fedora / RHEL (.rpm)
-```bash
-# Install with DNF
-sudo dnf install ./openfaceid-0.2.1-rc.1-1.x86_64.rpm
-```
-
-#### Option 3: Universal Standalone Tarball (.tar.gz)
-```bash
-tar -xzf openfaceid-0.2.1-rc.1-linux-x86_64.tar.gz
-cd linux/bin
-./openfaceid
-```
-
-#### Essential Linux Configuration
-1. **Grant Camera Permissions**:
-   Add your user account to the `video` group so OpenFaceID can read your hardware capture device:
-   ```bash
-   sudo usermod -a -G video $USER
-   ```
-   *(Log out and log back in for this group membership to take effect)*
-
-2. **Enable Background Presence Daemon (Systemd User Service)**:
-   To run OpenFaceID continuously in the background upon login:
-   ```bash
-   systemctl --user enable --now openfaceid
-   ```
-
----
-
-### Windows Installation & Setup
-
-#### Requirements
-* Windows 10 or Windows 11 (64-bit)
-* DirectShow / MediaFoundation compatible USB or integrated webcam
-
-#### Standalone Setup
-1. Download **[OpenFaceID-0.2.1-rc.1-windows-x64.zip](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-windows-x64.zip)**.
-2. Extract the archive into a folder of your choice (e.g. `%LOCALAPPDATA%\OpenFaceID` or `C:\Program Files\OpenFaceID`).
-3. Double-click `OpenFaceID.cmd` to start the background engine.
-
-> [!NOTE]
-> **Windows SmartScreen Prompt**: If Windows displays *"Windows protected your PC"*, click **"More info"** and then **"Run anyway"**.
-> **Camera Access**: Open **Settings &rarr; Privacy & Security &rarr; Camera** and confirm that **"Let desktop apps access your camera"** is enabled.
-
-#### Optional Autostart at Windows Login
-Inside the extracted folder, double-click `register-autostart.reg` to configure OpenFaceID to automatically monitor presence upon Windows user logon.
-
----
-
-## First-Time Setup & Guided Face Enrollment
-
-Once OpenFaceID is installed, complete this quick 3-step setup to activate presence detection:
-
-### Step 1: Verify Hardware Camera Access
-Run an automated diagnostic check to ensure your webcam is communicating and delivering real optical frames:
-```bash
-openfaceid camera test
-```
-*Expected: Confirms camera permission is granted, resolution is acquired, and frame buffers are zeroized.*
-
-### Step 2: Enroll Your Biometric Profile (5-Pose Guided Capture)
-OpenFaceID uses a **multi-pose guided capture** protocol. By registering 5 distinct head orientations, the in-tree 512D spatial embedder constructs an invariant topological representation that prevents false rejections during everyday head movements.
-
-* **Via Desktop Web Interface**:
-  Open the OpenFaceID dashboard (`http://localhost:41793`) and click **"Enroll Face"**.
-* **Via Terminal CLI**:
+#### 3. First Launch & Security Permissions (Gatekeeper)
+Because release candidate builds are ad-hoc signed, macOS Gatekeeper may show a warning on first launch:
+* **Option A (GUI)**: Open your `/Applications` folder in Finder. **Right-Click (or Control-Click)** `OpenFaceID.app` and choose **Open**, then click **Open** in the dialog.
+* **Option B (Terminal)**:
   ```bash
-  openfaceid identity enroll "Your Name"
+  xattr -cr /Applications/OpenFaceID.app
   ```
 
-Follow the prompts to capture each pose:
-1. 👤 **Frontal**: Look straight ahead at the camera.
-2. ⬆️ **Pitch Up**: Tilt your chin slightly upward (~15°).
-3. ⬇️ **Pitch Down**: Tilt your chin slightly downward (~15°).
-4. ⬅️ **Yaw Left**: Turn your head slightly to the left (~20°).
-5. ➡️ **Yaw Right**: Turn your head slightly to the right (~20°).
+#### 4. Grant Camera & Accessibility Permissions
+1. When OpenFaceID starts, macOS prompts: *"OpenFaceID would like to access the camera"*. Click **OK**.
+2. If prompted for **Accessibility** or **Input Monitoring** (needed to dispatch keystroke unlock at the lock screen), toggle **OpenFaceID** to **ON** in **System Settings &rarr; Privacy & Security**.
 
-> [!IMPORTANT]
-> Your facial biometric templates are encrypted immediately on-device using **AES-256-GCM** and saved with strict user-only permissions (`0600`). Raw images from enrollment are permanently zeroized from volatile memory.
+#### 5. Enroll Your Face (5-Pose Guided Capture)
+1. Open `OpenFaceID.app` (or open Safari/Chrome to `http://localhost:41793`).
+2. Click the **"Enroll Face"** button.
+3. Follow the 5-pose on-screen guidance:
+   - 👤 **Frontal**: Look straight into the camera.
+   - ⬆️ **Chin Up**: Tilt slightly upward (~15°).
+   - ⬇️ **Chin Down**: Tilt slightly downward (~15°).
+   - ⬅️ **Turn Left**: Turn head slightly to the left (~20°).
+   - ➡️ **Turn Right**: Turn head slightly to the right (~20°).
+4. OpenFaceID extracts a 512D unit embedding and encrypts it locally with **AES-256-GCM**. All raw photos are permanently zeroized from RAM.
 
-### Step 3: Verify Active Presence & Auto-Lock
-1. Inspect your active system status:
+#### 6. Configure Lock Screen Password & Unlock
+1. In the OpenFaceID app Settings tab, enter your Mac user password to securely store it in your encrypted local keychain.
+2. Ensure **"Enable Lock Screen Unlock"** is switched **ON**.
+
+#### 7. Daily Usage — How to Unlock
+1. **Lock your Mac**: Press <kbd>Control</kbd> + <kbd>Command</kbd> + <kbd>Q</kbd> (or <kbd>Command</kbd> + <kbd>Option</kbd> + <kbd>Power</kbd>).
+2. **Wake screen**: Tap any key or the trackpad.
+3. **Face Unlock**: Look directly at your MacBook webcam. The camera indicator blinks green, OpenFaceID verifies your identity and liveness in ~200ms, and **automatically unlocks your desktop**!
+4. **Presence Defense (Auto-Lock)**: If you step away from your computer, OpenFaceID detects absence and automatically locks your screen after 30 seconds.
+
+#### 8. How to Uninstall
+1. Quit OpenFaceID (click the menu bar icon &rarr; **Quit**).
+2. Drag `/Applications/OpenFaceID.app` to the Trash.
+3. Delete local encrypted biometrics and settings:
    ```bash
-   openfaceid status
+   rm -rf ~/.openfaceid
    ```
-2. **Test Presence Defense**:
-   - Step away from your computer or cover the webcam lens.
-   - Once the absence timeout expires (default: 30 seconds), OpenFaceID automatically dispatches a system lock.
-   - Return to your desk and wake the screen: OpenFaceID verifies your face in ~200ms and authenticates presence.
+
+---
+
+### 🪟 Windows Step-by-Step Guide
+
+#### 1. Download
+Download the standalone Windows release archive:
+* **Direct Download**: **[OpenFaceID-0.2.1-rc.1-windows-x64.zip](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/OpenFaceID-0.2.1-rc.1-windows-x64.zip)** (Windows 10 / 11 64-bit)
+
+#### 2. Install & Permissions
+1. Right-click the downloaded **`OpenFaceID-0.2.1-rc.1-windows-x64.zip`** file and select **Extract All...** to `C:\Program Files\OpenFaceID` (or `%LOCALAPPDATA%\OpenFaceID`).
+2. **Camera Access**: Open **Windows Settings &rarr; Privacy & Security &rarr; Camera**. Ensure:
+   - **"Camera access"** is switched **ON**.
+   - **"Let desktop apps access your camera"** is switched **ON**.
+3. **SmartScreen**: If Windows displays *"Windows protected your PC"*, click **"More info"** &rarr; **"Run anyway"**.
+
+#### 3. Launch & Enroll Your Face
+1. Double-click **`OpenFaceID.cmd`** in the extracted directory to start the background engine.
+2. Open your web browser to **`http://localhost:41793`**.
+3. Click **"Enroll Face"** and complete the 5-pose guided capture (Frontal, Up, Down, Left, Right).
+4. Templates are saved locally and protected using Windows **DPAPI** hardware encryption.
+
+#### 4. Enable Lock Screen Unlock (Windows LogonUI Integration)
+To enable face unlock on the Windows login and lock screen (`Win + L`):
+1. Open an **Administrator Command Prompt** (`cmd.exe` &rarr; Run as Administrator).
+2. Navigate to your OpenFaceID folder:
+   ```cmd
+   cd "C:\Program Files\OpenFaceID"
+   ```
+3. Register the native COM Credential Provider DLL:
+   ```cmd
+   regsvr32.exe OpenFaceIDCredentialProvider.dll
+   ```
+   *(A dialog will confirm `DllRegisterServer in OpenFaceIDCredentialProvider.dll succeeded`)*.
+4. *(Optional)* Double-click `register-autostart.reg` so the daemon launches automatically at user logon.
+
+#### 5. Daily Usage — How to Unlock
+1. **Lock your PC**: Press <kbd>Win</kbd> + <kbd>L</kbd>.
+2. Look at the login screen: An OpenFaceID credential tile will appear showing status (*"Looking for your face..."*).
+3. Look directly into your webcam.
+4. OpenFaceID verifies your face and anti-spoofing micro-motion, authenticates with Winlogon, and **unlocks directly into your interactive Windows session**.
+
+#### 6. How to Uninstall
+1. Open an Administrator Command Prompt and unregister the Credential Provider:
+   ```cmd
+   regsvr32.exe /u OpenFaceIDCredentialProvider.dll
+   ```
+2. Delete the `OpenFaceID` installation folder.
+3. Remove your encrypted templates: delete `%LOCALAPPDATA%\OpenFaceID`.
+
+---
+
+### 🐧 Linux Step-by-Step Guide
+
+#### 1. Download
+Download the package for your Linux distribution:
+* **Ubuntu / Debian**: **[openfaceid_0.2.1-rc.1_amd64.deb](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/openfaceid_0.2.1-rc.1_amd64.deb)**
+* **Universal Tarball**: **[openfaceid-0.2.1-rc.1-linux-x86_64.tar.gz](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/openfaceid-0.2.1-rc.1-linux-x86_64.tar.gz)**
+* **Fedora / RHEL**: [openfaceid-0.2.1-rc.1-1.x86_64.rpm](https://github.com/JayantOlhyan/OpenFaceID/releases/download/v0.2.1-rc.1/openfaceid-0.2.1-rc.1-1.x86_64.rpm)
+
+#### 2. Install Package & Hardware Permissions
+**On Ubuntu / Debian**:
+```bash
+sudo apt update
+sudo apt install ./openfaceid_0.2.1-rc.1_amd64.deb
+```
+**Grant Camera Device Permissions**:
+Ensure your user account belongs to the `video` group to read `/dev/video*`:
+```bash
+sudo usermod -a -G video $USER
+```
+*(Log out and log back in for this group permission to take effect)*.
+
+#### 3. Start Background Daemon
+Enable and start the user systemd service:
+```bash
+systemctl --user enable --now openfaceid
+```
+*(Or launch the daemon manually in a terminal with `openfaceid desktop`)*.
+
+#### 4. Enroll Your Face
+1. Open your browser to **`http://localhost:41793`** or use the terminal:
+   ```bash
+   openfaceid identity enroll "$USER"
+   ```
+2. Follow the 5-pose guided capture in front of your webcam.
+
+#### 5. Configure PAM Authentication (Sudo & Lock Screen Unlock)
+Install and configure the native PAM module (`pam_openfaceid.so`):
+```bash
+sudo install-linux-pam.sh
+```
+This automatically configures `/etc/pam.d/` with fail-closed safety (if the daemon is stopped or the camera is covered, it immediately falls back to your regular password prompt without locking you out).
+* **Test Sudo**: Open a new terminal and run `sudo -v`. Look into the webcam—sudo validates without prompting for a password!
+* **Display Manager (GDM / SDDM)**: OpenFaceID hooks into display managers for lockscreen unlock.
+
+#### 6. Daily Usage — How to Unlock
+1. **Lock session**: Press <kbd>Super</kbd> + <kbd>L</kbd> or run `loginctl lock-session`.
+2. Look at your webcam: OpenFaceID recognizes your face, verifies multi-cue liveness, and **unlocks your desktop session**.
+
+#### 7. How to Uninstall
+1. Remove PAM integration:
+   ```bash
+   sudo install-linux-pam.sh --uninstall
+   ```
+2. Remove the application package:
+   ```bash
+   sudo apt remove openfaceid
+   ```
+3. Remove user biometrics and configuration:
+   ```bash
+   rm -rf ~/.openfaceid
+   ```
 
 ---
 
@@ -497,9 +530,9 @@ npm test
 
 Current test status:
 ```text
-ℹ tests 203
-ℹ suites 52
-ℹ pass 203
+ℹ tests 226
+ℹ suites 56
+ℹ pass 226
 ℹ fail 0
 ```
 
