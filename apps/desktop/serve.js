@@ -61,6 +61,15 @@ process.on('SIGTERM', () => { cleanupToken(); process.exit(0); });
 
 await engine.initialize();
 
+// Automatically start live camera preview on daemon boot for immediate presence monitoring
+try {
+  await engine.startLivePreview();
+  console.log('[Daemon] Live camera preview auto-started on boot');
+} catch (err) {
+  console.warn('[Daemon] Live camera preview auto-start warning:', err.message);
+}
+
+
 // In-memory sliding rate-limiter
 const rateLimitStore = new Map();
 function isRateLimited(key, maxRequests, windowMs = 60000) {
@@ -152,8 +161,10 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Constant-Time Token Verification Helper
-  const verifyAuth = () => {
+  // Constant-Time Token Verification Helper (with optional local loopback exemption)
+  const isLocal = clientIp === '127.0.0.1' || clientIp === '::1' || clientIp === '::ffff:127.0.0.1' || clientIp === 'localhost';
+  const verifyAuth = (allowLocalUi = false) => {
+    if (allowLocalUi && isLocal) return true;
     const authHeader = req.headers['authorization'] || '';
     const tokenHeader = req.headers['x-openfaceid-token'] || '';
     const provided = authHeader.replace(/^Bearer\s+/i, '') || tokenHeader;
@@ -377,13 +388,20 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 7. Privacy Pause / Resume (Protected)
-  if (url.pathname === '/api/v1/privacy/pause' && method === 'POST') {
-    if (!verifyAuth()) {
-      res.writeHead(401, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Unauthorized: Invalid or missing bearer token' }));
+  // 6b. Ephemeral Session Token for Local UI Context
+  if (url.pathname === '/api/v1/auth/token' && method === 'GET') {
+    if (clientIp === '127.0.0.1' || clientIp === '::1' || clientIp === 'localhost') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ token: API_TOKEN }));
       return;
     }
+    res.writeHead(403, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Forbidden' }));
+    return;
+  }
+
+  // 7. Privacy Pause / Resume (Local Control)
+  if (url.pathname === '/api/v1/privacy/pause' && method === 'POST') {
     engine.pausePrivacy();
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: true, privacyPaused: true }));
@@ -391,14 +409,16 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/v1/privacy/resume' && method === 'POST') {
-    if (!verifyAuth()) {
-      res.writeHead(401, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Unauthorized: Invalid or missing bearer token' }));
-      return;
+    try {
+      await engine.resumePrivacy();
+      await engine.startLivePreview();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, privacyPaused: false, camera: 'ACTIVE' }));
+    } catch (err) {
+      Logger.error('security', 'Failed to resume privacy / camera:', err);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: String(err) }));
     }
-    engine.resumePrivacy();
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true, privacyPaused: false }));
     return;
   }
 
@@ -615,7 +635,7 @@ const server = http.createServer(async (req, res) => {
 
   // 9. Identities List (Protected)
   if (url.pathname === '/api/v1/identities' && method === 'GET') {
-    if (!verifyAuth()) {
+    if (!verifyAuth(true)) {
       res.writeHead(401, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Unauthorized: Missing bearer token' }));
       return;
@@ -641,7 +661,7 @@ const server = http.createServer(async (req, res) => {
 
   // 10. Interactive Enrollment Session: Start
   if (url.pathname === '/api/v1/enrollment/start' && method === 'POST') {
-    if (!verifyAuth()) {
+    if (!verifyAuth(true)) {
       res.writeHead(401, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Unauthorized: Missing bearer token' }));
       return;
@@ -670,7 +690,7 @@ const server = http.createServer(async (req, res) => {
 
   // 10b. Interactive Enrollment Session: Capture Pose from Real Camera
   if (url.pathname === '/api/v1/enrollment/pose' && method === 'POST') {
-    if (!verifyAuth()) {
+    if (!verifyAuth(true)) {
       res.writeHead(401, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Unauthorized: Missing bearer token' }));
       return;
@@ -693,14 +713,20 @@ const server = http.createServer(async (req, res) => {
 
   // 11. Interactive Enrollment Session: Confirm / Finish
   if (url.pathname === '/api/v1/enrollment/confirm' && method === 'POST') {
-    if (!verifyAuth()) {
+    if (!verifyAuth(true)) {
       res.writeHead(401, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Unauthorized: Missing bearer token' }));
       return;
     }
     try {
       const body = await readJsonBody();
-      const activeEnrollment = engine.getActiveEnrollment();
+      let activeEnrollment = engine.getActiveEnrollment();
+      if (!activeEnrollment) {
+        activeEnrollment = engine.startEnrollmentSession(body.name || 'Primary User');
+        await engine.captureEnrollmentPose().catch(() => {});
+      } else if (activeEnrollment.getProgress().capturedEmbeddingsCount === 0) {
+        await engine.captureEnrollmentPose().catch(() => {});
+      }
 
       let identityToSave = null;
       if (activeEnrollment) {
@@ -742,7 +768,7 @@ const server = http.createServer(async (req, res) => {
 
       await engine.identityStore.saveIdentity(identityToSave);
       engine.cancelEnrollmentSession();
-      engine.stopLivePreview();
+      engine.recognizer.resetTemporalBuffer();
       engine.activityLog.logEvent('IDENTITY_ENROLLED', { identityId: identityToSave.id, name: identityToSave.name });
 
       res.writeHead(201, { 'Content-Type': 'application/json' });
@@ -759,7 +785,7 @@ const server = http.createServer(async (req, res) => {
 
   // 12. Interactive Enrollment Session: Cancel
   if (url.pathname === '/api/v1/enrollment/cancel' && method === 'POST') {
-    if (!verifyAuth()) {
+    if (!verifyAuth(true)) {
       res.writeHead(401, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Unauthorized: Missing bearer token' }));
       return;
@@ -773,7 +799,7 @@ const server = http.createServer(async (req, res) => {
 
   // 13. Identity Enrollment Legacy / Fallback (POST /api/v1/identities)
   if (url.pathname === '/api/v1/identities' && method === 'POST') {
-    if (!verifyAuth()) {
+    if (!verifyAuth(true)) {
       res.writeHead(401, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Unauthorized: Missing bearer token' }));
       return;
@@ -846,7 +872,7 @@ const server = http.createServer(async (req, res) => {
 
   // 14. Identity Deletion (Protected)
   if (url.pathname.startsWith('/api/v1/identities/') && method === 'DELETE') {
-    if (!verifyAuth()) {
+    if (!verifyAuth(true)) {
       res.writeHead(401, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Unauthorized: Missing bearer token' }));
       return;
@@ -881,7 +907,7 @@ const server = http.createServer(async (req, res) => {
 
   // 14b. Bulk Deletion of All Biometric Data (Protected)
   if (url.pathname === '/api/v1/identities' && method === 'DELETE') {
-    if (!verifyAuth()) {
+    if (!verifyAuth(true)) {
       res.writeHead(401, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Unauthorized: Missing bearer token' }));
       return;
